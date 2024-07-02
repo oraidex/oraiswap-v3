@@ -1,17 +1,16 @@
-use cosmwasm_std::Addr;
+use cosmwasm_std::{attr, Addr, Attribute};
 use decimal::*;
 
 use crate::{
     fee_growth::FeeGrowth,
-    interface::{NftInfoResponse, TokensResponse},
+    interface::{NftInfoResponse, OwnerOfResponse, TokensResponse},
     liquidity::Liquidity,
     msg,
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    state,
     tests::helper::{macros::*, MockApp},
     token_amount::TokenAmount,
-    FeeTier, PoolKey, MIN_SQRT_PRICE,
+    FeeTier, PoolKey, Position, MIN_SQRT_PRICE,
 };
 
 #[test]
@@ -107,7 +106,7 @@ fn test_query_nft() {
     )
     .unwrap();
 
-    let token_id = state::position_key(&Addr::unchecked("alice"), 0).into();
+    let token_id = 1;
 
     let nft_info: NftInfoResponse = app
         .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
@@ -134,7 +133,6 @@ fn test_burn_nft() {
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
-    let remove_position_index = 0;
 
     let initial_mint = 10u128.pow(10);
 
@@ -214,7 +212,7 @@ fn test_burn_nft() {
     )
     .unwrap();
 
-    let token_id = state::position_key(&Addr::unchecked("alice"), 1).into();
+    let token_id = 2;
     let NftInfoResponse {
         extension: position_state,
     } = app
@@ -265,7 +263,7 @@ fn test_burn_nft() {
 
     // Remove position
     let sender = Addr::unchecked("alice");
-    let token_id = state::position_key(&sender, remove_position_index).into();
+    let token_id = 1;
     app.execute(
         sender,
         dex.clone(),
@@ -447,7 +445,15 @@ fn test_transfer_nft() {
                 },
             )
             .unwrap();
-        let token_id = state::position_key(&Addr::unchecked("alice"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("alice"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         let NftInfoResponse {
             extension: removed_position,
         } = app
@@ -465,7 +471,15 @@ fn test_transfer_nft() {
             )
             .unwrap();
 
-        let token_id = state::position_key(&Addr::unchecked("alice"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("alice"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         app.execute(
             Addr::unchecked("alice"),
             dex.clone(),
@@ -477,7 +491,15 @@ fn test_transfer_nft() {
         )
         .unwrap();
 
-        let token_id = state::position_key(&Addr::unchecked("bob"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("bob"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         let NftInfoResponse {
             extension: recipient_position,
         } = app
@@ -507,7 +529,16 @@ fn test_transfer_nft() {
                 },
             )
             .unwrap();
-        let token_id = state::position_key(&Addr::unchecked("alice"), transferred_index).into();
+
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("alice"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         let NftInfoResponse {
             extension: owner_first_position_after,
         } = app
@@ -563,7 +594,15 @@ fn test_transfer_nft() {
             )
             .unwrap();
 
-        let token_id = state::position_key(&Addr::unchecked("alice"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("alice"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         app.execute(
             Addr::unchecked("alice"),
             dex.clone(),
@@ -599,7 +638,15 @@ fn test_transfer_nft() {
                 },
             )
             .unwrap();
-        let token_id = state::position_key(&Addr::unchecked("alice"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("alice"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         let NftInfoResponse {
             extension: owner_first_position_after,
         } = app
@@ -627,14 +674,30 @@ fn test_transfer_nft() {
             )
             .unwrap();
         let transferred_index = (owner_list_before.len() - 1) as u32;
-        let token_id = state::position_key(&Addr::unchecked("alice"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("alice"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         let NftInfoResponse {
             extension: removed_position,
         } = app
             .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
             .unwrap();
 
-        let token_id = state::position_key(&Addr::unchecked("alice"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("alice"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         app.execute(
             Addr::unchecked("alice"),
             dex.clone(),
@@ -658,8 +721,15 @@ fn test_transfer_nft() {
             )
             .unwrap();
         let recipient_position_index = (recipient_list_after.len() - 1) as u32;
-        let token_id =
-            state::position_key(&Addr::unchecked("bob"), recipient_position_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("bob"),
+                    index: recipient_position_index,
+                },
+            )
+            .unwrap();
         let NftInfoResponse {
             extension: recipient_position,
         } = app
@@ -684,14 +754,30 @@ fn test_transfer_nft() {
                 },
             )
             .unwrap();
-        let token_id = state::position_key(&Addr::unchecked("alice"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("alice"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         let NftInfoResponse {
             extension: removed_position,
         } = app
             .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
             .unwrap();
 
-        let token_id = state::position_key(&Addr::unchecked("alice"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("alice"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         app.execute(
             Addr::unchecked("alice"),
             dex.clone(),
@@ -716,8 +802,15 @@ fn test_transfer_nft() {
             )
             .unwrap();
         let recipient_position_index = (recipient_list_after.len() - 1) as u32;
-        let token_id =
-            state::position_key(&Addr::unchecked("bob"), recipient_position_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("bob"),
+                    index: recipient_position_index,
+                },
+            )
+            .unwrap();
         let NftInfoResponse {
             extension: recipient_position,
         } = app
@@ -770,7 +863,15 @@ fn test_transfer_nft() {
                 },
             )
             .unwrap();
-        let token_id = state::position_key(&Addr::unchecked("bob"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("bob"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         let NftInfoResponse {
             extension: removed_position,
         } = app
@@ -788,7 +889,15 @@ fn test_transfer_nft() {
             )
             .unwrap();
 
-        let token_id = state::position_key(&Addr::unchecked("bob"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("bob"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         app.execute(
             Addr::unchecked("bob"),
             dex.clone(),
@@ -824,14 +933,30 @@ fn test_transfer_nft() {
                 },
             )
             .unwrap();
-        let token_id = state::position_key(&Addr::unchecked("bob"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("bob"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         let NftInfoResponse {
             extension: recipient_first_position_after,
         } = app
             .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
             .unwrap();
 
-        let token_id = state::position_key(&Addr::unchecked("alice"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("alice"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
         let NftInfoResponse {
             extension: owner_new_position,
         } = app
@@ -969,7 +1094,16 @@ fn test_only_owner_can_transfer_nft() {
     // Transfer first position
     {
         let transferred_index = 0;
-        let token_id = state::position_key(&Addr::unchecked("bob"), transferred_index).into();
+        let Position { token_id, .. } = app
+            .query(
+                dex.clone(),
+                &msg::QueryMsg::Position {
+                    owner_id: Addr::unchecked("alice"),
+                    index: transferred_index,
+                },
+            )
+            .unwrap();
+
         app.execute(
             Addr::unchecked("bob"),
             dex.clone(),
@@ -981,4 +1115,161 @@ fn test_only_owner_can_transfer_nft() {
         )
         .unwrap_err();
     }
+}
+
+#[test]
+fn test_approving_revoking() {
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
+    let (token_x, token_y) = create_tokens!(app, 500, 500);
+
+    let fee_tier = FeeTier::new(Percentage::new(0), 1).unwrap();
+
+    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+
+    let init_tick = 10;
+    let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+    create_pool!(
+        app,
+        dex,
+        token_x,
+        token_y,
+        fee_tier,
+        init_sqrt_price,
+        init_tick,
+        "alice"
+    )
+    .unwrap();
+
+    approve!(app, token_x, dex, 500, "alice").unwrap();
+    approve!(app, token_y, dex, 500, "alice").unwrap();
+
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+
+    app.execute(
+        Addr::unchecked("alice"),
+        dex.clone(),
+        &msg::ExecuteMsg::Mint {
+            extension: msg::NftExtensionMsg {
+                pool_key,
+                lower_tick: -10,
+                upper_tick: 10,
+                liquidity_delta: Liquidity::new(10),
+                slippage_limit_lower: SqrtPrice::new(0),
+                slippage_limit_upper: SqrtPrice::max_instance(),
+            },
+        },
+        &[],
+    )
+    .unwrap();
+
+    let Position { token_id, .. } = app
+        .query(
+            dex.clone(),
+            &msg::QueryMsg::Position {
+                owner_id: Addr::unchecked("alice"),
+                index: 0,
+            },
+        )
+        .unwrap();
+
+    // Give random transferring power
+    let res = app
+        .execute(
+            Addr::unchecked("alice"),
+            dex.clone(),
+            &msg::ExecuteMsg::Approve {
+                spender: Addr::unchecked("random"),
+                token_id: token_id.clone(),
+                expires: None,
+            },
+            &[],
+        )
+        .unwrap();
+    let wasm_event = &res.events.iter().find(|e| e.ty == "wasm").unwrap();
+
+    assert_eq!(
+        wasm_event.attributes,
+        vec![
+            Attribute {
+                key: "_contract_addr".to_string(),
+                value: dex.to_string()
+            },
+            attr("action", "approve"),
+            attr("sender", "alice"),
+            attr("spender", "random"),
+        ]
+    );
+
+    // random can now transfer
+    app.execute(
+        Addr::unchecked("random"),
+        dex.clone(),
+        &msg::ExecuteMsg::TransferNft {
+            recipient: Addr::unchecked("person"),
+            token_id: token_id.clone(),
+        },
+        &[],
+    )
+    .unwrap();
+
+    // Approvals are removed / cleared
+    let res: OwnerOfResponse = app
+        .query(
+            dex.clone(),
+            &msg::QueryMsg::OwnerOf {
+                token_id: token_id.clone(),
+                include_expired: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        res,
+        OwnerOfResponse {
+            owner: Addr::unchecked("person"),
+            approvals: vec![],
+        }
+    );
+
+    // Approve, revoke, and check for empty, to test revoke
+    app.execute(
+        Addr::unchecked("person"),
+        dex.clone(),
+        &msg::ExecuteMsg::Approve {
+            spender: Addr::unchecked("random"),
+            token_id: token_id.clone(),
+            expires: None,
+        },
+        &[],
+    )
+    .unwrap();
+
+    app.execute(
+        Addr::unchecked("person"),
+        dex.clone(),
+        &msg::ExecuteMsg::Revoke {
+            spender: Addr::unchecked("random"),
+            token_id: token_id.clone(),
+        },
+        &[],
+    )
+    .unwrap();
+
+    // Approvals are now removed / cleared
+    let res: OwnerOfResponse = app
+        .query(
+            dex.clone(),
+            &msg::QueryMsg::OwnerOf {
+                token_id: token_id.clone(),
+                include_expired: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        res,
+        OwnerOfResponse {
+            owner: Addr::unchecked("person"),
+            approvals: vec![],
+        }
+    );
 }

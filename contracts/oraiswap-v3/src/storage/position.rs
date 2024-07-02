@@ -30,6 +30,8 @@ pub struct Position {
     /// approvals are stored here, as we clear them all upon transfer and cannot accumulate much
     #[serde(default)]
     pub approvals: Vec<Approval>,
+    #[serde(default)]
+    pub token_id: u64,
 }
 
 impl Position {
@@ -172,6 +174,7 @@ impl Position {
 
         // init position
         let mut position = Self {
+            token_id: 0,
             pool_key,
             liquidity: Liquidity::new(0),
             lower_tick_index: lower_tick.index,

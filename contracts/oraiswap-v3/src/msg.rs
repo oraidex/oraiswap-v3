@@ -4,8 +4,8 @@ use cosmwasm_std::{Addr, Binary};
 use cw20::Expiration;
 
 use crate::interface::{
-    AllNftInfoResponse, ApprovedForAllResponse, NftInfoResponse, OwnerOfResponse, PoolWithPoolKey,
-    PositionTick, QuoteResult, TokensResponse,
+    AllNftInfoResponse, ApprovedForAllResponse, NftInfoResponse, NumTokensResponse,
+    OwnerOfResponse, PoolWithPoolKey, PositionTick, QuoteResult, TokensResponse,
 };
 #[allow(unused_imports)]
 use crate::{
@@ -91,7 +91,7 @@ pub enum ExecuteMsg {
     /// Transfer is a base message to move a token to another account without triggering actions
     TransferNft {
         recipient: Addr,
-        token_id: Binary,
+        token_id: u64,
     },
     /// Mint a new NFT, can only be called by the contract minter
     Mint {
@@ -99,26 +99,26 @@ pub enum ExecuteMsg {
         extension: NftExtensionMsg,
     },
     Burn {
-        token_id: Binary,
+        token_id: u64,
     },
     /// Send is a base message to transfer a token to a contract and trigger an action
     /// on the receiving contract.
     SendNft {
         contract: Addr,
-        token_id: Binary,
+        token_id: u64,
         msg: Option<Binary>,
     },
     /// Allows operator to transfer / send the token from the owner's account.
     /// If expiration is set, then this allowance has a time/height limit
     Approve {
         spender: Addr,
-        token_id: Binary,
+        token_id: u64,
         expires: Option<Expiration>,
     },
     /// Remove previously granted Approval
     Revoke {
         spender: Addr,
-        token_id: Binary,
+        token_id: u64,
     },
     /// Allows operator to transfer / send any token from the owner's account.
     /// If expiration is set, then this allowance has a time/height limit
@@ -230,12 +230,15 @@ pub enum QueryMsg {
     ///
     ///
     ///
+    /// Total number of tokens issued
+    #[returns(NumTokensResponse)]
+    NumTokens {},
 
     /// Return the owner of the given token, error if token does not exist
     /// Return type: OwnerOfResponse
     #[returns(OwnerOfResponse)]
     OwnerOf {
-        token_id: Binary,
+        token_id: u64,
         /// unset or false will filter out expired approvals, you must set to true to see them
         include_expired: Option<bool>,
     },
@@ -252,12 +255,12 @@ pub enum QueryMsg {
     /// Returns metadata about one particular token, based on *ERC721 Metadata JSON Schema*
     /// but directly from the contract: `NftInfoResponse`
     #[returns(NftInfoResponse)]
-    NftInfo { token_id: Binary },
+    NftInfo { token_id: u64 },
     /// With MetaData Extension.
     /// Returns the result of both `NftInfo` and `OwnerOf` as one query as an optimization
     #[returns(AllNftInfoResponse)]
     AllNftInfo {
-        token_id: Binary,
+        token_id: u64,
         /// unset or false will filter out expired approvals, you must set to true to see them
         include_expired: Option<bool>,
     },
@@ -275,7 +278,7 @@ pub enum QueryMsg {
     /// Return type: TokensResponse.
     #[returns(TokensResponse)]
     AllTokens {
-        start_after: Option<Binary>,
+        start_after: Option<u64>,
         limit: Option<u32>,
     },
 }

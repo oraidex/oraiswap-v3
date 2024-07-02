@@ -193,7 +193,7 @@ pub fn create_position(
         _ => create_tick(deps.storage, current_timestamp, &pool_key, upper_tick)?,
     };
 
-    let (position, x, y) = Position::create(
+    let (mut position, x, y) = Position::create(
         &mut pool,
         pool_key.clone(),
         &mut lower_tick,
@@ -205,6 +205,8 @@ pub fn create_position(
         current_block_number,
         pool_key.fee_tier.tick_spacing,
     )?;
+
+    position.token_id = state::next_token_id(deps.storage)?;
 
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
@@ -229,6 +231,7 @@ pub fn create_position(
 
     let event_attributes = vec![
         attr("action", "create_position"),
+        attr("token_id", position.token_id.to_string()),
         attr("address", info.sender.as_str()),
         attr("liquidity", liquidity_delta.to_string()),
         attr("lower_tick", lower_tick.index.to_string()),
@@ -363,11 +366,9 @@ pub fn transfer_position(
     index: u32,
     receiver: String,
 ) -> Result<Response, ContractError> {
-    let caller = info.sender;
+    let mut position = state::get_position(deps.storage, &info.sender, index)?;
 
-    let mut position = state::get_position(deps.storage, &caller, index)?;
-
-    state::remove_position(deps.storage, &caller, index)?;
+    state::remove_position(deps.storage, &info.sender, index)?;
 
     let receiver_addr = deps.api.addr_validate(&receiver)?;
     // reset approvals
@@ -408,7 +409,7 @@ pub fn claim_fee(
         current_timestamp,
     )?;
 
-    state::update_position(deps.storage, &info.sender, index, &position)?;
+    state::update_position(deps.storage, &position)?;
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
     state::update_tick(
         deps.storage,
@@ -461,7 +462,6 @@ pub fn remove_position(
     index: u32,
 ) -> Result<Response, ContractError> {
     let current_timestamp = env.block.time.millis();
-
     let mut position = state::get_position(deps.storage, &info.sender, index)?;
     let withdrawed_liquidity = position.liquidity;
 
@@ -668,10 +668,10 @@ pub fn handle_approve(
     env: Env,
     info: MessageInfo,
     spender: Addr,
-    token_id: Binary,
+    token_id: u64,
     expires: Option<Expiration>,
 ) -> Result<Response, ContractError> {
-    update_approvals(deps, &env, &info, &spender, &token_id, true, expires)?;
+    update_approvals(deps, &env, &info, &spender, token_id, true, expires)?;
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "approve"),
@@ -685,9 +685,9 @@ pub fn handle_revoke(
     env: Env,
     info: MessageInfo,
     spender: Addr,
-    token_id: Binary,
+    token_id: u64,
 ) -> Result<Response, ContractError> {
-    update_approvals(deps, &env, &info, &spender, &token_id, false, None)?;
+    update_approvals(deps, &env, &info, &spender, token_id, false, None)?;
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "revoke"),
@@ -744,9 +744,9 @@ pub fn handle_transfer_nft(
     env: Env,
     info: MessageInfo,
     recipient: Addr,
-    token_id: Binary,
+    token_id: u64,
 ) -> Result<Response, ContractError> {
-    transfer_nft(deps, &env, &info, &recipient, &token_id)?;
+    transfer_nft(deps, &env, &info, &recipient, token_id)?;
 
     // need transfer_payout as well
 
@@ -761,12 +761,14 @@ pub fn handle_burn(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    token_id: Binary,
+    token_id: u64,
 ) -> Result<Response, ContractError> {
-    let pos = state::get_position_by_key(deps.storage, &token_id)?;
-    let owner_raw = &token_id[..token_id.len() - 4];
-    let index = u32::from_be_bytes(token_id[token_id.len() - 4..].try_into().unwrap());
-    check_can_send(deps.as_ref(), &env, &info, owner_raw, &pos)?;
+    let (owner_raw, index) = state::POSITION_KEYS_BY_TOKEN_ID.load(deps.storage, token_id)?;
+    let mut position_key = owner_raw.to_vec();
+    position_key.extend_from_slice(&index.to_be_bytes());
+    let pos = state::get_position_by_key(deps.storage, &position_key)?;
+
+    check_can_send(deps.as_ref(), &env, &info, &owner_raw, &pos)?;
 
     // remain action to help sync backend
     remove_position(deps, env, info.clone(), index)
@@ -777,11 +779,11 @@ pub fn handle_send_nft(
     env: Env,
     info: MessageInfo,
     contract: Addr,
-    token_id: Binary,
+    token_id: u64,
     msg: Option<Binary>,
 ) -> Result<Response, ContractError> {
     // Transfer token
-    transfer_nft(deps, &env, &info, &contract, &token_id)?;
+    transfer_nft(deps, &env, &info, &contract, token_id)?;
 
     let send = Cw721ReceiveMsg {
         sender: info.sender.clone(),

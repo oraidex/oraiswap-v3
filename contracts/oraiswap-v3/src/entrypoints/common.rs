@@ -9,7 +9,7 @@ use crate::{
     check_tick, compute_swap_step,
     interface::{Approval, Asset, AssetInfo, CalculateSwapResult, SwapHop},
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
-    state::{self, CONFIG, POOLS},
+    state::{self},
     token_amount::TokenAmount,
     ContractError, PoolKey, Position, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MAX_TICKMAP_QUERY_SIZE,
     MIN_SQRT_PRICE,
@@ -112,7 +112,11 @@ pub fn calculate_swap(
                 .map_err(|_| ContractError::Sub)?;
         }
 
-        pool.add_fee(result.fee_amount, x_to_y, CONFIG.load(store)?.protocol_fee)?;
+        pool.add_fee(
+            result.fee_amount,
+            x_to_y,
+            state::CONFIG.load(store)?.protocol_fee,
+        )?;
         event_fee_amount += result.fee_amount;
 
         pool.sqrt_price = result.next_sqrt_price;
@@ -146,7 +150,7 @@ pub fn calculate_swap(
             by_amount_in,
             x_to_y,
             current_timestamp,
-            CONFIG.load(store)?.protocol_fee,
+            state::CONFIG.load(store)?.protocol_fee,
             pool_key.fee_tier,
         )?;
 
@@ -211,7 +215,7 @@ pub fn swap_internal(
         state::update_tick(store, pool_key, tick.index, tick)?;
     }
 
-    POOLS.save(store, &pool_key.key(), &calculate_swap_result.pool)?;
+    state::POOLS.save(store, &pool_key.key(), &calculate_swap_result.pool)?;
 
     let (token_0, token_1) = if x_to_y {
         (&pool_key.token_x, &pool_key.token_y)
@@ -412,15 +416,17 @@ pub fn update_approvals(
     env: &Env,
     info: &MessageInfo,
     spender: &Addr,
-    token_id: &[u8],
+    token_id: u64,
     // if add == false, remove. if add == true, remove then set with this expiration
     add: bool,
     expires: Option<Expiration>,
 ) -> Result<Position, ContractError> {
-    let owner_raw = &token_id[..token_id.len() - 4];
-    let mut pos = state::get_position_by_key(deps.storage, token_id)?;
+    let (owner_raw, index) = state::POSITION_KEYS_BY_TOKEN_ID.load(deps.storage, token_id)?;
+    let mut position_key = owner_raw.to_vec();
+    position_key.extend_from_slice(&index.to_be_bytes());
+    let mut pos = state::get_position_by_key(deps.storage, &position_key)?;
     // ensure we have permissions
-    check_can_approve(deps.as_ref(), env, info, owner_raw)?;
+    check_can_approve(deps.as_ref(), env, info, &owner_raw)?;
 
     // update the approval list (remove any for the same spender before adding)
     pos.approvals = pos
@@ -443,7 +449,7 @@ pub fn update_approvals(
         pos.approvals.push(approval);
     }
 
-    state::POSITIONS.save(deps.storage, token_id, &pos)?;
+    state::POSITIONS.save(deps.storage, &position_key, &pos)?;
 
     Ok(pos)
 }
@@ -453,19 +459,19 @@ pub fn transfer_nft(
     env: &Env,
     info: &MessageInfo,
     recipient: &Addr,
-    token_id: &[u8],
+    token_id: u64,
 ) -> Result<(), ContractError> {
-    let owner_raw = &token_id[..token_id.len() - 4];
-    let index = u32::from_be_bytes(token_id[token_id.len() - 4..].try_into().unwrap());
+    let (owner_raw, index) = state::POSITION_KEYS_BY_TOKEN_ID.load(deps.storage, token_id)?;
     let account_id = Addr::unchecked(String::from_utf8(owner_raw.to_vec())?);
-    let mut pos = state::get_position_by_key(deps.storage, token_id)?;
+    let mut pos = state::get_position(deps.storage, &account_id, index)?;
     // ensure we have permissions
-    check_can_send(deps.as_ref(), env, info, owner_raw, &pos)?;
+    check_can_send(deps.as_ref(), env, info, &owner_raw, &pos)?;
     // set owner and remove existing approvals
     state::remove_position(deps.storage, &account_id, index)?;
     // reset approvals when transfer
     pos.approvals = vec![];
     state::add_position(deps.storage, recipient, &pos)?;
+
     Ok(())
 }
 

@@ -22,10 +22,40 @@ pub const POSITIONS: Map<&[u8], Position> = Map::new("positions");
 pub const TICKS: Map<&[u8], Tick> = Map::new("ticks");
 
 pub const BITMAP: Map<&[u8], u64> = Map::new("bitmap");
-
+// for store global id of postion as token id
+pub const TOKEN_ID: Item<u64> = Item::new("token_id");
+// for mapping token_id => position key(account + index)
+pub const POSITION_KEYS_BY_TOKEN_ID: Map<u64, (Vec<u8>, u32)> = Map::new("position_keys_by_id");
+pub const TOKEN_COUNT: Item<u64> = Item::new("num_tokens");
 pub const OPERATORS: Map<(&[u8], &[u8]), Expiration> = Map::new("operators");
 
 pub const MAX_LIMIT: u32 = 100;
+
+pub fn num_tokens(storage: &dyn Storage) -> StdResult<u64> {
+    Ok(TOKEN_COUNT.may_load(storage)?.unwrap_or_default())
+}
+
+pub fn increment_tokens(storage: &mut dyn Storage) -> StdResult<u64> {
+    let val = num_tokens(storage)? + 1;
+    TOKEN_COUNT.save(storage, &val)?;
+    Ok(val)
+}
+
+pub fn decrement_tokens(storage: &mut dyn Storage) -> StdResult<u64> {
+    let val = num_tokens(storage)? - 1;
+    TOKEN_COUNT.save(storage, &val)?;
+    Ok(val)
+}
+
+pub fn next_token_id(store: &mut dyn Storage) -> StdResult<u64> {
+    let id: u64 = last_token_id(store)? + 1;
+    TOKEN_ID.save(store, &id)?;
+    Ok(id)
+}
+
+pub fn last_token_id(store: &dyn Storage) -> StdResult<u64> {
+    Ok(TOKEN_ID.may_load(store)?.unwrap_or_default())
+}
 
 pub fn get_pool(store: &dyn Storage, pool_key: &PoolKey) -> Result<Pool, ContractError> {
     let pool = POOLS.load(store, &pool_key.key())?;
@@ -136,28 +166,26 @@ pub fn add_position(
     store: &mut dyn Storage,
     account_id: &Addr,
     position: &Position,
-) -> Result<(), ContractError> {
+) -> Result<u32, ContractError> {
     let positions_length: u32 = get_position_length(store, account_id);
     let db_key = position_key(account_id, positions_length);
-    POSITIONS.save(store, &db_key, position)?;
 
+    POSITION_KEYS_BY_TOKEN_ID.save(
+        store,
+        position.token_id,
+        &(account_id.as_bytes().to_vec(), positions_length),
+    )?;
+
+    POSITIONS.save(store, &db_key, position)?;
     POSITIONS_LENGTH.save(store, account_id.as_bytes(), &(positions_length + 1))?;
-    Ok(())
+    // increase number
+    increment_tokens(store)?;
+    Ok(positions_length)
 }
 
-pub fn update_position(
-    store: &mut dyn Storage,
-    account_id: &Addr,
-    index: u32,
-    position: &Position,
-) -> Result<(), ContractError> {
-    let positions_length = get_position_length(store, account_id);
-
-    if index >= positions_length {
-        return Err(ContractError::PositionNotFound);
-    }
-
-    let db_key = position_key(account_id, index);
+pub fn update_position(store: &mut dyn Storage, position: &Position) -> Result<(), ContractError> {
+    let (mut db_key, index) = POSITION_KEYS_BY_TOKEN_ID.load(store, position.token_id)?;
+    db_key.extend_from_slice(&index.to_be_bytes());
 
     POSITIONS.save(store, &db_key, position)?;
 
@@ -180,11 +208,22 @@ pub fn remove_position(
         let last_position = POSITIONS.load(store, &prev_db_key)?;
         POSITIONS.remove(store, &prev_db_key);
         POSITIONS.save(store, &db_key, &last_position)?;
+        // last_position changes index to current index
+        POSITION_KEYS_BY_TOKEN_ID.save(
+            store,
+            last_position.token_id,
+            &(account_id.as_bytes().to_vec(), index),
+        )?;
     } else {
         POSITIONS.remove(store, &db_key);
     }
 
+    POSITION_KEYS_BY_TOKEN_ID.remove(store, position.token_id);
+
     POSITIONS_LENGTH.save(store, account_id.as_bytes(), &(positions_length))?;
+
+    // decrease token number
+    decrement_tokens(store)?;
 
     Ok(position)
 }

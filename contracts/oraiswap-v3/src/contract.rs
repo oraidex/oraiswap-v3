@@ -1,9 +1,11 @@
+use std::io::Read;
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::CONFIG;
+use crate::state::{next_token_id, CONFIG};
 use crate::{entrypoints::*, Config};
 
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
@@ -267,10 +269,36 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::AllTokens { start_after, limit } => {
             to_binary(&query_all_tokens(deps, start_after, limit)?)
         }
+        QueryMsg::NumTokens {} => to_binary(&query_num_tokens(deps)?),
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    // query all position, then update token id
+    let positions: Vec<_> = crate::state::POSITIONS
+        .range_raw(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+        .collect();
+    let mut token_id = 0;
+    for item in positions {
+        if let Ok((key, mut position)) = item {
+            token_id += 1;
+            position.token_id = token_id;
+            let account_id = &key[..key.len() - 4];
+            let index = u32::from_be_bytes(key[key.len() - 4..].try_into().unwrap());
+            // update position and its index
+            crate::state::POSITIONS.save(deps.storage, &key, &position)?;
+            crate::state::POSITION_KEYS_BY_TOKEN_ID.save(
+                deps.storage,
+                position.token_id,
+                &(account_id.to_vec(), index),
+            )?;
+        }
+    }
+
+    // update total token id, first time token count is total token ids
+    crate::state::TOKEN_COUNT.save(deps.storage, &token_id)?;
+    crate::state::TOKEN_ID.save(deps.storage, &token_id)?;
+
     Ok(Response::default())
 }

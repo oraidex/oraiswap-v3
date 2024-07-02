@@ -1,11 +1,11 @@
-use cosmwasm_std::{Addr, Binary, Deps, Env, Order, StdResult};
+use cosmwasm_std::{Addr, Deps, Env, Order, StdResult};
 use cw_storage_plus::Bound;
 
 use crate::{
     get_max_chunk, get_min_chunk,
     interface::{
-        AllNftInfoResponse, Approval, ApprovedForAllResponse, NftInfoResponse, OwnerOfResponse,
-        PoolWithPoolKey, QuoteResult, SwapHop, TokensResponse,
+        AllNftInfoResponse, Approval, ApprovedForAllResponse, NftInfoResponse, NumTokensResponse,
+        OwnerOfResponse, PoolWithPoolKey, QuoteResult, SwapHop, TokensResponse,
     },
     percentage::Percentage,
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
@@ -397,11 +397,12 @@ pub fn quote_route(
 pub fn query_owner_of(
     deps: Deps,
     env: Env,
-    token_id: Binary,
+    token_id: u64,
     include_expired: bool,
 ) -> Result<OwnerOfResponse, ContractError> {
-    let owner = Addr::unchecked(String::from_utf8(token_id[..token_id.len() - 4].to_vec())?);
-    let pos = state::get_position_by_key(deps.storage, &token_id)?;
+    let (owner_raw, index) = state::POSITION_KEYS_BY_TOKEN_ID.load(deps.storage, token_id)?;
+    let owner = Addr::unchecked(String::from_utf8(owner_raw.to_vec())?);
+    let pos = state::get_position(deps.storage, &owner, index)?;
     Ok(OwnerOfResponse {
         owner,
         approvals: humanize_approvals(&env.block, &pos, include_expired),
@@ -423,7 +424,7 @@ pub fn query_all_approvals(
 
     let owner_raw = owner.as_bytes();
     let res: StdResult<Vec<_>> = state::OPERATORS
-        .prefix(&owner_raw)
+        .prefix(owner_raw)
         .range_raw(deps.storage, start, None, Order::Ascending)
         .filter(|r| include_expired || r.is_err() || !r.as_ref().unwrap().1.is_expired(&env.block))
         .take(limit)
@@ -436,19 +437,23 @@ pub fn query_all_approvals(
     Ok(ApprovedForAllResponse { operators: res? })
 }
 
-pub fn query_nft_info(deps: Deps, token_id: Binary) -> Result<NftInfoResponse, ContractError> {
-    let pos = state::get_position_by_key(deps.storage, &token_id)?;
+pub fn query_nft_info(deps: Deps, token_id: u64) -> Result<NftInfoResponse, ContractError> {
+    let (owner_raw, index) = state::POSITION_KEYS_BY_TOKEN_ID.load(deps.storage, token_id)?;
+    let mut position_key = owner_raw.to_vec();
+    position_key.extend_from_slice(&index.to_be_bytes());
+    let pos = state::get_position_by_key(deps.storage, &position_key)?;
     Ok(NftInfoResponse { extension: pos })
 }
 
 pub fn query_all_nft_info(
     deps: Deps,
     env: Env,
-    token_id: Binary,
+    token_id: u64,
     include_expired: bool,
 ) -> Result<AllNftInfoResponse, ContractError> {
-    let owner = Addr::unchecked(String::from_utf8(token_id[..token_id.len() - 4].to_vec())?);
-    let pos = state::get_position_by_key(deps.storage, &token_id)?;
+    let (owner_raw, index) = state::POSITION_KEYS_BY_TOKEN_ID.load(deps.storage, token_id)?;
+    let owner = Addr::unchecked(String::from_utf8(owner_raw.to_vec())?);
+    let pos = state::get_position(deps.storage, &owner, index)?;
     Ok(AllNftInfoResponse {
         access: OwnerOfResponse {
             owner,
@@ -466,24 +471,35 @@ pub fn query_tokens(
 ) -> Result<TokensResponse, ContractError> {
     let tokens = state::get_all_position_keys(deps.storage, &owner, limit, start_after)
         .into_iter()
-        .map(Binary::from)
-        .collect();
+        .map(|key| {
+            let pos = state::get_position_by_key(deps.storage, &key)?;
+            Ok(pos.token_id)
+        })
+        .collect::<StdResult<_>>()?;
 
     Ok(TokensResponse { tokens })
 }
 
 pub fn query_all_tokens(
     deps: Deps,
-    start_after: Option<Binary>,
+    start_after: Option<u64>,
     limit: Option<u32>,
 ) -> Result<TokensResponse, ContractError> {
     let limit = limit.unwrap_or(MAX_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after.map(|x| x.to_vec()).map(Bound::ExclusiveRaw);
+    let start = start_after
+        .map(|x| x.to_be_bytes().to_vec())
+        .map(Bound::ExclusiveRaw);
 
-    let tokens: Vec<_> = state::POSITIONS
+    let tokens = state::POSITION_KEYS_BY_TOKEN_ID
         .keys_raw(deps.storage, start, None, Order::Ascending)
         .take(limit)
-        .map(Binary::from)
+        .map(|key| u64::from_be_bytes(key.try_into().unwrap()))
         .collect();
+
     Ok(TokensResponse { tokens })
+}
+
+pub fn query_num_tokens(deps: Deps) -> Result<NumTokensResponse, ContractError> {
+    let count = state::num_tokens(deps.storage)?;
+    Ok(NumTokensResponse { count })
 }

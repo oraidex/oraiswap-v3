@@ -184,7 +184,7 @@ pub struct TokensResponse {
     /// Contains all token_ids in lexicographical ordering
     /// If there are more than `limit`, use `start_from` in future queries
     /// to achieve pagination.
-    pub tokens: Vec<Binary>,
+    pub tokens: Vec<u64>,
 }
 
 #[cw_serde]
@@ -212,7 +212,7 @@ pub struct AllNftInfoResponse {
 #[cw_serde]
 pub struct Cw721ReceiveMsg {
     pub sender: Addr,
-    pub token_id: Binary,
+    pub token_id: u64,
     pub msg: Option<Binary>,
 }
 
@@ -245,4 +245,9 @@ enum ReceiverHandleMsg {
 #[cw_serde]
 pub struct NftInfoResponse {
     pub extension: Position,
+}
+
+#[cw_serde]
+pub struct NumTokensResponse {
+    pub count: u64,
 }
