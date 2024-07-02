@@ -1,11 +1,9 @@
-use std::io::Read;
-
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::{next_token_id, CONFIG};
+use crate::state::CONFIG;
 use crate::{entrypoints::*, Config};
 
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
@@ -275,6 +273,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    let original_version =
+        cw_utils::ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     // query all position, then update token id
     let positions: Vec<_> = crate::state::POSITIONS
         .range_raw(deps.storage, None, None, cosmwasm_std::Order::Ascending)
@@ -300,5 +301,5 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
     crate::state::TOKEN_COUNT.save(deps.storage, &token_id)?;
     crate::state::TOKEN_ID.save(deps.storage, &token_id)?;
 
-    Ok(Response::default())
+    Ok(Response::new().add_attribute("new_version", original_version.to_string()))
 }
