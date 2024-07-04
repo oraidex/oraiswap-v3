@@ -37,11 +37,11 @@ pub fn compute_swap_step(
     if by_amount_in {
         let amount_after_fee = amount.big_mul(Percentage::from_integer(1u8) - fee);
 
-        amount_in = (if x_to_y {
+        amount_in = if x_to_y {
             get_delta_x(target_sqrt_price, current_sqrt_price, liquidity, true)
         } else {
             get_delta_y(current_sqrt_price, target_sqrt_price, liquidity, true)
-        })?;
+        }?;
         // if target sqrt_price was hit it will be the next sqrt_price
         if amount_after_fee >= amount_in {
             next_sqrt_price = target_sqrt_price
@@ -54,11 +54,11 @@ pub fn compute_swap_step(
             )?;
         };
     } else {
-        amount_out = (if x_to_y {
+        amount_out = if x_to_y {
             get_delta_y(target_sqrt_price, current_sqrt_price, liquidity, false)
         } else {
             get_delta_x(current_sqrt_price, target_sqrt_price, liquidity, false)
-        })?;
+        }?;
 
         if amount >= amount_out {
             next_sqrt_price = target_sqrt_price
@@ -73,17 +73,17 @@ pub fn compute_swap_step(
     if x_to_y {
         if not_max || !by_amount_in {
             amount_in = get_delta_x(next_sqrt_price, current_sqrt_price, liquidity, true)?
-        };
+        }
         if not_max || by_amount_in {
             amount_out = get_delta_y(next_sqrt_price, current_sqrt_price, liquidity, false)?
         }
     } else {
         if not_max || !by_amount_in {
             amount_in = get_delta_y(current_sqrt_price, next_sqrt_price, liquidity, true)?
-        };
+        }
         if not_max || by_amount_in {
             amount_out = get_delta_x(current_sqrt_price, next_sqrt_price, liquidity, false)?
-        };
+        }
     }
 
     // Amount out can not exceed amount
@@ -298,12 +298,12 @@ pub fn is_enough_amount_to_change_price(
         return Ok(true);
     }
 
-    let next_sqrt_price = (if by_amount_in {
+    let next_sqrt_price = if by_amount_in {
         let amount_after_fee = amount.big_mul(Percentage::from_integer(1) - fee);
         get_next_sqrt_price_from_input(starting_sqrt_price, liquidity, amount_after_fee, x_to_y)
     } else {
         get_next_sqrt_price_from_output(starting_sqrt_price, liquidity, amount, x_to_y)
-    })?;
+    }?;
 
     Ok(starting_sqrt_price.ne(&next_sqrt_price))
 }
