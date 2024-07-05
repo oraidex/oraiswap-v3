@@ -11,8 +11,6 @@ pub enum ContractError {
     #[error("{0}")]
     FromUtf8(#[from] FromUtf8Error),
 
-    
-
     #[error("invalid tick spacing")]
     InvalidTickSpacing,
 
