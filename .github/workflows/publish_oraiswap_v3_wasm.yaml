@@ -43,7 +43,7 @@ jobs:
         if: steps.yarn-cache.outputs.cache-hit != 'true'
         run: yarn global add wasm-pack
       - name: Build
-        run: cd wasm && wasm-pack build --features tsify/js
+        run: cd wasm && wasm-pack build --target nodejs --scope oraichain --features tsify/js
 
       - name: Authenticate with private NPM package
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
@@ -51,7 +51,7 @@ jobs:
       - name: Publish Oraiswap V3 Wasm
         id: publish-oraiswap-v3-wasm
         continue-on-error: true
-        run: npm publish --access public wasm/pkg
+        run: cd wasm/pkg && npm publish --access public 
         env:
           CI: false
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
