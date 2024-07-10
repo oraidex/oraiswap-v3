@@ -51,7 +51,7 @@ jobs:
       - name: Publish Oraiswap V3 Wasm
         id: publish-oraiswap-v3-wasm
         continue-on-error: true
-        run: yarn deploy wasm/pkg
+        run: yarn publish --access public wasm/pkg
         env:
           CI: false
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
