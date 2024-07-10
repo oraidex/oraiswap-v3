@@ -19,7 +19,6 @@ pub struct SingleTokenLiquidity {
 }
 
 #[wasm_bindgen(js_name = getLiquidityByX)]
-#[allow(non_snake_case)]
 pub fn get_liquidity_by_x(
     x: TokenAmount,
     lower_tick: i32,
@@ -94,7 +93,6 @@ pub fn get_liquidity_by_x_sqrt_price(
 }
 
 #[wasm_bindgen(js_name = getLiquidityByY)]
-#[allow(non_snake_case)]
 pub fn get_liquidity_by_y(
     y: TokenAmount,
     lower_tick: i32,

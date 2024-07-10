@@ -24,7 +24,6 @@ pub struct SwapResult {
 }
 
 #[wasm_bindgen(js_name = computeSwapStep)]
-#[allow(non_snake_case)]
 pub fn compute_swap_step(
     current_sqrt_price: SqrtPrice,
     target_sqrt_price: SqrtPrice,
@@ -142,7 +141,6 @@ pub fn compute_swap_step(
 }
 
 #[wasm_bindgen(js_name = getDeltaX)]
-#[allow(non_snake_case)]
 pub fn get_delta_x(
     sqrt_price_a: SqrtPrice,
     sqrt_price_b: SqrtPrice,
@@ -169,7 +167,6 @@ pub fn get_delta_x(
 }
 
 #[wasm_bindgen(js_name = getDeltaY)]
-#[allow(non_snake_case)]
 pub fn get_delta_y(
     sqrt_price_a: SqrtPrice,
     sqrt_price_b: SqrtPrice,
@@ -201,7 +198,6 @@ pub fn get_delta_y(
 }
 
 #[wasm_bindgen(js_name = getNextSqrtPriceFromInput)]
-#[allow(non_snake_case)]
 pub fn get_next_sqrt_price_from_input(
     starting_sqrt_price: SqrtPrice,
     liquidity: Liquidity,
@@ -219,7 +215,6 @@ pub fn get_next_sqrt_price_from_input(
 }
 
 #[wasm_bindgen(js_name = getNextSqrtPriceFromOutput)]
-#[allow(non_snake_case)]
 pub fn get_next_sqrt_price_from_output(
     starting_sqrt_price: SqrtPrice,
     liquidity: Liquidity,
@@ -237,7 +232,6 @@ pub fn get_next_sqrt_price_from_output(
 }
 
 #[wasm_bindgen(js_name = getNextSqrtPriceXUp)]
-#[allow(non_snake_case)]
 pub fn get_next_sqrt_price_x_up(
     starting_sqrt_price: SqrtPrice,
     liquidity: Liquidity,
@@ -263,7 +257,6 @@ pub fn get_next_sqrt_price_x_up(
 }
 
 #[wasm_bindgen(js_name = getNextSqrtPriceYDown)]
-#[allow(non_snake_case)]
 pub fn get_next_sqrt_price_y_down(
     starting_sqrt_price: SqrtPrice,
     liquidity: Liquidity,
@@ -287,7 +280,6 @@ pub fn get_next_sqrt_price_y_down(
 }
 
 #[wasm_bindgen(js_name = calculateAmountDelta)]
-#[allow(non_snake_case)]
 pub fn calculate_amount_delta(
     current_tick_index: i32,
     current_sqrt_price: SqrtPrice,
@@ -341,7 +333,6 @@ pub fn calculate_amount_delta(
 }
 
 #[wasm_bindgen(js_name = isEnoughAmountToChangePrice)]
-#[allow(non_snake_case)]
 pub fn is_enough_amount_to_change_price(
     amount: TokenAmount,
     starting_sqrt_price: SqrtPrice,
@@ -365,7 +356,6 @@ pub fn is_enough_amount_to_change_price(
 }
 
 #[wasm_bindgen(js_name = calculateMaxLiquidityPerTick)]
-#[allow(non_snake_case)]
 pub fn calculate_max_liquidity_per_tick(tick_spacing: u16) -> Liquidity {
     const MAX_TICKS_AMOUNT_SQRT_PRICE_LIMITED: u128 = 2 * MAX_TICK as u128 + 1;
     let ticks_amount_spacing_limited = MAX_TICKS_AMOUNT_SQRT_PRICE_LIMITED / tick_spacing as u128;
@@ -373,7 +363,6 @@ pub fn calculate_max_liquidity_per_tick(tick_spacing: u16) -> Liquidity {
 }
 
 #[wasm_bindgen(js_name = checkTicks)]
-#[allow(non_snake_case)]
 pub fn check_ticks(tick_lower: i32, tick_upper: i32, tick_spacing: u16) -> TrackableResult<()> {
     if tick_lower > tick_upper {
         return Err(err!("tick_lower > tick_upper"));
@@ -385,7 +374,6 @@ pub fn check_ticks(tick_lower: i32, tick_upper: i32, tick_spacing: u16) -> Track
 }
 
 #[wasm_bindgen(js_name = checkTick)]
-#[allow(non_snake_case)]
 pub fn check_tick(tick_index: i32, tick_spacing: u16) -> TrackableResult<()> {
     let min_tick = get_min_tick(tick_spacing);
     let max_tick = get_max_tick(tick_spacing);
@@ -401,7 +389,6 @@ pub fn check_tick(tick_index: i32, tick_spacing: u16) -> TrackableResult<()> {
 }
 
 #[wasm_bindgen(js_name = calculateMinAmountOut)]
-#[allow(non_snake_case)]
 pub fn calculate_min_amount_out(
     expected_amount_out: TokenAmount,
     slippage: Percentage,

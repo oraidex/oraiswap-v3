@@ -39,7 +39,6 @@ impl PoolKey {
 }
 
 #[wasm_bindgen(js_name = newPoolKey)]
-#[allow(non_snake_case)]
 pub fn new_pool_key(
     token_0: String,
     token_1: String,

@@ -31,7 +31,6 @@ pub struct PositionResult {
 }
 
 #[wasm_bindgen(js_name = tickToPositionJs)]
-#[allow(non_snake_case)]
 pub fn tick_to_position_js(tick: i32, tick_spacing: u16) -> TrackableResult<PositionResult> {
     if !(-MAX_TICK..=MAX_TICK).contains(&tick) {
         return Err(err!(&format!(
@@ -74,7 +73,6 @@ pub fn tick_to_position(tick: i32, tick_spacing: u16) -> (u16, u8) {
     (chunk, bit)
 }
 #[wasm_bindgen(js_name = positionToTick)]
-#[allow(non_snake_case)]
 pub fn position_to_tick(chunk: u16, bit: u8, tick_spacing: u16) -> i32 {
     let tick_range_limit = MAX_TICK - MAX_TICK % tick_spacing as i32;
     (chunk as i32 * CHUNK_SIZE * tick_spacing as i32 + bit as i32 * tick_spacing as i32)

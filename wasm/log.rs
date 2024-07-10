@@ -21,7 +21,6 @@ fn sqrt_price_to_x32(decimal: SqrtPrice) -> u64 {
 }
 
 #[wasm_bindgen(js_name = alignTickToSpacing)]
-#[allow(non_snake_case)]
 pub fn align_tick_to_spacing(accurate_tick: i32, tick_spacing: i32) -> i32 {
     match accurate_tick > 0 {
         true => accurate_tick - (accurate_tick % tick_spacing),
@@ -86,7 +85,6 @@ fn log2_iterative_approximation_x32(mut sqrt_price_x32: u64) -> (bool, u64) {
 }
 
 #[wasm_bindgen(js_name = getTickAtSqrtPrice)]
-#[allow(non_snake_case)]
 pub fn get_tick_at_sqrt_price(sqrt_price: SqrtPrice, tick_spacing: u16) -> TrackableResult<i32> {
     if sqrt_price.get() > MAX_SQRT_PRICE || sqrt_price.get() < MIN_SQRT_PRICE {
         return Err(err!("sqrt_price out of range"));
