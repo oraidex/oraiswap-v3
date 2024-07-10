@@ -30,15 +30,15 @@ jobs:
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "::set-output name=dir::$(yarn cache dir)"
-      - uses: actions/cache@v4
-        id: yarn-cache
-        with:
-          path: |
-            ${{ steps.yarn-cache-dir-path.outputs.dir }}
-            ./node_modules/
-          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
+      # - uses: actions/cache@v4
+      #   id: yarn-cache
+      #   with:
+      #     path: |
+      #       ${{ steps.yarn-cache-dir-path.outputs.dir }}
+      #       ./node_modules/
+      #     key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-yarn-
       - name: Install Dependencies
         if: steps.yarn-cache.outputs.cache-hit != 'true'
         run: yarn global add wasm-pack
@@ -61,4 +61,4 @@ jobs:
       #     webhook_id: ${{ secrets.WEBHOOK_ID }}
       #     webhook_token: ${{ secrets.WEBHOOK_TOKEN }}
       #     username: "GitBot"
-      #     message: "Repo oraidex-sdk has just published. Oraidex common-ui: ${{ steps.publish-oraiswap-v3-wasm.outcome }}. ${{ github.event.head_commit.author.name }}"
+      #     message: "Repo oraidexswap_v3_wasm has just published. Oraiswap v3 wasm: ${{ steps.publish-oraiswap-v3-wasm.outcome }}. ${{ github.event.head_commit.author.name }}"
