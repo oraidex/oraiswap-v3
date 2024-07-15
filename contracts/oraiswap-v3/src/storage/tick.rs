@@ -97,15 +97,9 @@ impl Tick {
 
         // When going to higher tick net_liquidity should be added and for going lower subtracted
         if (pool.current_tick_index >= self.index) ^ self.sign {
-            pool.liquidity = pool
-                .liquidity
-                .checked_add(self.liquidity_change)
-                .map_err(|_| ContractError::PoolAddTickLiquidityOverflow)?;
+            pool.liquidity = pool.liquidity.checked_add(self.liquidity_change)?;
         } else {
-            pool.liquidity = pool
-                .liquidity
-                .checked_sub(self.liquidity_change)
-                .map_err(|_| ContractError::PoolSubTickLiquidityUnderflow)?;
+            pool.liquidity = pool.liquidity.checked_sub(self.liquidity_change)?;
         }
 
         Ok(())
@@ -124,21 +118,26 @@ impl Tick {
             max_liquidity_per_tick,
         )?;
 
-        self.update_liquidity_change(liquidity_delta, is_deposit ^ is_upper);
+        self.update_liquidity_change(liquidity_delta, is_deposit ^ is_upper)?;
         Ok(())
     }
 
-    fn update_liquidity_change(&mut self, liquidity_delta: Liquidity, add: bool) {
+    fn update_liquidity_change(
+        &mut self,
+        liquidity_delta: Liquidity,
+        add: bool,
+    ) -> Result<(), ContractError> {
         if self.sign ^ add {
             if { self.liquidity_change } > liquidity_delta {
-                self.liquidity_change -= liquidity_delta;
+                self.liquidity_change = self.liquidity_change.checked_sub(liquidity_delta)?;
             } else {
-                self.liquidity_change = liquidity_delta - self.liquidity_change;
+                self.liquidity_change = liquidity_delta.checked_sub(self.liquidity_change)?;
                 self.sign = !self.sign;
             }
         } else {
-            self.liquidity_change += liquidity_delta;
+            self.liquidity_change = self.liquidity_change.checked_add(liquidity_delta)?;
         }
+        Ok(())
     }
 
     fn calculate_new_liquidity_gross(
@@ -152,14 +151,8 @@ impl Tick {
             return Err(ContractError::InvalidTickLiquidity);
         }
         let new_liquidity = match sign {
-            true => self
-                .liquidity_gross
-                .checked_add(liquidity_delta)
-                .map_err(|_| ContractError::TickAddLiquidityOverflow),
-            false => self
-                .liquidity_gross
-                .checked_sub(liquidity_delta)
-                .map_err(|_| ContractError::TickRemoveLiquidityUnderflow),
+            true => self.liquidity_gross.checked_add(liquidity_delta),
+            false => self.liquidity_gross.checked_sub(liquidity_delta),
         }?;
         // validate in increase liquidity case
         if sign && new_liquidity >= max_liquidity_per_tick {
@@ -357,7 +350,7 @@ mod tests {
             };
             let liquidity_delta = Liquidity::from_integer(3);
             let add = true;
-            tick.update_liquidity_change(liquidity_delta, add);
+            tick.update_liquidity_change(liquidity_delta, add).unwrap();
 
             assert!(tick.sign);
             assert_eq!({ tick.liquidity_change }, Liquidity::from_integer(5));
@@ -370,7 +363,7 @@ mod tests {
             };
             let liquidity_delta = Liquidity::from_integer(3);
             let add = false;
-            tick.update_liquidity_change(liquidity_delta, add);
+            tick.update_liquidity_change(liquidity_delta, add).unwrap();
 
             assert!(!tick.sign);
             assert_eq!({ tick.liquidity_change }, Liquidity::from_integer(5));
@@ -384,7 +377,7 @@ mod tests {
             };
             let liquidity_delta = Liquidity::from_integer(3);
             let add = false;
-            tick.update_liquidity_change(liquidity_delta, add);
+            tick.update_liquidity_change(liquidity_delta, add).unwrap();
 
             assert!(!tick.sign);
             assert_eq!({ tick.liquidity_change }, Liquidity::from_integer(1));
@@ -397,7 +390,7 @@ mod tests {
             };
             let liquidity_delta = Liquidity::from_integer(3);
             let add = true;
-            tick.update_liquidity_change(liquidity_delta, add);
+            tick.update_liquidity_change(liquidity_delta, add).unwrap();
 
             assert!(tick.sign);
             assert_eq!({ tick.liquidity_change }, Liquidity::from_integer(1));

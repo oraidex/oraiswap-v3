@@ -103,13 +103,10 @@ pub fn calculate_swap(
 
         // make remaining amount smaller
         if by_amount_in {
-            remaining_amount = remaining_amount
-                .checked_sub(result.amount_in + result.fee_amount)
-                .map_err(|_| ContractError::Sub)?;
+            remaining_amount =
+                remaining_amount.checked_sub(result.amount_in.checked_add(result.fee_amount)?)?;
         } else {
-            remaining_amount = remaining_amount
-                .checked_sub(result.amount_out)
-                .map_err(|_| ContractError::Sub)?;
+            remaining_amount = remaining_amount.checked_sub(result.amount_out)?;
         }
 
         pool.add_fee(
@@ -117,12 +114,14 @@ pub fn calculate_swap(
             x_to_y,
             state::CONFIG.load(store)?.protocol_fee,
         )?;
-        event_fee_amount += result.fee_amount;
+        event_fee_amount = event_fee_amount.checked_add(result.fee_amount)?;
 
         pool.sqrt_price = result.next_sqrt_price;
 
-        total_amount_in += result.amount_in + result.fee_amount;
-        total_amount_out += result.amount_out;
+        total_amount_in = total_amount_in
+            .checked_add(result.amount_in)?
+            .checked_add(result.fee_amount)?;
+        total_amount_out = total_amount_out.checked_add(result.amount_out)?;
 
         // Fail if price would go over swap limit
         if pool.sqrt_price == sqrt_price_limit && !remaining_amount.is_zero() {
@@ -155,7 +154,7 @@ pub fn calculate_swap(
         )?;
 
         remaining_amount = amount_after_tick_update;
-        total_amount_in += amount_to_add;
+        total_amount_in = total_amount_in.checked_add(amount_to_add)?;
 
         if let UpdatePoolTick::TickInitialized(tick) = tick_update {
             if has_crossed {

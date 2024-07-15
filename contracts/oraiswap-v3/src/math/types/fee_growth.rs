@@ -28,8 +28,7 @@ impl FeeGrowth {
                 .ok_or(ContractError::Mul)?
                 .checked_div(liquidity.here())
                 .ok_or(ContractError::Div)?
-                .try_into()
-                .map_err(|_| (ContractError::Cast))?,
+                .try_into()?,
         ))
     }
 
@@ -40,8 +39,7 @@ impl FeeGrowth {
                 .ok_or(ContractError::Mul)?
                 .checked_div(U256::from(10).pow(U256::from(Self::scale() + Liquidity::scale())))
                 .ok_or(ContractError::Mul)?
-                .try_into()
-                .map_err(|_| (ContractError::Cast))?,
+                .try_into()?,
         ))
     }
 }
@@ -102,6 +100,7 @@ mod tests {
     use super::*;
     use crate::math::consts::{MAX_TICK, TICK_SEARCH_RANGE};
     use crate::math::types::sqrt_price::SqrtPrice;
+    use crate::CASTING_INTEGER_TO_U128_ERROR;
 
     #[test]
     fn test_unchecked_add() {
@@ -266,7 +265,7 @@ mod tests {
             let fee = TokenAmount::max_instance();
             let err = FeeGrowth::from_fee(liqudiity, fee).unwrap_err();
 
-            assert!(matches!(err, ContractError::Cast));
+            assert_eq!(err.to_string(), CASTING_INTEGER_TO_U128_ERROR.to_string());
         }
         // amount = 0
         {
@@ -353,7 +352,7 @@ mod tests {
             let fee_growth = FeeGrowth::max_instance();
 
             let err = fee_growth.to_fee(liquidity).unwrap_err();
-            assert!(matches!(err, ContractError::Cast));
+            assert_eq!(err.to_string(), CASTING_INTEGER_TO_U128_ERROR.to_string());
         }
         // FeeGrowth = 0
         {

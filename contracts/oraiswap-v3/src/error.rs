@@ -11,6 +11,9 @@ pub enum ContractError {
     #[error("{0}")]
     FromUtf8(#[from] FromUtf8Error),
 
+    #[error("{0}")]
+    CheckMathOverUnderFlowError(String),
+
     #[error("invalid tick spacing")]
     InvalidTickSpacing,
 
@@ -53,23 +56,11 @@ pub enum ContractError {
     #[error("subtraction underflow")]
     Sub,
 
-    #[error("update_liquidity: liquidity + liquidity_delta overflow")]
-    UpdateLiquidityPlusOverflow,
-
-    #[error("update_liquidity: liquidity - liquidity_delta underflow")]
-    UpdateLiquidityMinusOverflow,
-
     #[error("empty position pokes")]
     EmptyPositionPokes,
 
     #[error("position not found")]
     PositionNotFound,
-
-    #[error("position add liquidity overflow")]
-    PositionAddLiquidityOverflow,
-
-    #[error("position remove liquidity underflow")]
-    PositionRemoveLiquidityUnderflow,
 
     #[error("price limit reached")]
     PriceLimitReached,
@@ -83,12 +74,6 @@ pub enum ContractError {
     #[error("pool not found")]
     PoolNotFound,
 
-    #[error("pool.liquidity + tick.liquidity_change overflow")]
-    PoolAddTickLiquidityOverflow,
-
-    #[error("pool.liquidity - tick.liquidity_change underflow")]
-    PoolSubTickLiquidityUnderflow,
-
     #[error("tick limit reached")]
     TickLimitReached,
 
@@ -97,12 +82,6 @@ pub enum ContractError {
 
     #[error("tick already exist")]
     TickAlreadyExist,
-
-    #[error("tick add liquidity overflow")]
-    TickAddLiquidityOverflow,
-
-    #[error("tick remove liquidity underflow")]
-    TickRemoveLiquidityUnderflow,
 
     #[error("invalid tick liquidity")]
     InvalidTickLiquidity,
@@ -131,9 +110,6 @@ pub enum ContractError {
     #[error("calculate_sqrt_price: parsing scale failed")]
     ParseScale,
 
-    #[error("extending liquidity overflow")]
-    ExtendLiquidityOverflow,
-
     #[error("big_liquidity -/+ sqrt_price * x")]
     BigLiquidityOverflow,
 
@@ -148,9 +124,6 @@ pub enum ContractError {
 
     #[error("Upper Sqrt Price < Current Sqrt Price")]
     UpperSqrtPriceLess,
-
-    #[error("overflow in calculating liquidity")]
-    OverflowInCalculatingLiquidity,
 
     #[error("Current Sqrt Price < Lower Sqrt Price")]
     CurrentSqrtPriceLess,
@@ -198,5 +171,19 @@ pub enum ContractError {
 impl From<ContractError> for StdError {
     fn from(source: ContractError) -> Self {
         Self::generic_err(source.to_string())
+    }
+}
+
+// Implementing From<String> for ContractError
+impl From<String> for ContractError {
+    fn from(error: String) -> Self {
+        ContractError::CheckMathOverUnderFlowError(error)
+    }
+}
+
+// Implementing From<&str> for ContractError
+impl From<&str> for ContractError {
+    fn from(error: &str) -> Self {
+        ContractError::CheckMathOverUnderFlowError(error.to_string())
     }
 }

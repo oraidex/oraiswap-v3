@@ -103,8 +103,8 @@ impl Position {
         self.fee_growth_inside_x = fee_growth_inside_x;
         self.fee_growth_inside_y = fee_growth_inside_y;
 
-        self.tokens_owed_x += tokens_owed_x;
-        self.tokens_owed_y += tokens_owed_y;
+        self.tokens_owed_x = self.tokens_owed_x.checked_add(tokens_owed_x)?;
+        self.tokens_owed_y = self.tokens_owed_y.checked_add(tokens_owed_y)?;
         Ok(())
     }
 
@@ -118,16 +118,10 @@ impl Position {
             return Err(ContractError::InsufficientLiquidity);
         }
 
-        match sign {
-            true => self
-                .liquidity
-                .checked_add(liquidity_delta)
-                .map_err(|_| ContractError::PositionAddLiquidityOverflow),
-            false => self
-                .liquidity
-                .checked_sub(liquidity_delta)
-                .map_err(|_| ContractError::PositionRemoveLiquidityUnderflow),
-        }
+        Ok(match sign {
+            true => self.liquidity.checked_add(liquidity_delta)?,
+            false => self.liquidity.checked_sub(liquidity_delta)?,
+        })
     }
 
     pub fn claim_fee(
@@ -219,8 +213,8 @@ impl Position {
             tick_spacing,
         )?;
 
-        amount_x += self.tokens_owed_x;
-        amount_y += self.tokens_owed_y;
+        amount_x = amount_x.checked_add(self.tokens_owed_x)?;
+        amount_y = amount_y.checked_add(self.tokens_owed_y)?;
 
         let deinitialize_lower_tick = lower_tick.liquidity_gross.is_zero();
         let deinitialize_upper_tick = upper_tick.liquidity_gross.is_zero();

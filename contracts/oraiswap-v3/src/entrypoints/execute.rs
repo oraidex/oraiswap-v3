@@ -179,9 +179,7 @@ pub fn create_position(
         return Err(ContractError::InvalidTickIndex {});
     }
     let pool_key_db = pool_key.key();
-    let mut pool = POOLS
-        .load(deps.storage, &pool_key_db)
-        .map_err(|_| ContractError::PoolNotFound {})?;
+    let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
 
     let mut lower_tick = match state::get_tick(deps.storage, &pool_key, lower_tick) {
         Ok(tick) => tick,
@@ -586,8 +584,7 @@ pub fn create_pool(
         current_timestamp,
         fee_tier.tick_spacing,
         config.admin,
-    )
-    .map_err(|_| ContractError::CreatePoolError)?;
+    )?;
 
     POOLS.save(deps.storage, &db_key, &pool)?;
 

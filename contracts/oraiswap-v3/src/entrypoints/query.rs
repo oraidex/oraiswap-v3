@@ -321,13 +321,23 @@ pub fn get_liquidity_ticks_amount(
     let max_chunk = state::get_bitmap_item(deps.storage, max_chunk_index, &pool_key).unwrap_or(0);
 
     let mut amount: u32 = 0;
-    amount += active_bits_in_range(min_chunk, min_bit, (CHUNK_SIZE - 1) as u8);
-    amount += active_bits_in_range(max_chunk, 0, max_bit);
+    amount = amount
+        .checked_add(active_bits_in_range(
+            min_chunk,
+            min_bit,
+            (CHUNK_SIZE - 1) as u8,
+        ))
+        .ok_or(ContractError::Add)?;
+    amount = amount
+        .checked_add(active_bits_in_range(max_chunk, 0, max_bit))
+        .ok_or(ContractError::Add)?;
 
     for i in (min_chunk_index + 1)..max_chunk_index {
         let chunk = state::get_bitmap_item(deps.storage, i, &pool_key).unwrap_or(0);
 
-        amount += chunk.count_ones();
+        amount = amount
+            .checked_add(chunk.count_ones())
+            .ok_or(ContractError::Add)?;
     }
 
     Ok(amount)
