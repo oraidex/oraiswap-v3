@@ -1,6 +1,6 @@
 use crate::{
     types::{fee_growth::FeeGrowth, liquidity::Liquidity, sqrt_price::SqrtPrice},
-    Pool,
+    vec_adapter, Pool,
 };
 use decimal::*;
 use traceable_result::*;
@@ -44,6 +44,8 @@ pub struct LiquidityTick {
     pub liquidity_change: Liquidity,
     pub sign: bool,
 }
+
+vec_adapter!(LiquidityTick);
 
 impl Default for Tick {
     fn default() -> Self {

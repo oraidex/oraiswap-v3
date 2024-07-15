@@ -4,7 +4,7 @@ use decimal::*;
 use js_sys::BigInt;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
-use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
+use wasm_bindgen::prelude::wasm_bindgen;
 
 #[decimal(24)]
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Serialize, Deserialize, Tsify)]

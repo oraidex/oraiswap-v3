@@ -2,30 +2,26 @@ use crate::clamm::compute_swap_step;
 use crate::sqrt_price::{get_max_tick, get_min_tick, SqrtPrice};
 use crate::token_amount::TokenAmount;
 use crate::{
-    CalculateSwapResult, FeeTier, Tickmap, UpdatePoolTick, MAX_SQRT_PRICE, MAX_TICK_CROSS,
-    MIN_SQRT_PRICE,
+    CalculateSwapResult, FeeTier, LiquidityTickVec, Tickmap, UpdatePoolTick, MAX_SQRT_PRICE,
+    MAX_TICK_CROSS, MIN_SQRT_PRICE,
 };
 use crate::{LiquidityTick, Pool};
 use decimal::Decimal;
-use serde_wasm_bindgen::from_value;
 use traceable_result::TrackableResult;
 use traceable_result::*;
 use wasm_bindgen::prelude::*;
-
-type LiquidityTicks = Vec<LiquidityTick>;
 
 #[wasm_bindgen(js_name = simulateSwap)]
 pub fn simulate_swap(
     tickmap: Tickmap,
     fee_tier: FeeTier,
     mut pool: Pool,
-    ticks: JsValue,
+    ticks: LiquidityTickVec,
     x_to_y: bool,
     amount: TokenAmount,
     by_amount_in: bool,
     sqrt_price_limit: SqrtPrice,
 ) -> TrackableResult<CalculateSwapResult> {
-    let ticks: LiquidityTicks = from_value(ticks).unwrap();
     if amount.is_zero() {
         return Err(err!("Amount is zero"));
     }
