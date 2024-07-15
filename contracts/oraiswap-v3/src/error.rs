@@ -59,9 +59,6 @@ pub enum ContractError {
     #[error("empty position pokes")]
     EmptyPositionPokes,
 
-    #[error("position not found")]
-    PositionNotFound,
-
     #[error("price limit reached")]
     PriceLimitReached,
 
@@ -70,9 +67,6 @@ pub enum ContractError {
 
     #[error("current_timestamp - pool.start_timestamp underflow")]
     TimestampSubOverflow,
-
-    #[error("pool not found")]
-    PoolNotFound,
 
     #[error("tick limit reached")]
     TickLimitReached,
@@ -107,9 +101,6 @@ pub enum ContractError {
     #[error("calcaule_sqrt_price::checked_div division failed")]
     CheckedDiv,
 
-    #[error("calculate_sqrt_price: parsing scale failed")]
-    ParseScale,
-
     #[error("big_liquidity -/+ sqrt_price * x")]
     BigLiquidityOverflow,
 
@@ -128,9 +119,6 @@ pub enum ContractError {
     #[error("Current Sqrt Price < Lower Sqrt Price")]
     CurrentSqrtPriceLess,
 
-    #[error("overflow while casting to TokenAmount")]
-    OverflowCastingTokenAmount,
-
     #[error("unauthorized")]
     Unauthorized {},
 
@@ -146,20 +134,11 @@ pub enum ContractError {
     #[error("no gain swap")]
     NoGainSwap,
 
-    #[error("swap failed")]
-    SwapFailed,
-
     #[error("amount under minimum amount out")]
     AmountUnderMinimumAmountOut,
 
-    #[error("invalid pool key")]
-    InvalidPoolKey,
-
     #[error("pool already exist")]
     PoolAlreadyExist,
-
-    #[error("pool not created")]
-    CreatePoolError,
 
     #[error("FeeTierNotFound")]
     FeeTierNotFound,
