@@ -35,8 +35,7 @@ impl SecondsPerLiquidity {
                 .ok_or(ContractError::Mul)?
                 .checked_div(liquidity.here())
                 .ok_or(ContractError::Div)?
-                .try_into()
-                .map_err(|_| ContractError::Cast)?,
+                .try_into()?,
         ))
     }
 }
@@ -74,7 +73,9 @@ pub mod tests {
 
     use super::*;
 
-    use crate::math::types::seconds_per_liquidity::SecondsPerLiquidity;
+    use crate::{
+        math::types::seconds_per_liquidity::SecondsPerLiquidity, CASTING_INTEGER_TO_U128_ERROR,
+    };
     #[test]
     fn test_domain_calculate_seconds_per_liquidity_global() {
         // current_timestamp <= last_timestamp
@@ -148,7 +149,7 @@ pub mod tests {
             )
             .unwrap_err();
 
-            assert!(matches!(err, ContractError::Cast));
+            assert_eq!(err.to_string(), CASTING_INTEGER_TO_U128_ERROR.to_string());
         }
 
         let one_liquidity = Liquidity::new(1);

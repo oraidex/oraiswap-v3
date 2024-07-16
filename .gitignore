@@ -31,3 +31,6 @@ data/
 # code analyzer
 .scannerwork/
 clippy-report.json
+
+# code coverage
+*.html

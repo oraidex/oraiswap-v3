@@ -5,6 +5,8 @@ use crate::math::consts::*;
 use crate::math::types::{liquidity::*, percentage::*, sqrt_price::*, token_amount::*};
 use crate::ContractError;
 
+pub const CASTING_INTEGER_TO_U128_ERROR: &str = "integer overflow when casting to u128";
+
 #[cw_serde]
 pub struct SwapResult {
     pub next_sqrt_price: SqrtPrice,
@@ -155,9 +157,7 @@ pub fn get_delta_y(
             .ok_or(ContractError::Div)?,
     };
 
-    Ok(TokenAmount(
-        delta_y.try_into().map_err(|_| ContractError::Cast)?,
-    ))
+    Ok(TokenAmount(delta_y.try_into()?))
 }
 
 fn get_next_sqrt_price_from_input(
@@ -199,8 +199,7 @@ pub fn get_next_sqrt_price_x_up(
     if x.is_zero() {
         return Ok(starting_sqrt_price);
     };
-    let price_delta = SqrtPrice::checked_from_decimal_to_value(liquidity)
-        .map_err(|_| ContractError::ExtendLiquidityOverflow)?;
+    let price_delta = SqrtPrice::checked_from_decimal_to_value(liquidity)?;
 
     let denominator = match add_x {
         true => price_delta.checked_add(starting_sqrt_price.big_mul_to_value(x)),
@@ -220,22 +219,17 @@ fn get_next_sqrt_price_y_down(
     y: TokenAmount,
     add_y: bool,
 ) -> Result<SqrtPrice, ContractError> {
-    let numerator: U256 = SqrtPrice::checked_from_decimal_to_value(y).unwrap();
+    let numerator: U256 = SqrtPrice::checked_from_decimal_to_value(y)?;
 
-    let denominator: U256 = SqrtPrice::checked_from_decimal_to_value(liquidity)
-        .map_err(|_| ContractError::ExtendLiquidityOverflow)?;
+    let denominator: U256 = SqrtPrice::checked_from_decimal_to_value(liquidity)?;
 
-    if add_y {
+    Ok(if add_y {
         let quotient = SqrtPrice::checked_big_div_values(numerator, denominator)?;
-        starting_sqrt_price
-            .checked_add(quotient)
-            .map_err(|_| ContractError::Add)
+        starting_sqrt_price.checked_add(quotient)?
     } else {
         let quotient = SqrtPrice::checked_big_div_values_up(numerator, denominator)?;
-        starting_sqrt_price
-            .checked_sub(quotient)
-            .map_err(|_| ContractError::Sub)
-    }
+        starting_sqrt_price.checked_sub(quotient)?
+    })
 }
 
 pub fn calculate_amount_delta(
@@ -353,6 +347,8 @@ pub fn calculate_min_amount_out(
 mod tests {
 
     use super::*;
+    const ADD_OVERFLOW_ERROR: &str = "checked_add: (self + rhs) additional overflow";
+    const SUB_OVERFLOW_ERROR: &str = "checked_sub: (self - rhs) subtraction underflow";
 
     #[test]
     fn test_calculate_min_amount_out() {
@@ -1363,7 +1359,7 @@ mod tests {
                     false,
                 )
                 .unwrap_err();
-                assert!(matches!(err, ContractError::Cast));
+                assert_eq!(err.to_string(), CASTING_INTEGER_TO_U128_ERROR.to_string());
             }
         }
         // overflow in sqrt_price difference
@@ -1376,7 +1372,7 @@ mod tests {
                     true,
                 )
                 .unwrap_err();
-                assert!(matches!(err, ContractError::Add));
+                assert_eq!(err.to_string(), ADD_OVERFLOW_ERROR.to_string());
             }
             {
                 let err = get_next_sqrt_price_y_down(
@@ -1387,7 +1383,7 @@ mod tests {
                 )
                 .unwrap_err();
 
-                assert!(matches!(err, ContractError::Sub));
+                assert_eq!(err.to_string(), SUB_OVERFLOW_ERROR.to_string());
             }
         }
 
@@ -1409,7 +1405,7 @@ mod tests {
                         true,
                     )
                     .unwrap_err();
-                    assert!(matches!(err, ContractError::Cast));
+                    assert_eq!(err.to_string(), CASTING_INTEGER_TO_U128_ERROR.to_string());
                 }
                 {
                     let err = get_next_sqrt_price_y_down(
@@ -1419,7 +1415,7 @@ mod tests {
                         false,
                     )
                     .unwrap_err();
-                    assert!(matches!(err, ContractError::Cast));
+                    assert_eq!(err.to_string(), CASTING_INTEGER_TO_U128_ERROR.to_string());
                 }
             }
         }
@@ -2265,7 +2261,7 @@ mod tests {
                 )
                 .unwrap_err();
 
-                assert!(matches!(err, ContractError::Cast));
+                assert_eq!(err.to_string(), CASTING_INTEGER_TO_U128_ERROR.to_string());
             }
         }
     }

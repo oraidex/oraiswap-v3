@@ -81,10 +81,10 @@ impl Pool {
 
         if in_x {
             self.fee_growth_global_x = self.fee_growth_global_x.unchecked_add(fee_growth);
-            self.fee_protocol_token_x += protocol_fee;
+            self.fee_protocol_token_x = self.fee_protocol_token_x.checked_add(protocol_fee)?;
         } else {
             self.fee_growth_global_y = self.fee_growth_global_y.unchecked_add(fee_growth);
-            self.fee_protocol_token_y += protocol_fee;
+            self.fee_protocol_token_y = self.fee_protocol_token_y.checked_add(protocol_fee)?;
         }
         Ok(())
     }
@@ -107,15 +107,9 @@ impl Pool {
 
         if update_liquidity {
             if liquidity_sign {
-                self.liquidity = self
-                    .liquidity
-                    .checked_add(liquidity_delta)
-                    .map_err(|_| ContractError::UpdateLiquidityPlusOverflow)?;
+                self.liquidity = self.liquidity.checked_add(liquidity_delta)?;
             } else {
-                self.liquidity = self
-                    .liquidity
-                    .checked_sub(liquidity_delta)
-                    .map_err(|_| ContractError::UpdateLiquidityMinusOverflow)?;
+                self.liquidity = self.liquidity.checked_sub(liquidity_delta)?;
             }
         }
 

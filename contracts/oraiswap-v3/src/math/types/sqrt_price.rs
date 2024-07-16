@@ -32,8 +32,7 @@ impl SqrtPrice {
             .ok_or(ContractError::U320ToU256)?
             .checked_div(Self::one::<U256>())
             .ok_or(ContractError::Div)?
-            .try_into()
-            .map_err(|_| ContractError::Cast)?;
+            .try_into()?;
         Ok(TokenAmount(result))
     }
 
@@ -58,8 +57,7 @@ impl SqrtPrice {
             .ok_or(ContractError::Add)?
             .checked_div(Self::one::<U256>())
             .ok_or(ContractError::Div)?
-            .try_into()
-            .map_err(|_| ContractError::Cast)?;
+            .try_into()?;
         Ok(TokenAmount::new(result))
     }
 
@@ -87,8 +85,7 @@ impl SqrtPrice {
                 .ok_or(ContractError::Mul)?
                 .checked_div(denominator)
                 .ok_or(ContractError::Div)?
-                .try_into()
-                .map_err(|_| ContractError::Cast)?,
+                .try_into()?,
         ))
     }
 
@@ -110,8 +107,7 @@ impl SqrtPrice {
                 .ok_or(ContractError::Add)?
                 .checked_div(denominator)
                 .ok_or(ContractError::Div)?
-                .try_into()
-                .map_err(|_| ContractError::Cast)?,
+                .try_into()?,
         ))
     }
 }
@@ -204,14 +200,9 @@ pub fn calculate_sqrt_price(tick_index: i32) -> Result<SqrtPrice, ContractError>
 
     // Parsing to the Sqrt_price type by the end by convention (should always have 12 zeros at the end)
     Ok(if tick_index >= 0 {
-        SqrtPrice::checked_from_decimal(sqrt_price).map_err(|_| ContractError::ParseFromScale)?
+        SqrtPrice::checked_from_decimal(sqrt_price)?
     } else {
-        SqrtPrice::checked_from_decimal(
-            FixedPoint::from_integer(1)
-                .checked_div(sqrt_price)
-                .map_err(|_| ContractError::CheckedDiv)?,
-        )
-        .map_err(|_| ContractError::ParseScale)?
+        SqrtPrice::checked_from_decimal(FixedPoint::from_integer(1).checked_div(sqrt_price)?)?
     })
 }
 

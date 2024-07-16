@@ -136,8 +136,7 @@ pub fn get_liquidity_by_x_sqrt_price(
                 * U256::from(nominator.get())
                 * U256::from(Liquidity::from_integer(1).get())
                 / U256::from(denominator.get()))
-            .try_into()
-            .map_err(|_| ContractError::OverflowInCalculatingLiquidity)?,
+            .try_into()?,
         );
         return Ok(SingleTokenLiquidity {
             l: liquidity,
@@ -154,8 +153,7 @@ pub fn get_liquidity_by_x_sqrt_price(
             * U256::from(nominator.get())
             * U256::from(Liquidity::from_integer(1).get())
             / U256::from(denominator.get()))
-        .try_into()
-        .map_err(|_| ContractError::OverflowInCalculatingLiquidity)?,
+        .try_into()?,
     );
 
     let sqrt_price_diff = current_sqrt_price - lower_sqrt_price;
@@ -209,8 +207,7 @@ pub fn get_liquidity_by_y_sqrt_price(
                 * U256::from(SqrtPrice::from_integer(1).get())
                 * U256::from(Liquidity::from_integer(1).get())
                 / U256::from(sqrt_price_diff.get()))
-            .try_into()
-            .map_err(|_| ContractError::OverflowInCalculatingLiquidity)?,
+            .try_into()?,
         );
         return Ok(SingleTokenLiquidity {
             l: liquidity,
@@ -224,8 +221,7 @@ pub fn get_liquidity_by_y_sqrt_price(
             * U256::from(SqrtPrice::from_integer(1).get())
             * U256::from(Liquidity::from_integer(1).get())
             / U256::from(sqrt_price_diff.get()))
-        .try_into()
-        .map_err(|_| ContractError::OverflowInCalculatingLiquidity)?,
+        .try_into()?,
     );
     let denominator =
         (current_sqrt_price.big_mul(upper_sqrt_price)).big_div(SqrtPrice::from_integer(1));
@@ -252,14 +248,11 @@ pub fn calculate_x(
         TokenAmount::new(
             ((U256::from(common) + U256::from(Liquidity::from_integer(1).get()) - U256::from(1))
                 / U256::from(Liquidity::from_integer(1).get()))
-            .try_into()
-            .map_err(|_| ContractError::OverflowCastingTokenAmount)?,
+            .try_into()?,
         )
     } else {
         TokenAmount::new(
-            (U256::from(common) / U256::from(Liquidity::from_integer(1).get()))
-                .try_into()
-                .map_err(|_| ContractError::OverflowCastingTokenAmount)?,
+            (U256::from(common) / U256::from(Liquidity::from_integer(1).get())).try_into()?,
         )
     })
 }
@@ -275,15 +268,13 @@ pub fn calculate_y(
             (((U256::from(sqrt_price_diff.get()) * U256::from(shifted_liquidity))
                 + U256::from(SqrtPrice::from_integer(1).get() - 1))
                 / U256::from(SqrtPrice::from_integer(1).get()))
-            .try_into()
-            .map_err(|_| ContractError::OverflowCastingTokenAmount)?,
+            .try_into()?,
         )
     } else {
         TokenAmount::new(
             (U256::from(sqrt_price_diff.get()) * U256::from(shifted_liquidity)
                 / U256::from(SqrtPrice::from_integer(1).get()))
-            .try_into()
-            .map_err(|_| ContractError::OverflowCastingTokenAmount)?,
+            .try_into()?,
         )
     })
 }

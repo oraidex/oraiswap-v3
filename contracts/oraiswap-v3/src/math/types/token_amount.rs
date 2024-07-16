@@ -22,8 +22,7 @@ impl TokenAmount {
         let result: u128 = value
             .checked_div(SqrtPrice::one())
             .ok_or(ContractError::Div)?
-            .try_into()
-            .map_err(|_| ContractError::Cast)?;
+            .try_into()?;
 
         Ok(Self(result))
     }
@@ -34,8 +33,7 @@ impl TokenAmount {
             .ok_or(ContractError::Add)?
             .checked_div(SqrtPrice::one())
             .ok_or(ContractError::Div)?
-            .try_into()
-            .map_err(|_| ContractError::Cast)?;
+            .try_into()?;
         Ok(Self(result))
     }
 }

@@ -149,9 +149,7 @@ pub fn get_tick(
 ) -> Result<Tick, ContractError> {
     let db_key = tick_key(pool_key, index);
 
-    let tick = TICKS
-        .load(store, &db_key)
-        .map_err(|_| ContractError::TickNotFound)?;
+    let tick = TICKS.load(store, &db_key)?;
 
     Ok(tick)
 }
@@ -199,9 +197,7 @@ pub fn remove_position(
 ) -> Result<Position, ContractError> {
     let positions_length = get_position_length(store, account_id) - 1;
     let db_key = position_key(account_id, index);
-    let position = POSITIONS
-        .load(store, &db_key)
-        .map_err(|_| ContractError::PositionNotFound)?;
+    let position = POSITIONS.load(store, &db_key)?;
 
     if index < positions_length {
         let prev_db_key = position_key(account_id, positions_length);
@@ -238,9 +234,7 @@ pub fn get_position(
 }
 
 pub fn get_position_by_key(store: &dyn Storage, db_key: &[u8]) -> Result<Position, ContractError> {
-    let position = POSITIONS
-        .load(store, db_key)
-        .map_err(|_| ContractError::PositionNotFound)?;
+    let position = POSITIONS.load(store, db_key)?;
 
     Ok(position)
 }
