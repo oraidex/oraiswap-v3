@@ -12,7 +12,6 @@ pub struct IncentiveRecord {
     pub reward_token: AssetInfo,
     pub remaining: TokenAmount,
     pub start_timestamp: u64,
-    pub liquidity: Liquidity,
     pub incentive_growth_global: FeeGrowth,
     pub last_updated: u64,
 }
@@ -34,6 +33,7 @@ pub struct PositionIncentives {
 impl IncentiveRecord {
     pub fn update_global_incentive_growth(
         &mut self,
+        pool_liquidity: Liquidity,
         current_timestamp: u64,
     ) -> Result<(), ContractError> {
         if current_timestamp.lt(&self.start_timestamp) || current_timestamp.lt(&self.last_updated) {
@@ -47,15 +47,21 @@ impl IncentiveRecord {
             total_emit = self.remaining;
         };
 
-        let incentive_growth = FeeGrowth::from_fee(self.liquidity, total_emit);
+        let incentive_growth = FeeGrowth::from_fee(pool_liquidity, total_emit);
         match incentive_growth {
-            Ok(value) => self.incentive_growth_global += value,
+            Ok(value) => {
+                self.incentive_growth_global += value;
+                self.remaining = self.remaining - total_emit;
+            }
             Err(_) => {
                 //  Do nothing if there is an error when converting the amount to FeeGrowth
+                // Potential errors in calculating incentive growth:
+                // - overflow
+                // - liquidity is zero
             }
         }
         self.last_updated = current_timestamp;
-        self.remaining = self.remaining - total_emit;
+
         Ok(())
     }
 }

@@ -195,7 +195,7 @@ impl Pool {
         current_timestamp: u64,
     ) -> Result<(), ContractError> {
         for record in &mut self.incentives {
-            record.update_global_incentive_growth(current_timestamp)?;
+            record.update_global_incentive_growth(self.liquidity, current_timestamp)?;
         }
 
         Ok(())
