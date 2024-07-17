@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use cw_multi_test::{next_block, App, AppResponse, Contract, Executor};
 
 use crate::{
-    interface::{AssetInfo, PoolWithPoolKey, QuoteResult, SwapHop},
+    interface::{Asset, AssetInfo, PoolWithPoolKey, QuoteResult, SwapHop},
     liquidity::Liquidity,
     msg::{self},
     percentage::Percentage,
@@ -619,6 +619,21 @@ impl MockApp {
         )
     }
 
+    pub fn get_position_incentives(
+        &self,
+        dex: &str,
+        owner_id: &str,
+        index: u32,
+    ) -> StdResult<Vec<Asset>> {
+        self.query(
+            Addr::unchecked(dex),
+            &msg::QueryMsg::PositionIncentives {
+                owner_id: Addr::unchecked(owner_id),
+                index,
+            },
+        )
+    }
+
     pub fn get_all_positions(&self, dex: &str, owner_id: &str) -> StdResult<Vec<Position>> {
         self.query(
             Addr::unchecked(dex),
@@ -855,6 +870,13 @@ pub mod macros {
         }};
     }
     pub(crate) use get_position;
+
+    macro_rules! get_position_incentives {
+        ($app:ident, $dex_address:expr, $index:expr, $owner:tt) => {{
+            $app.get_position_incentives($dex_address.as_str(), $owner, $index)
+        }};
+    }
+    pub(crate) use get_position_incentives;
 
     macro_rules! get_tick {
         ($app:ident, $dex_address:expr, $key:expr, $index:expr) => {{

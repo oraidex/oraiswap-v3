@@ -4,8 +4,8 @@ use cw_storage_plus::Bound;
 use crate::{
     get_max_chunk, get_min_chunk,
     interface::{
-        AllNftInfoResponse, Approval, ApprovedForAllResponse, NftInfoResponse, NumTokensResponse,
-        OwnerOfResponse, PoolWithPoolKey, QuoteResult, SwapHop, TokensResponse,
+        AllNftInfoResponse, Approval, ApprovedForAllResponse, Asset, NftInfoResponse,
+        NumTokensResponse, OwnerOfResponse, PoolWithPoolKey, QuoteResult, SwapHop, TokensResponse,
     },
     percentage::Percentage,
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
@@ -512,4 +512,31 @@ pub fn query_all_tokens(
 pub fn query_num_tokens(deps: Deps) -> Result<NumTokensResponse, ContractError> {
     let count = state::num_tokens(deps.storage)?;
     Ok(NumTokensResponse { count })
+}
+
+/// Retrieves incentives information of a single position.
+///
+/// # Parameters
+/// - `owner_id`: An `Addr` identifying the user who owns the position.
+/// - `index`: The index of the user position.
+///
+/// # Errors
+/// - Fails if position cannot be found    
+pub fn query_position_incentives(
+    deps: Deps,
+    env: Env,
+    owner_id: Addr,
+    index: u32,
+) -> Result<Vec<Asset>, ContractError> {
+    let mut position = state::get_position(deps.storage, &owner_id, index)?;
+    let mut pool = state::get_pool(deps.storage, &position.pool_key)?;
+    let lower_tick = state::get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
+    let upper_tick = state::get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
+    // update global incentive
+    pool.update_global_incentives(env.block.time.seconds())?;
+    position.update_incentives(&pool, &upper_tick, &lower_tick)?;
+
+    let incentives = position.claim_incentives(&pool, &upper_tick, &lower_tick)?;
+
+    Ok(incentives)
 }

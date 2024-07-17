@@ -301,6 +301,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&query_all_tokens(deps, start_after, limit)?)
         }
         QueryMsg::NumTokens {} => to_binary(&query_num_tokens(deps)?),
+        QueryMsg::PositionIncentives { owner_id, index } => {
+            to_binary(&query_position_incentives(deps, env, owner_id, index)?)
+        }
     }
 }
 

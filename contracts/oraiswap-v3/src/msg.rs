@@ -4,8 +4,8 @@ use cosmwasm_std::{Addr, Binary};
 use cw20::Expiration;
 
 use crate::interface::{
-    AllNftInfoResponse, ApprovedForAllResponse, AssetInfo, NftInfoResponse, NumTokensResponse,
-    OwnerOfResponse, PoolWithPoolKey, PositionTick, QuoteResult, TokensResponse,
+    AllNftInfoResponse, ApprovedForAllResponse, Asset, AssetInfo, NftInfoResponse,
+    NumTokensResponse, OwnerOfResponse, PoolWithPoolKey, PositionTick, QuoteResult, TokensResponse,
 };
 #[allow(unused_imports)]
 use crate::{
@@ -301,4 +301,7 @@ pub enum QueryMsg {
         start_after: Option<u64>,
         limit: Option<u32>,
     },
+
+    #[returns(Vec<Asset>)]
+    PositionIncentives { owner_id: Addr, index: u32 },
 }
