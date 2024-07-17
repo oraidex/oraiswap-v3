@@ -281,7 +281,7 @@ pub fn swap(
     // update incentives first
     let mut pool = state::get_pool(deps.storage, &pool_key)?;
     pool.update_global_incentives(env.block.time.seconds())?;
-    state::POOLS.save(deps.storage, &pool_key.key(), &pool)?;
+    POOLS.save(deps.storage, &pool_key.key(), &pool)?;
 
     let mut msgs = vec![];
 
@@ -343,7 +343,7 @@ pub fn swap_route(
     for hop in &swaps {
         let mut pool = state::get_pool(deps.storage, &hop.pool_key)?;
         pool.update_global_incentives(env.block.time.seconds())?;
-        state::POOLS.save(deps.storage, &hop.pool_key.key(), &pool)?;
+        POOLS.save(deps.storage, &hop.pool_key.key(), &pool)?;
     }
 
     let mut msgs = vec![];
@@ -915,7 +915,6 @@ pub fn create_incentive(
         reward_token: reward_token.clone(),
         remaining: total_reward,
         start_timestamp: start_timestamp.unwrap_or(env.block.time.seconds()),
-        liquidity: pool.liquidity,
         incentive_growth_global: FeeGrowth(0),
         last_updated: env.block.time.seconds(),
     };
