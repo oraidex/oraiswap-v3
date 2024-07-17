@@ -301,7 +301,7 @@ fn test_swap_y_to_x() {
 
 #[test]
 fn test_swap_not_enough_liquidity_token_x() {
-    let protocol_fee = Percentage::from_scale(6, 3);
+    let protocol_fee: Percentage = Percentage::from_scale(6, 3);
     let mut app = MockApp::new(&[]);
     let dex = create_dex!(app, protocol_fee);
 

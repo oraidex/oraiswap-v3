@@ -11,8 +11,7 @@ use std::collections::HashMap;
 use cw_multi_test::{next_block, App, AppResponse, Contract, Executor};
 
 use crate::{
-    interface::SwapHop,
-    interface::{PoolWithPoolKey, QuoteResult},
+    interface::{AssetInfo, PoolWithPoolKey, QuoteResult, SwapHop},
     liquidity::Liquidity,
     msg::{self},
     percentage::Percentage,
@@ -34,7 +33,7 @@ macro_rules! create_entry_points_testing {
 }
 
 pub struct MockApp {
-    app: App,
+    pub app: App,
     token_map: HashMap<String, Addr>, // map token name to address
     token_id: u64,
     dex_id: u64,
@@ -670,6 +669,30 @@ impl MockApp {
             None => panic!("Must return generic error"),
         }
     }
+
+    pub fn create_incentive(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        pool_key: &PoolKey,
+        reward_token: AssetInfo,
+        total_reward: TokenAmount,
+        reward_per_sec: TokenAmount,
+        start_timestamp: Option<u64>,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &msg::ExecuteMsg::CreateIncentive {
+                pool_key: pool_key.clone(),
+                reward_token,
+                total_reward,
+                reward_per_sec,
+                start_timestamp,
+            },
+            &[],
+        )
+    }
 }
 
 pub fn extract_amount(events: &[Event], key: &str) -> Option<TokenAmount> {
@@ -775,6 +798,21 @@ pub mod macros {
         }};
     }
     pub(crate) use fee_tier_exist;
+
+    macro_rules! create_incentive {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $reward_token:expr, $total_reward:expr, $reward_per_sec:expr, $start_timestamp:expr, $caller:tt) => {{
+            $app.create_incentive(
+                $caller,
+                $dex_address.as_str(),
+                &$pool_key,
+                $reward_token,
+                $total_reward,
+                $reward_per_sec,
+                $start_timestamp,
+            )
+        }};
+    }
+    pub(crate) use create_incentive;
 
     macro_rules! create_position {
         ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick:expr, $upper_tick:expr, $liquidity_delta:expr, $slippage_limit_lower:expr, $slippage_limit_upper:expr, $caller:tt) => {{
