@@ -107,6 +107,94 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_update_global_incentive_growth() {
+        let mut record = IncentiveRecord {
+            id: 0,
+            reward_per_sec: TokenAmount(0),
+            reward_token: AssetInfo::NativeToken {
+                denom: "orai".to_string(),
+            },
+            remaining: TokenAmount(1000000),
+            start_timestamp: 1000,
+            incentive_growth_global: FeeGrowth(0),
+            last_updated: 1000,
+        };
+        let mut pool_liquidity = Liquidity::new(1000000);
+
+        // case 1: CurrentTimestamp < start_timestamp => no update
+        record
+            .update_global_incentive_growth(pool_liquidity, 900)
+            .unwrap();
+        assert_eq!(record.last_updated, 1000);
+        assert_eq!(record.incentive_growth_global, FeeGrowth(0));
+
+        // case 2: CurrentTimestamp < last_updated => no update
+        record.last_updated = 1100;
+        record
+            .update_global_incentive_growth(pool_liquidity, 1099)
+            .unwrap();
+        assert_eq!(record.last_updated, 1100);
+        assert_eq!(record.incentive_growth_global, FeeGrowth(0));
+
+        // case 3: liquidity = 0 => still success, but don;t update incentive_growth_global
+        pool_liquidity = Liquidity::new(0);
+        record.reward_per_sec = TokenAmount(100);
+        record
+            .update_global_incentive_growth(pool_liquidity, 1200)
+            .unwrap();
+        assert_eq!(record.last_updated, 1200);
+        assert_eq!(record.remaining, TokenAmount(1000000));
+        assert_eq!(record.incentive_growth_global, FeeGrowth(0));
+
+        // case 4: overflow => still success, but don;t update incentive_growth_global
+        pool_liquidity = Liquidity::new(1);
+        record.reward_per_sec = TokenAmount(1000);
+        record
+            .update_global_incentive_growth(pool_liquidity, 1300)
+            .unwrap();
+        assert_eq!(record.last_updated, 1300);
+        assert_eq!(record.remaining, TokenAmount(1000000));
+        assert_eq!(record.incentive_growth_global, FeeGrowth(0));
+
+        // case 4: happy case
+        pool_liquidity = Liquidity::new(1000);
+        record.reward_per_sec = TokenAmount(100);
+        record
+            .update_global_incentive_growth(pool_liquidity, 1400)
+            .unwrap();
+        assert_eq!(record.last_updated, 1400);
+        assert_eq!(record.remaining, TokenAmount(990000));
+        assert_eq!(
+            record.incentive_growth_global,
+            FeeGrowth(100000000000000000000000000000000000)
+        );
+
+        // case 5: total emit > remaining reward
+        pool_liquidity = Liquidity::new(100000);
+        record.reward_per_sec = TokenAmount(10000);
+        record
+            .update_global_incentive_growth(pool_liquidity, 1500)
+            .unwrap();
+        assert_eq!(record.last_updated, 1500);
+        assert_eq!(record.remaining, TokenAmount(0));
+        assert_eq!(
+            record.incentive_growth_global,
+            FeeGrowth(199000000000000000000000000000000000)
+        );
+
+        // case 6: no reward remaining
+        record
+            .update_global_incentive_growth(pool_liquidity, 1600)
+            .unwrap();
+        assert_eq!(record.last_updated, 1600);
+        assert_eq!(record.remaining, TokenAmount(0));
+        assert_eq!(
+            record.incentive_growth_global,
+            FeeGrowth(199000000000000000000000000000000000)
+        );
+    }
+
+    #[test]
     fn test_calculate_incentive_growth_inside() {
         // <──────────────                    ──────────────>
         // incentive_outside_t0| incentive_growth_inside |incentive_outside_t1
