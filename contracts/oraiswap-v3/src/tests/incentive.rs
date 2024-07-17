@@ -63,11 +63,49 @@ pub fn test_create_incentive() {
         vec![IncentiveRecord {
             id: 0,
             reward_per_sec,
-            reward_token,
+            reward_token: reward_token.clone(),
             remaining: total_reward,
             start_timestamp: current_time,
             incentive_growth_global: FeeGrowth(0),
             last_updated: current_time
         }]
+    );
+
+    // create other incentives
+    let new_timestamp_time = app.app.block_info().time.seconds();
+    create_incentive!(
+        app,
+        dex,
+        pool_key,
+        reward_token.clone(),
+        total_reward,
+        reward_per_sec,
+        start_timestamp,
+        "alice"
+    )
+    .unwrap();
+    let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
+    assert_eq!(
+        pool.incentives,
+        vec![
+            IncentiveRecord {
+                id: 0,
+                reward_per_sec,
+                reward_token: reward_token.clone(),
+                remaining: total_reward,
+                start_timestamp: current_time,
+                incentive_growth_global: FeeGrowth(0),
+                last_updated: new_timestamp_time
+            },
+            IncentiveRecord {
+                id: 1,
+                reward_per_sec,
+                reward_token: reward_token.clone(),
+                remaining: total_reward,
+                start_timestamp: new_timestamp_time,
+                incentive_growth_global: FeeGrowth(0),
+                last_updated: new_timestamp_time
+            }
+        ]
     );
 }
