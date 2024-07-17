@@ -99,3 +99,195 @@ pub fn calculate_incentive_growth_inside(
 
     incentive_growth_inside
 }
+
+#[cfg(test)]
+mod tests {
+    use decimal::*;
+
+    use super::*;
+
+    #[test]
+    fn test_calculate_incentive_growth_inside() {
+        // <──────────────                    ──────────────>
+        // incentive_outside_t0| incentive_growth_inside |incentive_outside_t1
+        //<───────────── t0 ────── C ────── t1 ───────────────────>
+
+        // incentive_growth_inside = incentive_growth_global - t0.incentive_outside - t1.incentive_outside
+
+        let incentive_growth_global = FeeGrowth::from_integer(15);
+
+        let tick_lower_index = -2;
+        let tick_lower_incentive_growth_outside = FeeGrowth::new(0);
+
+        let tick_upper_index = 2;
+        let tick_upper_incentive_growth_outside = FeeGrowth::from_integer(0);
+
+        // current tick inside range
+        // lower    current     upper
+        // |        |           |
+        // -2       0           2
+        {
+            // index and fee global
+            let tick_current = 0;
+            let incentive_growth_inside = calculate_incentive_growth_inside(
+                tick_lower_index,
+                tick_lower_incentive_growth_outside,
+                tick_upper_index,
+                tick_upper_incentive_growth_outside,
+                tick_current,
+                incentive_growth_global,
+            );
+
+            assert_eq!(incentive_growth_inside, FeeGrowth::from_integer(15)); // x incentive growth inside
+        }
+        //                      ───────incentive_outside_t0──────────>
+        //                     |incentive_growth_inside| incentive_outside_t1
+        // ─────── c ─────── t0 ──────────────> t1 ───────────>
+        //
+        // incentive_growth_inside = t0.incentive_outisde - t1.incentive_outside
+        //
+        // current tick below range
+        // current  lower       upper
+        // |        |           |
+        // -4       2           2
+        {
+            let tick_current = -4;
+            let incentive_growth_inside = calculate_incentive_growth_inside(
+                tick_lower_index,
+                tick_lower_incentive_growth_outside,
+                tick_upper_index,
+                tick_upper_incentive_growth_outside,
+                tick_current,
+                incentive_growth_global,
+            );
+
+            assert_eq!(incentive_growth_inside, FeeGrowth::new(0)); // incentive growth inside
+        }
+
+        // <──────────incentive_outside_t0──────────
+        // incentive_outside_t1  | incentive_growth_inside|
+        // ────────────── t1 ──────────────── t0 ─────── c ───────────>
+
+        // incentive_growth_inside = t0.incentive_outisde - t1.incentive_outside
+
+        // current tick upper range
+        // lower    upper       current
+        // |        |           |
+        // -2       2           4
+        {
+            let tick_current = 4;
+            let incentive_growth_inside = calculate_incentive_growth_inside(
+                tick_lower_index,
+                tick_lower_incentive_growth_outside,
+                tick_upper_index,
+                tick_upper_incentive_growth_outside,
+                tick_current,
+                incentive_growth_global,
+            );
+
+            assert_eq!(incentive_growth_inside, FeeGrowth::new(0)); // incentive growth inside
+        }
+
+        // current tick upper range
+        // lower    upper       current
+        // |        |           |
+        // -2       2           3
+        {
+            let tick_lower_index = -2;
+            let tick_lower_incentive_growth_outside = FeeGrowth::new(0);
+
+            let tick_upper_index = 2;
+            let tick_upper_incentive_growth_outside = FeeGrowth::new(1);
+
+            let incentive_growth_global = FeeGrowth::from_integer(5);
+
+            let tick_current = 3;
+            let incentive_growth_inside = calculate_incentive_growth_inside(
+                tick_lower_index,
+                tick_lower_incentive_growth_outside,
+                tick_upper_index,
+                tick_upper_incentive_growth_outside,
+                tick_current,
+                incentive_growth_global,
+            );
+
+            assert_eq!(incentive_growth_inside, FeeGrowth::new(1)); // incentive growth inside
+        }
+
+        // subtracts upper tick if below
+        let tick_upper_index = 2;
+        let tick_upper_incentive_growth_outside = FeeGrowth::from_integer(2);
+
+        // lower    current     upper
+        // |        |           |
+        // -2       0           2
+        {
+            let tick_current = 0;
+            let incentive_growth_inside = calculate_incentive_growth_inside(
+                tick_lower_index,
+                tick_lower_incentive_growth_outside,
+                tick_upper_index,
+                tick_upper_incentive_growth_outside,
+                tick_current,
+                incentive_growth_global,
+            );
+
+            assert_eq!(incentive_growth_inside, FeeGrowth::from_integer(13)); // incentive growth inside
+        }
+
+        // subtracts lower tick if above
+        let tick_upper_index = 2;
+        let tick_upper_incentive_growth_outside = FeeGrowth::new(0);
+
+        let tick_lower_index = -2;
+        let tick_lower_incentive_growth_outside = FeeGrowth::from_integer(2);
+
+        // current tick inside range
+        // lower    current     upper
+        // |        |           |
+        // -2       0           2
+        {
+            let tick_current = 0;
+            let incentive_growth_inside = calculate_incentive_growth_inside(
+                tick_lower_index,
+                tick_lower_incentive_growth_outside,
+                tick_upper_index,
+                tick_upper_incentive_growth_outside,
+                tick_current,
+                incentive_growth_global,
+            );
+
+            assert_eq!(incentive_growth_inside, FeeGrowth::from_integer(13)); // incentive growth inside
+        }
+    }
+
+    #[test]
+    fn test_domain_calculate_incentive_growth_inside() {
+        let tick_current = 0;
+        let incentive_growth_global = FeeGrowth::from_integer(20);
+
+        let tick_lower_index = -20;
+        let tick_lower_incentive_growth_outside = FeeGrowth::from_integer(20);
+
+        let tick_upper_index = -10;
+        let tick_upper_incentive_growth_outside = FeeGrowth::from_integer(15);
+
+        let incentive_growth_inside = calculate_incentive_growth_inside(
+            tick_lower_index,
+            tick_lower_incentive_growth_outside,
+            tick_upper_index,
+            tick_upper_incentive_growth_outside,
+            tick_current,
+            incentive_growth_global,
+        );
+
+        assert_eq!(
+            incentive_growth_inside,
+            FeeGrowth::max_instance() - FeeGrowth::from_integer(5) + FeeGrowth::new(1)
+        );
+        assert_eq!(
+            incentive_growth_inside,
+            FeeGrowth::max_instance() - FeeGrowth::from_integer(5) + FeeGrowth::new(1)
+        );
+    }
+}
