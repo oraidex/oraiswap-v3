@@ -151,6 +151,39 @@ pub fn execute(
             extension.slippage_limit_lower,
             extension.slippage_limit_upper,
         ),
+        ExecuteMsg::CreateIncentive {
+            pool_key,
+            reward_token,
+            total_reward,
+            reward_per_sec,
+            start_timestamp,
+        } => create_incentive(
+            deps,
+            env,
+            info,
+            pool_key,
+            reward_token,
+            total_reward,
+            reward_per_sec,
+            start_timestamp,
+        ),
+        ExecuteMsg::ClaimIncentive { index } => claim_incentives(deps, env, info, index),
+        ExecuteMsg::UpdateIncentive {
+            pool_key,
+            incentive_id,
+            remaining_reward,
+            start_timestamp,
+            reward_per_sec,
+        } => update_incentive(
+            deps,
+            env,
+            info,
+            pool_key,
+            incentive_id,
+            remaining_reward,
+            start_timestamp,
+            reward_per_sec,
+        ),
     }
 }
 
