@@ -532,6 +532,20 @@ impl MockApp {
         )
     }
 
+    pub fn claim_incentives(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        index: u32,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &msg::ExecuteMsg::ClaimIncentive { index },
+            &[],
+        )
+    }
+
     pub fn quote_route(
         &mut self,
         dex: &str,
@@ -971,6 +985,13 @@ pub mod macros {
         }};
     }
     pub(crate) use claim_fee;
+
+    macro_rules! claim_incentives {
+        ($app:ident, $dex_address:expr, $index:expr, $caller:tt) => {{
+            $app.claim_incentives($caller, $dex_address.as_str(), $index)
+        }};
+    }
+    pub(crate) use claim_incentives;
 
     macro_rules! init_slippage_pool_with_liquidity {
         ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{
