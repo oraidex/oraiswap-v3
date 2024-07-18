@@ -786,5 +786,90 @@ pub fn test_incentive_with_position_cross_out_of_range() {
 
 #[test]
 pub fn test_remove_position() {
-    // TODO
+    let protocol_fee = Percentage::from_scale(6, 3);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
+    let dex_raw = &dex.to_string();
+
+    let initial_amount = 10u128.pow(10);
+    let (token_x, token_y, token_z) =
+        create_3_tokens!(app, initial_amount, initial_amount, initial_amount);
+    mint!(app, token_z, dex_raw, initial_amount, "alice").unwrap();
+
+    let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
+
+    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+
+    let init_tick = 0;
+    let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+    create_pool!(
+        app,
+        dex,
+        token_x,
+        token_y,
+        fee_tier,
+        init_sqrt_price,
+        init_tick,
+        "alice"
+    )
+    .unwrap();
+
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+
+    let reward_token = AssetInfo::Token {
+        contract_addr: token_z.clone(),
+    };
+    let total_reward = TokenAmount(1000000000);
+    let reward_per_sec = TokenAmount(100);
+    let start_timestamp: Option<u64> = None;
+    let liquidity = Liquidity::from_integer(1000000);
+    create_incentive!(
+        app,
+        dex,
+        pool_key,
+        reward_token.clone(),
+        total_reward,
+        reward_per_sec,
+        start_timestamp,
+        "alice"
+    )
+    .unwrap();
+
+    // create position in range
+    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        -20,
+        20,
+        liquidity,
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        "alice"
+    )
+    .unwrap();
+
+    // increase block time
+    let mut block_info = app.app.block_info();
+    let current_timestamp = block_info.time.seconds();
+    block_info.time = Timestamp::from_seconds(current_timestamp + 1000);
+    app.app.set_block(block_info.clone());
+
+    let before_dex_balance = balance_of!(app, token_z, dex);
+    let before_user_balance = balance_of!(app, token_z, "alice");
+
+    // try remove position
+    remove_position!(app, dex, 0, "alice").unwrap();
+
+    let after_dex_balance = balance_of!(app, token_z, dex);
+    let after_user_balance = balance_of!(app, token_z, "alice");
+
+    assert!(before_dex_balance.gt(&after_dex_balance));
+    assert!(before_user_balance.lt(&after_user_balance));
+    assert!(
+        (before_user_balance + before_dex_balance).eq(&(after_user_balance + after_dex_balance))
+    );
 }
