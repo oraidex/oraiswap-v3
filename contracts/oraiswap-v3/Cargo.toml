@@ -33,4 +33,4 @@ derive_more = { workspace = true }
 [dev-dependencies]
 cw-multi-test = { workspace = true }
 cw20-base = { workspace = true, features = ["library"] }
-cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-util.git", rev = "aaa09cf" }
+cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-util.git", rev = "53c270e573172f475eb2586b8fdeb3798ef9b599" }
