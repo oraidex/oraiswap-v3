@@ -292,7 +292,7 @@ pub fn swap(
     let CalculateSwapResult {
         amount_in,
         amount_out,
-        fee, 
+        fee,
         ..
     } = swap_internal(
         deps.storage,
@@ -313,7 +313,6 @@ pub fn swap(
         .add_attribute("action", "swap")
         .add_attribute("pool_key", pool_key.to_string())
         .add_attribute("amount_in", amount_in.to_string())
-        .add_attribute("amount_out", amount_out.to_string())
         .add_attribute("amount_out", amount_out.to_string())
         .add_attribute("fee", fee.to_string())
         .add_attribute("x_to_y", x_to_y.to_string()))
@@ -376,7 +375,14 @@ pub fn swap_route(
         .add_messages(msgs)
         .add_attribute("action", "swap_route")
         .add_attribute("amount_out", amount_out.to_string())
-        .add_attribute("swap_hop", swaps.iter().map(|x| x.pool_key.to_string()).collect::<Vec<String>>().join(",")))
+        .add_attribute(
+            "swap_hop",
+            swaps
+                .iter()
+                .map(|x| x.pool_key.to_string())
+                .collect::<Vec<String>>()
+                .join(","),
+        ))
 }
 
 /// Transfers a position between users.
