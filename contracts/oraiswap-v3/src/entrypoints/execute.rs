@@ -83,7 +83,9 @@ pub fn withdraw_protocol_fee(
 
     Ok(Response::new()
         .add_messages(msgs)
-        .add_attribute("action", "withdraw_protocol_fee"))
+        .add_attribute("action", "withdraw_protocol_fee")
+        .add_attribute("token_x", fee_protocol_token_x.to_string())
+        .add_attribute("token_y", fee_protocol_token_y.to_string()))
 }
 
 /// Allows an admin to adjust the protocol fee.
@@ -240,6 +242,8 @@ pub fn create_position(
         attr("lower_tick", lower_tick.index.to_string()),
         attr("upper_tick", upper_tick.index.to_string()),
         attr("current_sqrt_price", pool.sqrt_price.to_string()),
+        attr("amount_x", x.to_string()),
+        attr("amount_y", y.to_string()),
     ];
 
     Ok(Response::new()
@@ -288,6 +292,7 @@ pub fn swap(
     let CalculateSwapResult {
         amount_in,
         amount_out,
+        fee, 
         ..
     } = swap_internal(
         deps.storage,
@@ -306,8 +311,12 @@ pub fn swap(
     Ok(Response::new()
         .add_messages(msgs)
         .add_attribute("action", "swap")
+        .add_attribute("pool_key", pool_key.to_string())
         .add_attribute("amount_in", amount_in.to_string())
-        .add_attribute("amount_out", amount_out.to_string()))
+        .add_attribute("amount_out", amount_out.to_string())
+        .add_attribute("amount_out", amount_out.to_string())
+        .add_attribute("fee", fee.to_string())
+        .add_attribute("x_to_y", x_to_y.to_string()))
 }
 
 /// Performs atomic swap involving several pools based on the provided parameters.
@@ -354,7 +363,7 @@ pub fn swap_route(
         &info,
         &mut msgs,
         amount_in,
-        swaps,
+        swaps.clone(),
     )?;
 
     let min_amount_out = calculate_min_amount_out(expected_amount_out, slippage);
@@ -366,7 +375,8 @@ pub fn swap_route(
     Ok(Response::new()
         .add_messages(msgs)
         .add_attribute("action", "swap_route")
-        .add_attribute("amount_out", amount_out.to_string()))
+        .add_attribute("amount_out", amount_out.to_string())
+        .add_attribute("swap_hop", swaps.iter().map(|x| x.pool_key.to_string()).collect::<Vec<String>>().join(",")))
 }
 
 /// Transfers a position between users.
