@@ -863,6 +863,7 @@ pub fn handle_send_nft(
         ]))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn handle_mint(
     deps: DepsMut,
     env: Env,
@@ -889,6 +890,7 @@ pub fn handle_mint(
 }
 
 // only owner can execute
+#[allow(clippy::too_many_arguments)]
 pub fn create_incentive(
     deps: DepsMut,
     env: Env,
@@ -938,6 +940,7 @@ pub fn create_incentive(
 }
 
 // only owner can execute
+#[allow(clippy::too_many_arguments)]
 pub fn update_incentive(
     deps: DepsMut,
     env: Env,

@@ -51,7 +51,7 @@ impl IncentiveRecord {
         match incentive_growth {
             Ok(value) => {
                 self.incentive_growth_global += value;
-                self.remaining = self.remaining - total_emit;
+                self.remaining -= total_emit;
             }
             Err(_) => {
                 //  Do nothing if there is an error when converting the amount to FeeGrowth
@@ -93,11 +93,9 @@ pub fn calculate_incentive_growth_inside(
     };
 
     // calculate fee growth inside
-    let incentive_growth_inside = incentive_growth_global
+    incentive_growth_global
         .unchecked_sub(incentive_growth_below)
-        .unchecked_sub(incentive_growth_above);
-
-    incentive_growth_inside
+        .unchecked_sub(incentive_growth_above)
 }
 
 #[cfg(test)]

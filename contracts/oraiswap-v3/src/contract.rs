@@ -312,30 +312,30 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
     let original_version =
         cw_utils::ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    // query all position, then update token id
-    let positions: Vec<_> = crate::state::POSITIONS
-        .range_raw(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .collect();
-    let mut token_id = 0;
-    for item in positions {
-        if let Ok((key, mut position)) = item {
-            token_id += 1;
-            position.token_id = token_id;
-            let account_id = &key[..key.len() - 4];
-            let index = u32::from_be_bytes(key[key.len() - 4..].try_into().unwrap());
-            // update position and its index
-            crate::state::POSITIONS.save(deps.storage, &key, &position)?;
-            crate::state::POSITION_KEYS_BY_TOKEN_ID.save(
-                deps.storage,
-                position.token_id,
-                &(account_id.to_vec(), index),
-            )?;
-        }
-    }
+    // // query all position, then update token id
+    // let positions: Vec<_> = crate::state::POSITIONS
+    //     .range_raw(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+    //     .collect();
+    // let mut token_id = 0;
+    // for item in positions {
+    //     if let Ok((key, mut position)) = item {
+    //         token_id += 1;
+    //         position.token_id = token_id;
+    //         let account_id = &key[..key.len() - 4];
+    //         let index = u32::from_be_bytes(key[key.len() - 4..].try_into().unwrap());
+    //         // update position and its index
+    //         crate::state::POSITIONS.save(deps.storage, &key, &position)?;
+    //         crate::state::POSITION_KEYS_BY_TOKEN_ID.save(
+    //             deps.storage,
+    //             position.token_id,
+    //             &(account_id.to_vec(), index),
+    //         )?;
+    //     }
+    // }
 
-    // update total token id, first time token count is total token ids
-    crate::state::TOKEN_COUNT.save(deps.storage, &token_id)?;
-    crate::state::TOKEN_ID.save(deps.storage, &token_id)?;
+    // // update total token id, first time token count is total token ids
+    // crate::state::TOKEN_COUNT.save(deps.storage, &token_id)?;
+    // crate::state::TOKEN_ID.save(deps.storage, &token_id)?;
 
     Ok(Response::new().add_attribute("new_version", original_version.to_string()))
 }
