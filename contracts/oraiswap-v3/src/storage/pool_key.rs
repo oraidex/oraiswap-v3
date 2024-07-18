@@ -63,6 +63,14 @@ impl PoolKey {
             })
         }
     }
+
+    pub fn to_string(&self) -> String {
+        // tokenx-tokeny-fee-tick_spacing
+        format!(
+            "{}-{}-{}-{}",
+            self.token_x, self.token_y, self.fee_tier.fee.0, self.fee_tier.tick_spacing
+        )
+    }
 }
 
 #[cfg(test)]
