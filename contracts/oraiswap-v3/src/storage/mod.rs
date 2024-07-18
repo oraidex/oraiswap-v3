@@ -1,5 +1,6 @@
 pub mod config;
 pub mod fee_tier;
+pub mod incentive;
 pub mod pool;
 pub mod pool_key;
 pub mod position;

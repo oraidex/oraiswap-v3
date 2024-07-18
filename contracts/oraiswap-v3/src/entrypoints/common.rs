@@ -232,8 +232,8 @@ pub fn swap_internal(
         amount: calculate_swap_result.amount_out.into(),
     };
 
-    asset_0.transfer_from(msgs, &info, contract_address.to_string())?;
-    asset_1.transfer(msgs, &info)?;
+    asset_0.transfer_from(msgs, info, contract_address.to_string())?;
+    asset_1.transfer(msgs, info)?;
 
     Ok(calculate_swap_result)
 }

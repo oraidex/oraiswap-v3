@@ -4,8 +4,8 @@ use cosmwasm_std::{Addr, Binary};
 use cw20::Expiration;
 
 use crate::interface::{
-    AllNftInfoResponse, ApprovedForAllResponse, NftInfoResponse, NumTokensResponse,
-    OwnerOfResponse, PoolWithPoolKey, PositionTick, QuoteResult, TokensResponse,
+    AllNftInfoResponse, ApprovedForAllResponse, Asset, AssetInfo, NftInfoResponse,
+    NumTokensResponse, OwnerOfResponse, PoolWithPoolKey, PositionTick, QuoteResult, TokensResponse,
 };
 #[allow(unused_imports)]
 use crate::{
@@ -129,6 +129,26 @@ pub enum ExecuteMsg {
     /// Remove previously granted ApproveAll permission
     RevokeAll {
         operator: Addr,
+    },
+    // create incentives for specific pool
+    CreateIncentive {
+        pool_key: PoolKey,
+        reward_token: AssetInfo,
+        total_reward: TokenAmount,
+        reward_per_sec: TokenAmount,
+        start_timestamp: Option<u64>,
+    },
+    // update  for specific pool
+    UpdateIncentive {
+        pool_key: PoolKey,
+        incentive_id: u64,
+        remaining_reward: Option<TokenAmount>,
+        start_timestamp: Option<u64>,
+        reward_per_sec: Option<TokenAmount>,
+    },
+    // Claim Incentives
+    ClaimIncentive {
+        index: u32,
     },
 }
 
@@ -281,4 +301,7 @@ pub enum QueryMsg {
         start_after: Option<u64>,
         limit: Option<u32>,
     },
+
+    #[returns(Vec<Asset>)]
+    PositionIncentives { owner_id: Addr, index: u32 },
 }

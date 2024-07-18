@@ -1,4 +1,6 @@
 use crate::error::ContractError;
+use crate::fee_growth::FeeGrowth;
+use crate::incentive::IncentiveRecord;
 use crate::interface::{Asset, AssetInfo, CalculateSwapResult, Cw721ReceiveMsg, SwapHop};
 use crate::liquidity::Liquidity;
 use crate::percentage::Percentage;
@@ -183,6 +185,9 @@ pub fn create_position(
     let pool_key_db = pool_key.key();
     let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
 
+    // update global incentives
+    pool.update_global_incentives(env.block.time.seconds())?;
+
     let mut lower_tick = match state::get_tick(deps.storage, &pool_key, lower_tick) {
         Ok(tick) => tick,
         _ => create_tick(deps.storage, current_timestamp, &pool_key, lower_tick)?,
@@ -277,6 +282,11 @@ pub fn swap(
     by_amount_in: bool,
     sqrt_price_limit: SqrtPrice,
 ) -> Result<Response, ContractError> {
+    // update incentives first
+    let mut pool = state::get_pool(deps.storage, &pool_key)?;
+    pool.update_global_incentives(env.block.time.seconds())?;
+    POOLS.save(deps.storage, &pool_key.key(), &pool)?;
+
     let mut msgs = vec![];
 
     let CalculateSwapResult {
@@ -337,6 +347,13 @@ pub fn swap_route(
     slippage: Percentage,
     swaps: Vec<SwapHop>,
 ) -> Result<Response, ContractError> {
+    // update incentives first
+    for hop in &swaps {
+        let mut pool = state::get_pool(deps.storage, &hop.pool_key)?;
+        pool.update_global_incentives(env.block.time.seconds())?;
+        POOLS.save(deps.storage, &hop.pool_key.key(), &pool)?;
+    }
+
     let mut msgs = vec![];
     let amount_out = swap_route_internal(
         deps.storage,
@@ -452,6 +469,44 @@ pub fn claim_fee(
         .add_attribute("amount_y", y.to_string()))
 }
 
+/// Allows an authorized user (owner of the position) to claim incentives.
+///
+/// # Parameters
+/// - `index`: The index of the user position from which fees will be claimed.
+///
+/// # Errors
+/// - Fails if the position cannot be found.
+pub fn claim_incentives(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    index: u32,
+) -> Result<Response, ContractError> {
+    let mut position = state::get_position(deps.storage, &info.sender, index)?;
+
+    let lower_tick = state::get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
+    let upper_tick = state::get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
+    let pool_key_db = position.pool_key.key();
+    let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
+
+    // update global incentive
+    pool.update_global_incentives(env.block.time.seconds())?;
+
+    let incentives = position.claim_incentives(&pool, &upper_tick, &lower_tick)?;
+
+    state::update_position(deps.storage, &position)?;
+    POOLS.save(deps.storage, &pool_key_db, &pool)?;
+
+    let mut msgs = vec![];
+    for asset in incentives {
+        asset.transfer(&mut msgs, &info)?;
+    }
+
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attribute("action", "claim_incentives"))
+}
+
 /// Removes a position. Sends tokens associated with specified position to the owner.
 ///
 /// # Parameters
@@ -479,6 +534,12 @@ pub fn remove_position(
 
     let pool_key_db = position.pool_key.key();
     let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
+
+    // update global incentives first
+    pool.update_global_incentives(env.block.time.seconds())?;
+
+    // calculate pending incentives
+    let incentives = position.claim_incentives(&pool, &upper_tick, &lower_tick)?;
 
     let (amount_x, amount_y, deinitialize_lower_tick, deinitialize_upper_tick) = position.remove(
         &mut pool,
@@ -511,6 +572,7 @@ pub fn remove_position(
             &upper_tick,
         )?;
     }
+
     let position = state::remove_position(deps.storage, &info.sender, index)?;
 
     let asset_0 = Asset {
@@ -526,6 +588,9 @@ pub fn remove_position(
     let mut msgs = vec![];
     asset_0.transfer(&mut msgs, &info)?;
     asset_1.transfer(&mut msgs, &info)?;
+    for asset in incentives {
+        asset.transfer(&mut msgs, &info)?;
+    }
 
     let event_attributes = vec![
         attr("action", "remove_position"),
@@ -807,6 +872,7 @@ pub fn handle_send_nft(
         ]))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn handle_mint(
     deps: DepsMut,
     env: Env,
@@ -830,4 +896,96 @@ pub fn handle_mint(
         slippage_limit_lower,
         slippage_limit_upper,
     )
+}
+
+// only owner can execute
+#[allow(clippy::too_many_arguments)]
+pub fn create_incentive(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    pool_key: PoolKey,
+    reward_token: AssetInfo,
+    total_reward: TokenAmount,
+    reward_per_sec: TokenAmount,
+    start_timestamp: Option<u64>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if info.sender != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let pool_key_db = pool_key.key();
+    let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
+    pool.update_global_incentives(env.block.time.seconds())?;
+
+    let id = pool.incentives.len() as u64;
+    let incentive = IncentiveRecord {
+        id,
+        reward_per_sec,
+        reward_token: reward_token.clone(),
+        remaining: total_reward,
+        start_timestamp: start_timestamp.unwrap_or(env.block.time.seconds()),
+        incentive_growth_global: FeeGrowth(0),
+        last_updated: env.block.time.seconds(),
+    };
+    pool.incentives.push(incentive);
+
+    POOLS.save(deps.storage, &pool_key_db, &pool)?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "create_incentive"),
+        ("pool", &format!("{:?}", pool_key)),
+        ("reward_token", &format!("{:?}", reward_token)),
+        ("total_reward", &total_reward.to_string()),
+        ("reward_per_sec", &reward_per_sec.to_string()),
+        (
+            "reward_per_sec",
+            &start_timestamp
+                .unwrap_or(env.block.time.seconds())
+                .to_string(),
+        ),
+    ]))
+}
+
+// only owner can execute
+#[allow(clippy::too_many_arguments)]
+pub fn update_incentive(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    pool_key: PoolKey,
+    record_id: u64,
+    remaining_reward: Option<TokenAmount>,
+    start_timestamp: Option<u64>,
+    reward_per_sec: Option<TokenAmount>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if info.sender != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let pool_key_db = pool_key.key();
+    let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
+    pool.update_global_incentives(env.block.time.seconds())?;
+
+    if let Some(record) = pool.incentives.iter_mut().find(|i| i.id == record_id) {
+        if let Some(remaining_reward) = remaining_reward {
+            record.remaining = remaining_reward;
+        }
+        if let Some(start_timestamp) = start_timestamp {
+            record.start_timestamp = start_timestamp;
+        }
+        if let Some(reward_per_sec) = reward_per_sec {
+            record.reward_per_sec = reward_per_sec;
+        }
+    }
+
+    POOLS.save(deps.storage, &pool_key_db, &pool)?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "update_incentive"),
+        ("pool", &format!("{:?}", pool_key)),
+        ("record_id", &record_id.to_string()),
+    ]))
 }

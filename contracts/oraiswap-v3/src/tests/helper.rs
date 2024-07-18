@@ -1,9 +1,17 @@
-use cosmwasm_std::{Addr, Coin, Event, StdResult};
-use cw_multi_test::{AppResponse, ContractWrapper};
+use cosmwasm_schema::serde::de::DeserializeOwned;
+use cosmwasm_schema::serde::Serialize;
+use cosmwasm_std::{
+    Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, Empty, Event, QuerierWrapper,
+    QueryRequest, StdResult, Uint128,
+};
+use cw20::TokenInfoResponse;
+use decimal::num_traits::Zero;
+use std::collections::HashMap;
+
+use cw_multi_test::{next_block, App, AppResponse, Contract, Executor};
 
 use crate::{
-    interface::SwapHop,
-    interface::{PoolWithPoolKey, QuoteResult},
+    interface::{Asset, AssetInfo, PoolWithPoolKey, QuoteResult, SwapHop},
     liquidity::Liquidity,
     msg::{self},
     percentage::Percentage,
@@ -12,34 +20,307 @@ use crate::{
     token_amount::TokenAmount,
     FeeTier, LiquidityTick, Pool, PoolKey, Position, Tick,
 };
-use derive_more::{Deref, DerefMut};
 
-#[derive(Deref, DerefMut)]
+#[macro_export]
+macro_rules! create_entry_points_testing {
+    ($contract:ident) => {
+        cw_multi_test::ContractWrapper::new(
+            $contract::contract::execute,
+            $contract::contract::instantiate,
+            $contract::contract::query,
+        )
+    };
+}
+
 pub struct MockApp {
-    #[deref]
-    #[deref_mut]
-    app: cosmwasm_testing_util::MockApp,
+    pub app: App,
+    token_map: HashMap<String, Addr>, // map token name to address
+    token_id: u64,
     dex_id: u64,
 }
 
 #[allow(dead_code)]
 impl MockApp {
     pub fn new(init_balances: &[(&str, &[Coin])]) -> Self {
-        let mut app = cosmwasm_testing_util::MockApp::new(init_balances);
+        let mut app = App::new(|router, _, storage| {
+            for (owner, init_funds) in init_balances.iter() {
+                router
+                    .bank
+                    .init_balance(
+                        storage,
+                        &Addr::unchecked(owner.to_owned()),
+                        init_funds.to_vec(),
+                    )
+                    .unwrap();
+            }
+        });
 
-        let dex_id = app.upload(Box::new(ContractWrapper::new_with_empty(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        )));
+        // default token is cw20_base
+        let token_id = app.store_code(Box::new(create_entry_points_testing!(cw20_base)));
+        let dex_id = app.store_code(Box::new(create_entry_points_testing!(crate)));
 
-        Self { app, dex_id }
+        Self {
+            app,
+            token_id,
+            dex_id,
+            token_map: HashMap::new(),
+        }
     }
 
+    pub fn set_token_contract(&mut self, code: Box<dyn Contract<Empty>>) {
+        self.token_id = self.upload(code);
+    }
+
+    pub fn upload(&mut self, code: Box<dyn Contract<Empty>>) -> u64 {
+        let code_id = self.app.store_code(code);
+        self.app.update_block(next_block);
+        code_id
+    }
+
+    pub fn instantiate<T: Serialize>(
+        &mut self,
+        code_id: u64,
+        sender: Addr,
+        init_msg: &T,
+        send_funds: &[Coin],
+        label: &str,
+    ) -> Result<Addr, String> {
+        let contract_addr = self
+            .app
+            .instantiate_contract(code_id, sender, init_msg, send_funds, label, None)
+            .map_err(|err| err.to_string())?;
+        self.app.update_block(next_block);
+        Ok(contract_addr)
+    }
+
+    pub fn execute<T: Serialize + std::fmt::Debug>(
+        &mut self,
+        sender: Addr,
+        contract_addr: Addr,
+        msg: &T,
+        send_funds: &[Coin],
+    ) -> Result<AppResponse, String> {
+        let response = self
+            .app
+            .execute_contract(sender, contract_addr, msg, send_funds)
+            .map_err(|err| err.to_string())?;
+
+        self.app.update_block(next_block);
+
+        Ok(response)
+    }
+
+    pub fn query<T: DeserializeOwned, U: Serialize>(
+        &self,
+        contract_addr: Addr,
+        msg: &U,
+    ) -> StdResult<T> {
+        self.app.wrap().query_wasm_smart(contract_addr, msg)
+    }
+
+    pub fn query_balance(&self, account_addr: Addr, denom: String) -> StdResult<Uint128> {
+        let balance: BalanceResponse =
+            self.app
+                .wrap()
+                .query(&QueryRequest::Bank(BankQuery::Balance {
+                    address: account_addr.to_string(),
+                    denom,
+                }))?;
+        Ok(balance.amount.amount)
+    }
+
+    pub fn query_all_balances(&self, account_addr: Addr) -> StdResult<Vec<Coin>> {
+        let all_balances: AllBalanceResponse =
+            self.app
+                .wrap()
+                .query(&QueryRequest::Bank(BankQuery::AllBalances {
+                    address: account_addr.to_string(),
+                }))?;
+        Ok(all_balances.amount)
+    }
+
+    pub fn register_token(&mut self, contract_addr: Addr) -> StdResult<String> {
+        let res: cw20::TokenInfoResponse =
+            self.query(contract_addr.clone(), &cw20::Cw20QueryMsg::TokenInfo {})?;
+        self.token_map.insert(res.symbol.clone(), contract_addr);
+        Ok(res.symbol)
+    }
+
+    pub fn query_token_balance(
+        &self,
+        contract_addr: &str,
+        account_addr: &str,
+    ) -> StdResult<Uint128> {
+        let res: cw20::BalanceResponse = self.query(
+            Addr::unchecked(contract_addr),
+            &cw20::Cw20QueryMsg::Balance {
+                address: account_addr.to_string(),
+            },
+        )?;
+        Ok(res.balance)
+    }
+
+    pub fn query_token_info(&self, contract_addr: Addr) -> StdResult<TokenInfoResponse> {
+        self.query(contract_addr, &cw20::Cw20QueryMsg::TokenInfo {})
+    }
+
+    pub fn query_token_balances(&self, account_addr: &str) -> StdResult<Vec<Coin>> {
+        let mut balances = vec![];
+        for (denom, contract_addr) in self.token_map.iter() {
+            let res: cw20::BalanceResponse = self.query(
+                contract_addr.clone(),
+                &cw20::Cw20QueryMsg::Balance {
+                    address: account_addr.to_string(),
+                },
+            )?;
+            balances.push(Coin {
+                denom: denom.clone(),
+                amount: res.balance,
+            });
+        }
+        Ok(balances)
+    }
+
+    pub fn as_querier(&self) -> QuerierWrapper {
+        self.app.wrap()
+    }
+
+    pub fn get_token_addr(&self, token: &str) -> Option<Addr> {
+        self.token_map.get(token).cloned()
+    }
+
+    pub fn create_token(&mut self, owner: &str, token: &str, initial_amount: u128) -> Addr {
+        let addr = self
+            .instantiate(
+                self.token_id,
+                Addr::unchecked(owner),
+                &cw20_base::msg::InstantiateMsg {
+                    name: token.to_string(),
+                    symbol: token.to_string(),
+                    decimals: 6,
+                    initial_balances: vec![cw20::Cw20Coin {
+                        address: owner.to_string(),
+                        amount: initial_amount.into(),
+                    }],
+                    mint: Some(cw20::MinterResponse {
+                        minter: owner.to_string(),
+                        cap: None,
+                    }),
+                    marketing: None,
+                },
+                &[],
+                "cw20",
+            )
+            .unwrap();
+        self.token_map.insert(token.to_string(), addr.clone());
+        addr
+    }
+
+    pub fn set_balances_from(
+        &mut self,
+        sender: Addr,
+        balances: &[(&String, &[(&String, &Uint128)])],
+    ) {
+        for (denom, balances) in balances.iter() {
+            // send for each recipient
+            for (recipient, &amount) in balances.iter() {
+                self.app
+                    .send_tokens(
+                        sender.clone(),
+                        Addr::unchecked(recipient.as_str()),
+                        &[Coin {
+                            denom: denom.to_string(),
+                            amount,
+                        }],
+                    )
+                    .unwrap();
+            }
+        }
+    }
+
+    pub fn mint_token(
+        &mut self,
+        sender: &str,
+        recipient: &str,
+        cw20_addr: &str,
+        amount: u128,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(cw20_addr),
+            &cw20::Cw20ExecuteMsg::Mint {
+                recipient: recipient.to_string(),
+                amount: amount.into(),
+            },
+            &[],
+        )
+    }
+
+    pub fn set_token_balances_from(
+        &mut self,
+        sender: &str,
+        balances: &[(&str, &[(&str, u128)])],
+    ) -> Result<Vec<Addr>, String> {
+        let mut contract_addrs = vec![];
+        for (token, balances) in balances {
+            let contract_addr = match self.token_map.get(*token) {
+                None => self.create_token(sender, token, 0),
+                Some(addr) => addr.clone(),
+            };
+            contract_addrs.push(contract_addr.clone());
+
+            // mint for each recipient
+            for (recipient, amount) in balances.iter() {
+                if !amount.is_zero() {
+                    self.mint_token(sender, recipient, contract_addr.as_str(), *amount)?;
+                }
+            }
+        }
+        Ok(contract_addrs)
+    }
+
+    pub fn set_balances(&mut self, owner: &str, balances: &[(&String, &[(&String, &Uint128)])]) {
+        self.set_balances_from(Addr::unchecked(owner), balances)
+    }
+
+    // configure the mint whitelist mock querier
+    pub fn set_token_balances(
+        &mut self,
+        owner: &str,
+        balances: &[(&str, &[(&str, u128)])],
+    ) -> Result<Vec<Addr>, String> {
+        self.set_token_balances_from(owner, balances)
+    }
+
+    pub fn approve_token(
+        &mut self,
+        token: &str,
+        approver: &str,
+        spender: &str,
+        amount: u128,
+    ) -> Result<AppResponse, String> {
+        let token_addr = match self.token_map.get(token) {
+            Some(v) => v.to_owned(),
+            None => Addr::unchecked(token),
+        };
+
+        self.execute(
+            Addr::unchecked(approver),
+            token_addr,
+            &cw20::Cw20ExecuteMsg::IncreaseAllowance {
+                spender: spender.to_string(),
+                amount: amount.into(),
+                expires: None,
+            },
+            &[],
+        )
+    }
+
+    /// external method
+
     pub fn create_dex(&mut self, owner: &str, protocol_fee: Percentage) -> Result<Addr, String> {
-        let code_id = self.dex_id;
         self.instantiate(
-            code_id,
+            self.dex_id,
             Addr::unchecked(owner),
             &msg::InstantiateMsg { protocol_fee },
             &[],
@@ -251,6 +532,20 @@ impl MockApp {
         )
     }
 
+    pub fn claim_incentives(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        index: u32,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &msg::ExecuteMsg::ClaimIncentive { index },
+            &[],
+        )
+    }
+
     pub fn quote_route(
         &mut self,
         dex: &str,
@@ -338,6 +633,21 @@ impl MockApp {
         )
     }
 
+    pub fn get_position_incentives(
+        &self,
+        dex: &str,
+        owner_id: &str,
+        index: u32,
+    ) -> StdResult<Vec<Asset>> {
+        self.query(
+            Addr::unchecked(dex),
+            &msg::QueryMsg::PositionIncentives {
+                owner_id: Addr::unchecked(owner_id),
+                index,
+            },
+        )
+    }
+
     pub fn get_all_positions(&self, dex: &str, owner_id: &str) -> StdResult<Vec<Position>> {
         self.query(
             Addr::unchecked(dex),
@@ -387,6 +697,30 @@ impl MockApp {
             Some(msg) => assert!(msg.contains("error executing WasmMsg")),
             None => panic!("Must return generic error"),
         }
+    }
+
+    pub fn create_incentive(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        pool_key: &PoolKey,
+        reward_token: AssetInfo,
+        total_reward: TokenAmount,
+        reward_per_sec: TokenAmount,
+        start_timestamp: Option<u64>,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &msg::ExecuteMsg::CreateIncentive {
+                pool_key: pool_key.clone(),
+                reward_token,
+                total_reward,
+                reward_per_sec,
+                start_timestamp,
+            },
+            &[],
+        )
     }
 }
 
@@ -494,6 +828,21 @@ pub mod macros {
     }
     pub(crate) use fee_tier_exist;
 
+    macro_rules! create_incentive {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $reward_token:expr, $total_reward:expr, $reward_per_sec:expr, $start_timestamp:expr, $caller:tt) => {{
+            $app.create_incentive(
+                $caller,
+                $dex_address.as_str(),
+                &$pool_key,
+                $reward_token,
+                $total_reward,
+                $reward_per_sec,
+                $start_timestamp,
+            )
+        }};
+    }
+    pub(crate) use create_incentive;
+
     macro_rules! create_position {
         ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick:expr, $upper_tick:expr, $liquidity_delta:expr, $slippage_limit_lower:expr, $slippage_limit_upper:expr, $caller:tt) => {{
             $app.create_position(
@@ -535,6 +884,13 @@ pub mod macros {
         }};
     }
     pub(crate) use get_position;
+
+    macro_rules! get_position_incentives {
+        ($app:ident, $dex_address:expr, $index:expr, $owner:tt) => {{
+            $app.get_position_incentives($dex_address.as_str(), $owner, $index)
+        }};
+    }
+    pub(crate) use get_position_incentives;
 
     macro_rules! get_tick {
         ($app:ident, $dex_address:expr, $key:expr, $index:expr) => {{
@@ -629,6 +985,13 @@ pub mod macros {
         }};
     }
     pub(crate) use claim_fee;
+
+    macro_rules! claim_incentives {
+        ($app:ident, $dex_address:expr, $index:expr, $caller:tt) => {{
+            $app.claim_incentives($caller, $dex_address.as_str(), $index)
+        }};
+    }
+    pub(crate) use claim_incentives;
 
     macro_rules! init_slippage_pool_with_liquidity {
         ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{

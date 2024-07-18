@@ -151,6 +151,39 @@ pub fn execute(
             extension.slippage_limit_lower,
             extension.slippage_limit_upper,
         ),
+        ExecuteMsg::CreateIncentive {
+            pool_key,
+            reward_token,
+            total_reward,
+            reward_per_sec,
+            start_timestamp,
+        } => create_incentive(
+            deps,
+            env,
+            info,
+            pool_key,
+            reward_token,
+            total_reward,
+            reward_per_sec,
+            start_timestamp,
+        ),
+        ExecuteMsg::ClaimIncentive { index } => claim_incentives(deps, env, info, index),
+        ExecuteMsg::UpdateIncentive {
+            pool_key,
+            incentive_id,
+            remaining_reward,
+            start_timestamp,
+            reward_per_sec,
+        } => update_incentive(
+            deps,
+            env,
+            info,
+            pool_key,
+            incentive_id,
+            remaining_reward,
+            start_timestamp,
+            reward_per_sec,
+        ),
     }
 }
 
@@ -268,6 +301,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&query_all_tokens(deps, start_after, limit)?)
         }
         QueryMsg::NumTokens {} => to_binary(&query_num_tokens(deps)?),
+        QueryMsg::PositionIncentives { owner_id, index } => {
+            to_binary(&query_position_incentives(deps, env, owner_id, index)?)
+        }
     }
 }
 
@@ -276,30 +312,30 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
     let original_version =
         cw_utils::ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    // query all position, then update token id
-    let positions: Vec<_> = crate::state::POSITIONS
-        .range_raw(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .collect();
-    let mut token_id = 0;
-    for item in positions {
-        if let Ok((key, mut position)) = item {
-            token_id += 1;
-            position.token_id = token_id;
-            let account_id = &key[..key.len() - 4];
-            let index = u32::from_be_bytes(key[key.len() - 4..].try_into().unwrap());
-            // update position and its index
-            crate::state::POSITIONS.save(deps.storage, &key, &position)?;
-            crate::state::POSITION_KEYS_BY_TOKEN_ID.save(
-                deps.storage,
-                position.token_id,
-                &(account_id.to_vec(), index),
-            )?;
-        }
-    }
+    // // query all position, then update token id
+    // let positions: Vec<_> = crate::state::POSITIONS
+    //     .range_raw(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+    //     .collect();
+    // let mut token_id = 0;
+    // for item in positions {
+    //     if let Ok((key, mut position)) = item {
+    //         token_id += 1;
+    //         position.token_id = token_id;
+    //         let account_id = &key[..key.len() - 4];
+    //         let index = u32::from_be_bytes(key[key.len() - 4..].try_into().unwrap());
+    //         // update position and its index
+    //         crate::state::POSITIONS.save(deps.storage, &key, &position)?;
+    //         crate::state::POSITION_KEYS_BY_TOKEN_ID.save(
+    //             deps.storage,
+    //             position.token_id,
+    //             &(account_id.to_vec(), index),
+    //         )?;
+    //     }
+    // }
 
-    // update total token id, first time token count is total token ids
-    crate::state::TOKEN_COUNT.save(deps.storage, &token_id)?;
-    crate::state::TOKEN_ID.save(deps.storage, &token_id)?;
+    // // update total token id, first time token count is total token ids
+    // crate::state::TOKEN_COUNT.save(deps.storage, &token_id)?;
+    // crate::state::TOKEN_ID.save(deps.storage, &token_id)?;
 
     Ok(Response::new().add_attribute("new_version", original_version.to_string()))
 }

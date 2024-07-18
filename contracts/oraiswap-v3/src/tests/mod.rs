@@ -10,6 +10,7 @@ mod get_liquidity_ticks;
 mod get_position_ticks;
 mod get_tickmap;
 mod helper;
+mod incentive;
 mod interaction_with_pool_on_removed_fee_tier;
 mod limits;
 mod liquidity_gap;
