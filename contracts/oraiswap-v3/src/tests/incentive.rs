@@ -873,3 +873,141 @@ pub fn test_remove_position() {
         (before_user_balance + before_dex_balance).eq(&(after_user_balance + after_dex_balance))
     );
 }
+
+#[test]
+pub fn incentive_stress_test() {
+    let protocol_fee = Percentage::from_scale(6, 3);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
+    let dex_raw = &dex.to_string();
+
+    let initial_amount = 10u128.pow(20);
+    let (token_x, token_y, token_z) =
+        create_3_tokens!(app, initial_amount, initial_amount, initial_amount);
+    mint!(app, token_z, dex_raw, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+
+    let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
+
+    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+
+    let init_tick = 0;
+    let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+    create_pool!(
+        app,
+        dex,
+        token_x,
+        token_y,
+        fee_tier,
+        init_sqrt_price,
+        init_tick,
+        "alice"
+    )
+    .unwrap();
+
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+
+    let reward_token = AssetInfo::Token {
+        contract_addr: token_z.clone(),
+    };
+    let total_reward = TokenAmount(1000000000);
+    let start_timestamp: Option<u64> = None;
+
+    let rps: Vec<TokenAmount> = vec![
+        TokenAmount(1),
+        TokenAmount(5),
+        TokenAmount(10),
+        TokenAmount(49),
+        TokenAmount(99),
+        TokenAmount(10000),
+    ];
+
+    for i in 0..rps.len() {
+        create_incentive!(
+            app,
+            dex,
+            pool_key,
+            reward_token.clone(),
+            total_reward,
+            rps[i],
+            start_timestamp,
+            "alice"
+        )
+        .unwrap();
+    }
+
+    // create multi position
+    let liq = vec![3233322, 54343223, 3223135, 2431323, 1322339, 53283, 123293];
+    let ranges = vec![
+        -10000, -1000, -500, -90, -40, -20, -5, 4, 12, 23, 35, 42, 63, 120, 1000, 10000,
+    ];
+    for i in 0..1000 {
+        let liquidity = Liquidity::from_integer(liq[i % liq.len()]);
+        let tick_index = i % (ranges.len() - 1);
+        let lower_tick = ranges[tick_index];
+        let upper_tick = ranges[tick_index + 1];
+        create_position!(
+            app,
+            dex,
+            pool_key,
+            lower_tick,
+            upper_tick,
+            liquidity,
+            SqrtPrice::new(0),
+            SqrtPrice::max_instance(),
+            "alice"
+        )
+        .unwrap();
+    }
+
+    // try swap
+
+    mint!(app, token_y, "bob", initial_amount, "alice").unwrap();
+    approve!(app, token_y, dex, initial_amount, "bob").unwrap();
+    mint!(app, token_x, "bob", initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, "bob").unwrap();
+
+    let swap_amounts: Vec<u128> = vec![2323, 233, 321, 5353, 12, 932, 42, 3123, 5438];
+    let x_to_y_list = vec![true, false, false, true, true, false, false, true];
+
+    for i in 0..1000 {
+        let x_to_y = x_to_y_list[i % x_to_y_list.len()];
+        let swap_amount = TokenAmount(swap_amounts[i % swap_amounts.len()]);
+        let target_sqrt_price = if x_to_y {
+            SqrtPrice::new(MIN_SQRT_PRICE)
+        } else {
+            SqrtPrice::new(MAX_SQRT_PRICE)
+        };
+
+        swap!(
+            app,
+            dex,
+            pool_key,
+            x_to_y,
+            swap_amount,
+            true,
+            target_sqrt_price,
+            "bob"
+        )
+        .unwrap();
+    }
+
+    let before_dex_balance = balance_of!(app, token_z, dex);
+    let before_user_balance = balance_of!(app, token_z, "alice");
+
+    // claim all incentives
+    for _ in 0..1000 {
+        // try remove position
+        remove_position!(app, dex, 0, "alice").unwrap();
+    }
+
+    let after_dex_balance = balance_of!(app, token_z, dex);
+    let after_user_balance = balance_of!(app, token_z, "alice");
+
+    assert!(before_dex_balance.gt(&after_dex_balance));
+    assert!(before_user_balance.lt(&after_user_balance));
+    assert!(
+        (before_user_balance + before_dex_balance).eq(&(after_user_balance + after_dex_balance))
+    );
+}
