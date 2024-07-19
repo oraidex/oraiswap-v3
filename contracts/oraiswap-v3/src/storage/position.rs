@@ -221,7 +221,7 @@ impl Position {
         self.update_incentives(pool, upper_tick, lower_tick)?;
         let incentives: Vec<Asset> = self
             .incentives
-            .iter()
+            .iter_mut()
             .filter_map(|incentive| {
                 if incentive.pending_rewards.is_zero() {
                     return None;
@@ -231,9 +231,11 @@ impl Position {
                     .iter()
                     .find(|i| i.id == incentive.incentive_id)
                 {
+                    let reward = incentive.pending_rewards;
+                    incentive.pending_rewards = TokenAmount::new(0);
                     return Some(Asset {
                         info: record.reward_token.clone(),
-                        amount: incentive.pending_rewards.into(),
+                        amount: reward.into(),
                     });
                 }
                 None
