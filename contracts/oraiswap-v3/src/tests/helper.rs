@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, Event, StdResult};
+use cosmwasm_std::{Addr, Coin, Event, StdResult, Timestamp};
 use cw_multi_test::{AppResponse, ContractWrapper};
 
 use crate::{
@@ -439,6 +439,12 @@ impl MockApp {
             },
             &[],
         )
+    }
+
+    pub fn increase_block_time_by_seconds(&mut self, seconds: u64) {
+        let mut block_info = self.app.app.block_info();
+        block_info.time = Timestamp::from_seconds(block_info.time.seconds() + seconds);
+        self.app.app.set_block(block_info);
     }
 }
 
