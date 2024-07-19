@@ -42,7 +42,7 @@ pub fn test_create_incentive() {
     let reward_token = AssetInfo::NativeToken {
         denom: "orai".to_string(),
     };
-    let total_reward = TokenAmount(1000000000);
+    let total_reward = Some(TokenAmount(1000000000));
     let reward_per_sec = TokenAmount(100);
     let start_timestamp: Option<u64> = None;
     let current_time = app.app.block_info().time.seconds();
@@ -65,7 +65,7 @@ pub fn test_create_incentive() {
             id: 0,
             reward_per_sec,
             reward_token: reward_token.clone(),
-            remaining: total_reward,
+            remaining: total_reward.unwrap(),
             start_timestamp: current_time,
             incentive_growth_global: FeeGrowth(0),
             last_updated: current_time
@@ -93,7 +93,7 @@ pub fn test_create_incentive() {
                 id: 0,
                 reward_per_sec,
                 reward_token: reward_token.clone(),
-                remaining: total_reward,
+                remaining: total_reward.unwrap(),
                 start_timestamp: current_time,
                 incentive_growth_global: FeeGrowth(0),
                 last_updated: new_timestamp_time
@@ -102,7 +102,7 @@ pub fn test_create_incentive() {
                 id: 1,
                 reward_per_sec,
                 reward_token: reward_token.clone(),
-                remaining: total_reward,
+                remaining: total_reward.unwrap(),
                 start_timestamp: new_timestamp_time,
                 incentive_growth_global: FeeGrowth(0),
                 last_updated: new_timestamp_time
@@ -153,7 +153,7 @@ pub fn test_single_incentive_with_single_position() {
     let reward_token = AssetInfo::NativeToken {
         denom: "orai".to_string(),
     };
-    let total_reward = TokenAmount(1000000);
+    let total_reward = Some(TokenAmount(1000000));
     let reward_per_sec = TokenAmount(100);
     let start_timestamp: Option<u64> = None;
     create_incentive!(
@@ -266,7 +266,7 @@ pub fn test_multi_incentives_with_single_position() {
     let reward_token_2 = AssetInfo::Token {
         contract_addr: Addr::unchecked("usdt"),
     };
-    let total_reward = TokenAmount(1000000);
+    let total_reward = Some(TokenAmount(1000000));
     let reward_per_sec = TokenAmount(100);
     let start_timestamp: Option<u64> = None;
     create_incentive!(
@@ -285,7 +285,7 @@ pub fn test_multi_incentives_with_single_position() {
         dex,
         pool_key,
         reward_token_2.clone(),
-        TokenAmount(1000000000),
+        Some(TokenAmount(1000000000)),
         TokenAmount(200),
         start_timestamp,
         "alice"
@@ -423,7 +423,7 @@ pub fn test_multi_incentives_with_multi_positions() {
     let reward_token_2 = AssetInfo::Token {
         contract_addr: Addr::unchecked("usdt"),
     };
-    let total_reward = TokenAmount(1000000);
+    let total_reward = Some(TokenAmount(1000000));
     let reward_per_sec = TokenAmount(100);
     let start_timestamp: Option<u64> = None;
     create_incentive!(
@@ -442,7 +442,7 @@ pub fn test_multi_incentives_with_multi_positions() {
         dex,
         pool_key,
         reward_token_2.clone(),
-        TokenAmount(1000000000),
+        Some(TokenAmount(1000000000)),
         TokenAmount(200),
         start_timestamp,
         "alice"
@@ -598,7 +598,7 @@ pub fn test_incentive_with_position_cross_out_of_range() {
     let reward_token = AssetInfo::Token {
         contract_addr: token_z.clone(),
     };
-    let total_reward = TokenAmount(1000000000);
+    let total_reward = Some(TokenAmount(1000000000));
     let reward_per_sec = TokenAmount(100);
     let start_timestamp: Option<u64> = None;
     let liquidity = Liquidity::from_integer(1000000);
@@ -820,7 +820,7 @@ pub fn test_remove_position() {
     let reward_token = AssetInfo::Token {
         contract_addr: token_z.clone(),
     };
-    let total_reward = TokenAmount(1000000000);
+    let total_reward = Some(TokenAmount(1000000000));
     let reward_per_sec = TokenAmount(100);
     let start_timestamp: Option<u64> = None;
     let liquidity = Liquidity::from_integer(1000000);
@@ -912,7 +912,7 @@ pub fn incentive_stress_test() {
     let reward_token = AssetInfo::Token {
         contract_addr: token_z.clone(),
     };
-    let total_reward = TokenAmount(1000000000);
+    let total_reward = Some(TokenAmount(1000000000));
     let start_timestamp: Option<u64> = None;
 
     let rps: Vec<TokenAmount> = vec![
@@ -1047,7 +1047,7 @@ pub fn test_claim_incentive_with_single_position() {
     let reward_token = AssetInfo::Token {
         contract_addr: token_z.clone(),
     };
-    let total_reward = TokenAmount::from_integer(1000000000);
+    let total_reward = Some(TokenAmount::from_integer(1000000000));
     let reward_per_sec = TokenAmount(100);
     let start_timestamp: Option<u64> = None;
     let liquidity = Liquidity::from_integer(1000000);
@@ -1146,7 +1146,7 @@ pub fn test_claim_incentive_with_multi_position() {
     let reward_token = AssetInfo::Token {
         contract_addr: token_z.clone(),
     };
-    let total_reward = TokenAmount::from_integer(1000000000);
+    let total_reward = Some(TokenAmount::from_integer(1000000000));
     let reward_per_sec = TokenAmount(100);
     let start_timestamp: Option<u64> = None;
 
@@ -1257,7 +1257,7 @@ pub fn test_update_incentive_with_tick_move_left_to_right() {
     let reward_token = AssetInfo::Token {
         contract_addr: token_z.clone(),
     };
-    let total_reward = TokenAmount(1000000000);
+    let total_reward = Some(TokenAmount(1000000000));
     let reward_per_sec = TokenAmount(100);
     let start_timestamp: Option<u64> = None;
     let liquidity = Liquidity::from_integer(1000000);
@@ -1410,7 +1410,7 @@ pub fn test_update_incentive_with_tick_move_right_to_left() {
     let reward_token = AssetInfo::Token {
         contract_addr: token_z.clone(),
     };
-    let total_reward = TokenAmount(1000000000);
+    let total_reward = Some(TokenAmount(1000000000));
     let reward_per_sec = TokenAmount(100);
     let start_timestamp: Option<u64> = None;
     let liquidity = Liquidity::from_integer(1000000);

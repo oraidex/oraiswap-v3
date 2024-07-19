@@ -913,7 +913,7 @@ pub fn create_incentive(
     info: MessageInfo,
     pool_key: PoolKey,
     reward_token: AssetInfo,
-    total_reward: TokenAmount,
+    total_reward: Option<TokenAmount>,
     reward_per_sec: TokenAmount,
     start_timestamp: Option<u64>,
 ) -> Result<Response, ContractError> {
@@ -927,11 +927,12 @@ pub fn create_incentive(
     pool.update_global_incentives(env.block.time.seconds())?;
 
     let id = pool.incentives.len() as u64;
+    let remaining = total_reward.unwrap_or(TokenAmount(u128::MAX));
     let incentive = IncentiveRecord {
         id,
         reward_per_sec,
         reward_token: reward_token.clone(),
-        remaining: total_reward,
+        remaining: remaining,
         start_timestamp: start_timestamp.unwrap_or(env.block.time.seconds()),
         incentive_growth_global: FeeGrowth(0),
         last_updated: env.block.time.seconds(),
@@ -944,7 +945,7 @@ pub fn create_incentive(
         ("action", "create_incentive"),
         ("pool", &format!("{:?}", pool_key)),
         ("reward_token", &format!("{:?}", reward_token)),
-        ("total_reward", &total_reward.to_string()),
+        ("total_reward", &remaining.to_string()),
         ("reward_per_sec", &reward_per_sec.to_string()),
         (
             "reward_per_sec",

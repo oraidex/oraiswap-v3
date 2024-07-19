@@ -423,7 +423,7 @@ impl MockApp {
         dex: &str,
         pool_key: &PoolKey,
         reward_token: AssetInfo,
-        total_reward: TokenAmount,
+        total_reward: Option<TokenAmount>,
         reward_per_sec: TokenAmount,
         start_timestamp: Option<u64>,
     ) -> Result<AppResponse, String> {
