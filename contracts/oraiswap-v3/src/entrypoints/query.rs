@@ -16,7 +16,7 @@ use crate::{
     LIQUIDITY_TICK_LIMIT, POSITION_TICK_LIMIT,
 };
 
-use super::{calculate_swap, humanize_approvals, route, tickmap_slice, TimeStampExt};
+use super::{calculate_swap, route, tickmap_slice, TimeStampExt};
 
 /// Retrieves the admin of contract.
 pub fn query_admin(deps: Deps) -> Result<Addr, ContractError> {
@@ -412,10 +412,12 @@ pub fn query_owner_of(
 ) -> Result<OwnerOfResponse, ContractError> {
     let (owner_raw, index) = state::POSITION_KEYS_BY_TOKEN_ID.load(deps.storage, token_id)?;
     let owner = Addr::unchecked(String::from_utf8(owner_raw.to_vec())?);
-    let pos = state::get_position(deps.storage, &owner, index)?;
+    let mut pos = state::get_position(deps.storage, &owner, index)?;
+    pos.approvals
+        .retain(|apr| include_expired || !apr.expires.is_expired(&env.block));
     Ok(OwnerOfResponse {
         owner,
-        approvals: humanize_approvals(&env.block, &pos, include_expired),
+        approvals: pos.approvals,
     })
 }
 
@@ -463,11 +465,13 @@ pub fn query_all_nft_info(
 ) -> Result<AllNftInfoResponse, ContractError> {
     let (owner_raw, index) = state::POSITION_KEYS_BY_TOKEN_ID.load(deps.storage, token_id)?;
     let owner = Addr::unchecked(String::from_utf8(owner_raw.to_vec())?);
-    let pos = state::get_position(deps.storage, &owner, index)?;
+    let mut pos = state::get_position(deps.storage, &owner, index)?;
+    pos.approvals
+        .retain(|apr| include_expired || !apr.expires.is_expired(&env.block));
     Ok(AllNftInfoResponse {
         access: OwnerOfResponse {
             owner,
-            approvals: humanize_approvals(&env.block, &pos, include_expired),
+            approvals: pos.approvals.clone(),
         },
         info: NftInfoResponse { extension: pos },
     })
