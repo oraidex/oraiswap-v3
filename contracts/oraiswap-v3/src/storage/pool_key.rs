@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{ContractError, FeeTier};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_storage::to_length_prefixed_nested;
@@ -63,16 +65,18 @@ impl PoolKey {
             })
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl fmt::Display for PoolKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // tokenx-tokeny-fee-tick_spacing
-        format!(
+        write!(
+            f,
             "{}-{}-{}-{}",
             self.token_x, self.token_y, self.fee_tier.fee.0, self.fee_tier.tick_spacing
         )
     }
 }
-
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::Addr;
@@ -96,5 +100,7 @@ mod tests {
             pool_key.key(),
             to_length_prefixed_nested(&[b"token_0", b"token_1", fee_tier.key().as_slice()])
         );
+
+        println!("{:?}", pool_key.to_string());
     }
 }
