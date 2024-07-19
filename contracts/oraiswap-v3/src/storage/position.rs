@@ -128,7 +128,7 @@ impl Position {
                 continue;
             }
             let pending_rewards = incentive_growth_inside.to_fee(self.liquidity)?;
-            if pending_rewards.is_zero() {
+            if pending_rewards.is_zero() && incentive_growth_inside.is_zero() {
                 continue;
             }
             let incentive = PositionIncentives {
@@ -219,25 +219,26 @@ impl Position {
         lower_tick: &Tick,
     ) -> Result<Vec<Asset>, ContractError> {
         self.update_incentives(pool, upper_tick, lower_tick)?;
-        let mut incentives: Vec<Asset> = vec![];
-        // remove all incentives that has no pending rewards to keep the incentives list short.
-        self.incentives.retain(|incentive| {
-            if incentive.pending_rewards.is_zero() {
-                return false;
-            }
-            if let Some(record) = pool
-                .incentives
-                .iter()
-                .find(|i| i.id == incentive.incentive_id)
-            {
-                incentives.push(Asset {
-                    info: record.reward_token.clone(),
-                    amount: incentive.pending_rewards.into(),
-                });
-                return false;
-            }
-            true
-        });
+        let incentives: Vec<Asset> = self
+            .incentives
+            .iter()
+            .filter_map(|incentive| {
+                if incentive.pending_rewards.is_zero() {
+                    return None;
+                }
+                if let Some(record) = pool
+                    .incentives
+                    .iter()
+                    .find(|i| i.id == incentive.incentive_id)
+                {
+                    return Some(Asset {
+                        info: record.reward_token.clone(),
+                        amount: incentive.pending_rewards.into(),
+                    });
+                }
+                None
+            })
+            .collect();
 
         Ok(incentives)
     }
