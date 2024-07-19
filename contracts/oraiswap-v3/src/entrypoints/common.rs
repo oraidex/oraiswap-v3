@@ -1,6 +1,4 @@
-use cosmwasm_std::{
-    Addr, Api, BlockInfo, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Storage, Timestamp,
-};
+use cosmwasm_std::{Addr, Api, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Storage, Timestamp};
 
 use cw20::Expiration;
 use decimal::{CheckedOps, Decimal};
@@ -428,11 +426,7 @@ pub fn update_approvals(
     check_can_approve(deps.as_ref(), env, info, &owner_raw)?;
 
     // update the approval list (remove any for the same spender before adding)
-    pos.approvals = pos
-        .approvals
-        .into_iter()
-        .filter(|apr| apr.spender != spender)
-        .collect();
+    pos.approvals.retain(|apr| apr.spender != spender);
 
     // only difference between approve and revoke
     if add {
@@ -472,16 +466,4 @@ pub fn transfer_nft(
     state::add_position(deps.storage, recipient, &pos)?;
 
     Ok(())
-}
-
-pub fn humanize_approvals(
-    block: &BlockInfo,
-    pos: &Position,
-    include_expired: bool,
-) -> Vec<Approval> {
-    pos.approvals
-        .iter()
-        .filter(|apr| include_expired || !apr.expires.is_expired(block))
-        .map(|approval| approval.clone())
-        .collect()
 }
