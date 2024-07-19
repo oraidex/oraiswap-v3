@@ -65,6 +65,7 @@ impl Tick {
         let below_current_tick = index <= pool.current_tick_index;
 
         // ensure update global incentive before
+        // reference: https://uniswap.org/whitepaper-v3.pdf (6.21)
         let incentives: Vec<TickIncentive> = pool
             .incentives
             .iter()
@@ -99,6 +100,7 @@ impl Tick {
     }
 
     pub fn cross(&mut self, pool: &mut Pool, current_timestamp: u64) -> Result<(), ContractError> {
+        // reference: https://uniswap.org/whitepaper-v3.pdf (6.20)
         self.fee_growth_outside_x = pool
             .fee_growth_global_x
             .unchecked_sub(self.fee_growth_outside_x);
@@ -122,6 +124,7 @@ impl Tick {
                 .iter_mut()
                 .find(|i| i.incentive_id == record.id)
             {
+                // reference: https://uniswap.org/whitepaper-v3.pdf (6.20)
                 // Update the incentive growth if it exists
                 incentive.incentive_growth_outside = record
                     .incentive_growth_global

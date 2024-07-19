@@ -653,6 +653,7 @@ pub fn test_incentive_with_position_cross_out_of_range() {
 
     let incentives = get_position_incentives!(app, dex, 0, "alice").unwrap();
     assert_eq!(incentives.len(), 1);
+    println!("incentives: {:?}", incentives);
     let incentives_2 = get_position_incentives!(app, dex, 1, "alice").unwrap();
     assert_eq!(incentives_2, vec![]);
 

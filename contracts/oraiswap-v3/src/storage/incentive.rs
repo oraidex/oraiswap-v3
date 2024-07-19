@@ -66,6 +66,7 @@ impl IncentiveRecord {
     }
 }
 
+// reference: https://uniswap.org/whitepaper-v3.pdf (6.17) and (6.18)
 pub fn calculate_incentive_growth_inside(
     tick_lower: i32,
     tick_lower_incentive_growth_outside: FeeGrowth,

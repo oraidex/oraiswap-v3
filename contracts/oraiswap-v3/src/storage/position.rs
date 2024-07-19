@@ -125,14 +125,18 @@ impl Position {
                     .unchecked_sub(incentive.incentive_growth_inside)
                     .to_fee(self.liquidity)?;
                 incentive.incentive_growth_inside = incentive_growth_inside;
-            } else {
-                let incentive = PositionIncentives {
-                    incentive_id: record.id,
-                    pending_rewards: incentive_growth_inside.to_fee(self.liquidity)?,
-                    incentive_growth_inside,
-                };
-                self.incentives.push(incentive);
+                continue;
             }
+            let pending_rewards = incentive_growth_inside.to_fee(self.liquidity)?;
+            if pending_rewards.is_zero() {
+                continue;
+            }
+            let incentive = PositionIncentives {
+                incentive_id: record.id,
+                pending_rewards,
+                incentive_growth_inside,
+            };
+            self.incentives.push(incentive);
         }
 
         Ok(())
@@ -216,22 +220,24 @@ impl Position {
     ) -> Result<Vec<Asset>, ContractError> {
         self.update_incentives(pool, upper_tick, lower_tick)?;
         let mut incentives: Vec<Asset> = vec![];
-
-        for incentive in &mut self.incentives {
-            if incentive.pending_rewards.gt(&TokenAmount::new(0)) {
-                if let Some(record) = pool
-                    .incentives
-                    .iter()
-                    .find(|i| i.id == incentive.incentive_id)
-                {
-                    incentives.push(Asset {
-                        info: record.reward_token.clone(),
-                        amount: incentive.pending_rewards.into(),
-                    });
-                    incentive.pending_rewards = TokenAmount::new(0);
-                }
+        // remove all incentives that has no pending rewards to keep the incentives list short.
+        self.incentives.retain(|incentive| {
+            if incentive.pending_rewards.is_zero() {
+                return false;
             }
-        }
+            if let Some(record) = pool
+                .incentives
+                .iter()
+                .find(|i| i.id == incentive.incentive_id)
+            {
+                incentives.push(Asset {
+                    info: record.reward_token.clone(),
+                    amount: incentive.pending_rewards.into(),
+                });
+                return false;
+            }
+            true
+        });
 
         Ok(incentives)
     }
