@@ -47,5 +47,5 @@ fn test_change_admin_not_admin() {
         )
         .unwrap_err();
 
-    assert!(result.contains("error executing WasmMsg"));
+    assert!(result.to_string().contains("error executing WasmMsg"));
 }

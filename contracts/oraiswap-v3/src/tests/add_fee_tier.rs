@@ -31,7 +31,7 @@ fn test_add_fee_tier_not_admin() {
 
     let fee_tier = FeeTier::new(Percentage::new(1), 1).unwrap();
     let result = add_fee_tier!(app, dex, fee_tier, "bob").unwrap_err();
-    assert!(result.contains("error executing WasmMsg"));
+    assert!(result.to_string().contains("error executing WasmMsg"));
 }
 
 #[test]
@@ -55,7 +55,7 @@ fn test_add_fee_tier_tick_spacing_zero() {
     };
     let result = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
 
-    assert!(result.contains("error executing WasmMsg"));
+    assert!(result.to_string().contains("error executing WasmMsg"));
 }
 
 #[test]

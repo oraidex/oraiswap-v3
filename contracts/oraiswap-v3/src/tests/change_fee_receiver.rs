@@ -67,5 +67,5 @@ fn test_not_admin_change_fee_reciever() {
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier.clone()).unwrap();
     let result = change_fee_receiver!(app, dex, pool_key, "bob", "bob").unwrap_err();
-    assert!(result.contains("error executing WasmMsg"));
+    assert!(result.to_string().contains("error executing WasmMsg"));
 }

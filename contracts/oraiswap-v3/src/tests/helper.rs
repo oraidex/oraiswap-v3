@@ -46,6 +46,21 @@ impl MockApp {
         )
     }
 
+    pub fn add_fee_tier_string(
+        &mut self,
+        sender: String,
+        dex: String,
+        fee_tier: FeeTier,
+    ) -> Result<AppResponse, String> {
+        println!("in add fee tier string");
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &msg::ExecuteMsg::AddFeeTier { fee_tier },
+            &[],
+        )
+    }
+
     pub fn add_fee_tier(
         &mut self,
         sender: &str,
@@ -529,6 +544,13 @@ pub mod macros {
         }};
     }
     pub(crate) use add_fee_tier;
+
+    macro_rules! add_fee_tier_string {
+        ($app:ident, $dex_address:expr, $fee_tier:expr, $caller:expr) => {{
+            $app.add_fee_tier_string($caller, $dex_address, $fee_tier)
+        }};
+    }
+    pub(crate) use add_fee_tier_string;
 
     macro_rules! remove_fee_tier {
         ($app:ident, $dex_address:expr, $fee_tier:expr, $caller:tt) => {{

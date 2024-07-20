@@ -110,6 +110,53 @@ pub fn test_create_incentive() {
         ]
     );
 
+    // create incentive with no total reward -> fallback to max:u128
+    let latest_timestamp_time = app.app.block_info().time.seconds();
+    create_incentive!(
+        app,
+        dex,
+        pool_key,
+        reward_token.clone(),
+        None,
+        reward_per_sec,
+        start_timestamp,
+        "alice"
+    )
+    .unwrap();
+    let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
+    assert_eq!(
+        pool.incentives,
+        vec![
+            IncentiveRecord {
+                id: 0,
+                reward_per_sec,
+                reward_token: reward_token.clone(),
+                remaining: total_reward.unwrap(),
+                start_timestamp: current_time,
+                incentive_growth_global: FeeGrowth(0),
+                last_updated: latest_timestamp_time
+            },
+            IncentiveRecord {
+                id: 1,
+                reward_per_sec,
+                reward_token: reward_token.clone(),
+                remaining: total_reward.unwrap(),
+                start_timestamp: new_timestamp_time,
+                incentive_growth_global: FeeGrowth(0),
+                last_updated: latest_timestamp_time
+            },
+            IncentiveRecord {
+                id: 2,
+                reward_per_sec,
+                reward_token: reward_token.clone(),
+                remaining: TokenAmount(u128::MAX),
+                start_timestamp: latest_timestamp_time,
+                incentive_growth_global: FeeGrowth(0),
+                last_updated: latest_timestamp_time
+            }
+        ]
+    );
+
     // create fail, unauthorized
     let res = create_incentive!(
         app,
