@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, StdError, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Timestamp, Uint128};
 use decimal::*;
 
 use crate::{
