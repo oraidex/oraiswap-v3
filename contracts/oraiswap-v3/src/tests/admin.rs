@@ -2,6 +2,7 @@ use crate::msg::{ExecuteMsg, QueryMsg};
 use crate::percentage::Percentage;
 use crate::tests::helper::macros::*;
 use crate::tests::helper::MockApp;
+use crate::ContractError;
 use cosmwasm_std::Addr;
 use decimal::Decimal;
 
@@ -38,7 +39,7 @@ fn test_change_admin_not_admin() {
     let execute_msg = ExecuteMsg::ChangeAdmin {
         new_admin: Addr::unchecked("bob"),
     };
-    let result = app
+    let error = app
         .execute(
             Addr::unchecked("bob"),
             Addr::unchecked(dex.clone()),
@@ -47,5 +48,8 @@ fn test_change_admin_not_admin() {
         )
         .unwrap_err();
 
-    assert!(result.to_string().contains("error executing WasmMsg"));
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::Unauthorized {}.to_string()
+    );
 }

@@ -2,6 +2,7 @@ use crate::math::types::percentage::Percentage;
 use crate::math::types::sqrt_price::calculate_sqrt_price;
 use crate::tests::helper::macros::*;
 use crate::tests::helper::MockApp;
+use crate::ContractError;
 use crate::{FeeTier, PoolKey};
 use cosmwasm_std::Addr;
 use decimal::Decimal;
@@ -69,8 +70,9 @@ fn test_not_admin_change_fee_reciever() {
     let pool_key =
         PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier.clone()).unwrap();
     let error = change_fee_receiver!(app, dex, pool_key, "bob", "bob").unwrap_err();
-    assert!(error
-        .root_cause()
-        .to_string()
-        .contains("error executing WasmMsg"));
+
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::Unauthorized {}.to_string()
+    );
 }

@@ -2,6 +2,7 @@ use crate::msg::{ExecuteMsg, QueryMsg};
 use crate::percentage::Percentage;
 use crate::tests::helper::macros::*;
 use crate::tests::helper::MockApp;
+use crate::ContractError;
 use cosmwasm_std::Addr;
 use decimal::Decimal;
 
@@ -46,8 +47,8 @@ fn test_change_protocol_fee_not_admin() {
         )
         .unwrap_err();
 
-    assert!(error
-        .root_cause()
-        .to_string()
-        .contains("error executing WasmMsg"));
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::Unauthorized {}.to_string()
+    );
 }

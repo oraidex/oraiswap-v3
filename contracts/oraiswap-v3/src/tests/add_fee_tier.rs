@@ -1,8 +1,8 @@
 use crate::math::types::percentage::Percentage;
 use crate::msg::QueryMsg;
 use crate::tests::helper::{macros::*, MockApp};
+use crate::ContractError;
 use crate::FeeTier;
-use cw20_base::ContractError;
 use decimal::Decimal;
 
 #[test]
@@ -33,10 +33,10 @@ fn test_add_fee_tier_not_admin() {
     let fee_tier = FeeTier::new(Percentage::new(1), 1).unwrap();
     let error = add_fee_tier!(app, dex, fee_tier, "bob").unwrap_err();
 
-    assert!(error
-        .root_cause()
-        .to_string()
-        .contains(&ContractError::Unauthorized {}.to_string()));
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::Unauthorized {}.to_string()
+    );
 }
 
 #[test]
@@ -60,10 +60,10 @@ fn test_add_fee_tier_tick_spacing_zero() {
     };
     let error = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
 
-    assert!(error
-        .root_cause()
-        .to_string()
-        .contains("error executing WasmMsg"));
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::InvalidTickSpacing {}.to_string()
+    );
 }
 
 #[test]
@@ -77,10 +77,10 @@ fn test_add_fee_tier_over_upper_bound_tick_spacing() {
     };
     let error = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
 
-    assert!(error
-        .root_cause()
-        .to_string()
-        .contains("error executing WasmMsg"));
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::InvalidTickSpacing {}.to_string()
+    );
 }
 
 #[test]
@@ -94,8 +94,8 @@ fn test_add_fee_tier_fee_above_limit() {
     };
     let error = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
 
-    assert!(error
-        .root_cause()
-        .to_string()
-        .contains("error executing WasmMsg"));
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::InvalidFee {}.to_string()
+    );
 }
