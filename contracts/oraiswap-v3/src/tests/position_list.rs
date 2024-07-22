@@ -34,7 +34,8 @@ fn test_remove_position_from_empty_list() {
     )
     .unwrap();
 
-    remove_position!(app, dex, 0, "alice").unwrap_err();
+    let error = remove_position!(app, dex, 0, "alice").unwrap_err();
+    assert!(error.root_cause().to_string().contains("not found"));
 }
 
 #[test]
@@ -369,13 +370,14 @@ fn test_only_owner_can_modify_position_list() {
         let last_position_index_before = get_all_positions!(app, dex, "alice").len() - 1;
 
         let unauthorized_user = "bob";
-        remove_position!(
+        let error = remove_position!(
             app,
             dex,
             last_position_index_before as u32,
             unauthorized_user
         )
         .unwrap_err();
+        assert!(error.root_cause().to_string().contains("not found"));
     }
 }
 
@@ -674,7 +676,8 @@ fn test_only_owner_can_transfer_position() {
     {
         let transferred_index = 0;
 
-        transfer_position!(app, dex, transferred_index, "alice", "bob").unwrap_err();
+        let error = transfer_position!(app, dex, transferred_index, "alice", "bob").unwrap_err();
+        assert!(error.root_cause().to_string().contains("not found"));
     }
 }
 

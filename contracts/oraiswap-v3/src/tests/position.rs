@@ -7,7 +7,7 @@ use crate::{
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp},
     token_amount::TokenAmount,
-    FeeTier, PoolKey, MIN_SQRT_PRICE,
+    ContractError, FeeTier, PoolKey, MIN_SQRT_PRICE,
 };
 
 #[test]
@@ -82,7 +82,7 @@ fn test_position_same_upper_and_lower_tick() {
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
-    create_position!(
+    let error = create_position!(
         app,
         dex,
         pool_key,
@@ -94,6 +94,11 @@ fn test_position_same_upper_and_lower_tick() {
         "alice"
     )
     .unwrap_err();
+
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::InvalidTickIndex {}.to_string()
+    );
 }
 
 #[test]
@@ -224,8 +229,11 @@ fn test_remove_position() {
     // Load states
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     // Check ticks
-    get_tick!(app, dex, pool_key, lower_tick_index).unwrap_err();
-    get_tick!(app, dex, pool_key, upper_tick_index).unwrap_err();
+    let error = get_tick!(app, dex, pool_key, lower_tick_index).unwrap_err();
+    assert!(error.to_string().contains("not found"));
+    let error = get_tick!(app, dex, pool_key, upper_tick_index).unwrap_err();
+    assert!(error.to_string().contains("not found"));
+
     let lower_tick_bit = is_tick_initialized!(app, dex, pool_key, lower_tick_index);
 
     let upper_tick_bit = is_tick_initialized!(app, dex, pool_key, upper_tick_index);

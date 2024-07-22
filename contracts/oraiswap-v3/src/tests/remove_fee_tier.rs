@@ -3,7 +3,7 @@ use decimal::*;
 use crate::{
     percentage::Percentage,
     tests::helper::{macros::*, MockApp},
-    FeeTier,
+    ContractError, FeeTier,
 };
 
 #[test]
@@ -35,7 +35,12 @@ fn test_remove_not_existing_fee_tier() {
     add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(2, 4), 2).unwrap();
-    remove_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
+    let error = remove_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
+
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::FeeTierNotFound {}.to_string()
+    );
 }
 
 #[test]
@@ -49,5 +54,9 @@ fn test_remove_fee_tier_not_admin() {
     let fee_tier = FeeTier::new(Percentage::from_scale(2, 4), 2).unwrap();
     add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
 
-    remove_fee_tier!(app, dex, fee_tier, "bob").unwrap_err();
+    let error = remove_fee_tier!(app, dex, fee_tier, "bob").unwrap_err();
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::Unauthorized {}.to_string()
+    );
 }

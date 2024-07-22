@@ -5,7 +5,7 @@ use crate::{
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp},
-    FeeTier, PoolKey,
+    ContractError, FeeTier, PoolKey,
 };
 
 #[test]
@@ -72,7 +72,7 @@ fn test_position_slippage_below_range() {
     let limit_lower = SqrtPrice::new(1014432353584998786339859);
     let limit_upper = SqrtPrice::new(1045335831204498605270797);
     let tick = pool_key.fee_tier.tick_spacing as i32;
-    create_position!(
+    let error = create_position!(
         app,
         dex,
         pool_key,
@@ -84,6 +84,10 @@ fn test_position_slippage_below_range() {
         "alice"
     )
     .unwrap_err();
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::PriceLimitReached {}.to_string()
+    );
 }
 
 #[test]
@@ -99,7 +103,7 @@ fn test_position_slippage_above_range() {
     let limit_lower = SqrtPrice::new(955339206774222158009382);
     let limit_upper = SqrtPrice::new(984442481813945288458906);
     let tick = pool_key.fee_tier.tick_spacing as i32;
-    create_position!(
+    let error = create_position!(
         app,
         dex,
         pool_key,
@@ -111,4 +115,8 @@ fn test_position_slippage_above_range() {
         "alice"
     )
     .unwrap_err();
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::PriceLimitReached {}.to_string()
+    );
 }

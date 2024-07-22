@@ -10,7 +10,7 @@ use crate::{
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp},
     token_amount::TokenAmount,
-    FeeTier, PoolKey, Position, MIN_SQRT_PRICE,
+    ContractError, FeeTier, PoolKey, Position, MIN_SQRT_PRICE,
 };
 
 #[test]
@@ -275,8 +275,10 @@ fn test_burn_nft() {
     // Load states
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     // Check ticks
-    get_tick!(app, dex, pool_key, lower_tick_index).unwrap_err();
-    get_tick!(app, dex, pool_key, upper_tick_index).unwrap_err();
+    let error = get_tick!(app, dex, pool_key, lower_tick_index).unwrap_err();
+    assert!(error.to_string().contains("not found"));
+    let error = get_tick!(app, dex, pool_key, upper_tick_index).unwrap_err();
+    assert!(error.to_string().contains("not found"));
     let lower_tick_bit = is_tick_initialized!(app, dex, pool_key, lower_tick_index);
 
     let upper_tick_bit = is_tick_initialized!(app, dex, pool_key, upper_tick_index);
@@ -1104,16 +1106,21 @@ fn test_only_owner_can_transfer_nft() {
             )
             .unwrap();
 
-        app.execute(
-            Addr::unchecked("bob"),
-            dex.clone(),
-            &msg::ExecuteMsg::TransferNft {
-                recipient: Addr::unchecked("alice"),
-                token_id,
-            },
-            &[],
-        )
-        .unwrap_err();
+        let error = app
+            .execute(
+                Addr::unchecked("bob"),
+                dex.clone(),
+                &msg::ExecuteMsg::TransferNft {
+                    recipient: Addr::unchecked("alice"),
+                    token_id,
+                },
+                &[],
+            )
+            .unwrap_err();
+        assert_eq!(
+            error.root_cause().to_string(),
+            ContractError::Unauthorized {}.to_string()
+        );
     }
 }
 

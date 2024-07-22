@@ -48,5 +48,6 @@ fn test_claim_not_owner() {
     init_basic_position!(app, dex, token_x, token_y);
     init_basic_swap!(app, dex, token_x, token_y);
 
-    claim_fee!(app, dex, 0, "bob").unwrap_err();
+    let error = claim_fee!(app, dex, 0, "bob").unwrap_err();
+    assert!(error.root_cause().to_string().contains("not found"));
 }
