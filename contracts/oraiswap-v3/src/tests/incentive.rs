@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Timestamp, Uint128};
+use cosmwasm_std::{Addr, StdError, Timestamp, Uint128};
 use decimal::*;
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp},
     token_amount::TokenAmount,
-    FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+    ContractError, FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
 };
 
 #[test]
@@ -158,7 +158,7 @@ pub fn test_create_incentive() {
     );
 
     // create fail, unauthorized
-    let res = create_incentive!(
+    let error = create_incentive!(
         app,
         dex,
         pool_key,
@@ -167,8 +167,12 @@ pub fn test_create_incentive() {
         reward_per_sec,
         start_timestamp,
         "bob"
-    );
-    assert!(res.is_err());
+    )
+    .unwrap_err();
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::Unauthorized {}.to_string()));
 }
 
 #[test]
