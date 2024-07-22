@@ -1192,7 +1192,7 @@ fn test_approving_revoking() {
         wasm_event.attributes,
         vec![
             Attribute {
-                key: "_contract_addr".to_string(),
+                key: "_contract_address".to_string(),
                 value: dex.to_string()
             },
             attr("action", "approve"),

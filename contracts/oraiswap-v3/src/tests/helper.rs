@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Coin, Event, StdResult, Timestamp};
-use cw_multi_test::{AppResponse, ContractWrapper};
+use cosmwasm_testing_util::{AppResponse, ContractWrapper, MockResult};
 
 use crate::{
     interface::{Asset, AssetInfo, PoolWithPoolKey, QuoteResult, SwapHop},
@@ -35,7 +35,7 @@ impl MockApp {
         Self { app, dex_id }
     }
 
-    pub fn create_dex(&mut self, owner: &str, protocol_fee: Percentage) -> Result<Addr, String> {
+    pub fn create_dex(&mut self, owner: &str, protocol_fee: Percentage) -> MockResult<Addr> {
         let code_id = self.dex_id;
         self.instantiate(
             code_id,
@@ -46,27 +46,12 @@ impl MockApp {
         )
     }
 
-    pub fn add_fee_tier_string(
-        &mut self,
-        sender: String,
-        dex: String,
-        fee_tier: FeeTier,
-    ) -> Result<AppResponse, String> {
-        println!("in add fee tier string");
-        self.execute(
-            Addr::unchecked(sender),
-            Addr::unchecked(dex),
-            &msg::ExecuteMsg::AddFeeTier { fee_tier },
-            &[],
-        )
-    }
-
     pub fn add_fee_tier(
         &mut self,
         sender: &str,
         dex: &str,
         fee_tier: FeeTier,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -80,7 +65,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         fee_tier: FeeTier,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -98,7 +83,7 @@ impl MockApp {
         fee_tier: FeeTier,
         init_sqrt_price: SqrtPrice,
         init_tick: i32,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -118,7 +103,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         pool_key: &PoolKey,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -135,7 +120,7 @@ impl MockApp {
         dex: &str,
         pool_key: &PoolKey,
         fee_recevier: &str,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -157,7 +142,7 @@ impl MockApp {
         liquidity_delta: Liquidity,
         slippage_limit_lower: SqrtPrice,
         slippage_limit_upper: SqrtPrice,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -179,7 +164,7 @@ impl MockApp {
         dex: &str,
         index: u32,
         receiver: &str,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -196,7 +181,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         index: u32,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -213,7 +198,7 @@ impl MockApp {
         expected_amount_out: TokenAmount,
         slippage: Percentage,
         swaps: Vec<SwapHop>,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -236,7 +221,7 @@ impl MockApp {
         amount: TokenAmount,
         by_amount_in: bool,
         sqrt_price_limit: SqrtPrice,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -251,12 +236,7 @@ impl MockApp {
         )
     }
 
-    pub fn claim_fee(
-        &mut self,
-        sender: &str,
-        dex: &str,
-        index: u32,
-    ) -> Result<AppResponse, String> {
+    pub fn claim_fee(&mut self, sender: &str, dex: &str, index: u32) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -270,7 +250,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         index: u32,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -424,14 +404,6 @@ impl MockApp {
         )
     }
 
-    pub fn assert_fail(&self, res: Result<AppResponse, String>) {
-        // new version of cosmwasm does not return detail error
-        match res.err() {
-            Some(msg) => assert!(msg.contains("error executing WasmMsg")),
-            None => panic!("Must return generic error"),
-        }
-    }
-
     pub fn create_incentive(
         &mut self,
         sender: &str,
@@ -441,7 +413,7 @@ impl MockApp {
         total_reward: Option<TokenAmount>,
         reward_per_sec: TokenAmount,
         start_timestamp: Option<u64>,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -544,13 +516,6 @@ pub mod macros {
         }};
     }
     pub(crate) use add_fee_tier;
-
-    macro_rules! add_fee_tier_string {
-        ($app:ident, $dex_address:expr, $fee_tier:expr, $caller:expr) => {{
-            $app.add_fee_tier_string($caller, $dex_address, $fee_tier)
-        }};
-    }
-    pub(crate) use add_fee_tier_string;
 
     macro_rules! remove_fee_tier {
         ($app:ident, $dex_address:expr, $fee_tier:expr, $caller:tt) => {{

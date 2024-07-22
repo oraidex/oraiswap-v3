@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, Api, BankMsg, Binary, Coin, CosmosMsg, MessageInfo, StdResult, Uint128,
+    to_json_binary, Addr, Api, BankMsg, Binary, Coin, CosmosMsg, MessageInfo, StdResult, Uint128,
     WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Expiration};
@@ -65,7 +65,7 @@ impl Asset {
                     msgs.push(
                         WasmMsg::Execute {
                             contract_addr: contract_addr.to_string(),
-                            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                                 recipient: info.sender.to_string(),
                                 amount: self.amount,
                             })?,
@@ -101,7 +101,7 @@ impl Asset {
                     msgs.push(
                         WasmMsg::Execute {
                             contract_addr: contract_addr.to_string(),
-                            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                            msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
                                 owner: info.sender.to_string(),
                                 recipient,
                                 amount: self.amount,
@@ -220,7 +220,7 @@ impl Cw721ReceiveMsg {
     /// serializes the message
     pub fn into_binary(self) -> StdResult<Binary> {
         let msg = ReceiverHandleMsg::ReceiveNft(self);
-        to_binary(&msg)
+        to_json_binary(&msg)
     }
 
     /// creates a cosmos_msg sending this struct to the named contract

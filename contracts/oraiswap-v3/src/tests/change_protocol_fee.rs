@@ -37,7 +37,7 @@ fn test_change_protocol_fee_not_admin() {
     let execute_msg = ExecuteMsg::ChangeProtocolFee {
         protocol_fee: Percentage::new(1),
     };
-    let result = app
+    let error = app
         .execute(
             Addr::unchecked("bob"),
             Addr::unchecked(dex.clone()),
@@ -46,5 +46,8 @@ fn test_change_protocol_fee_not_admin() {
         )
         .unwrap_err();
 
-    assert!(result.to_string().contains("error executing WasmMsg"));
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains("error executing WasmMsg"));
 }
