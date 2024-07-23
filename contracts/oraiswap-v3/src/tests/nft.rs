@@ -1203,6 +1203,7 @@ fn test_approving_revoking() {
                 value: dex.to_string()
             },
             attr("action", "approve"),
+            attr("token_id", token_id.to_string()),
             attr("sender", "alice"),
             attr("spender", "random"),
         ]

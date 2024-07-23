@@ -46,9 +46,7 @@ pub fn change_admin(
         attr("new_admin", new_admin.as_str()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_event(event))
+    Ok(Response::new().add_attributes(event_attributes))
 }
 
 /// Allows an fee receiver to withdraw collected fees.
@@ -130,9 +128,7 @@ pub fn change_protocol_fee(
         attr("new_protocol_fee", protocol_fee.to_string()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_event(event))
+    Ok(Response::new().add_attributes(event_attributes))
 }
 
 /// Allows admin to change current fee receiver.
@@ -169,9 +165,7 @@ pub fn change_fee_receiver(
         attr("new_fee_receiver", fee_receiver.as_str()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_event(event))
+    Ok(Response::new().add_attributes(event_attributes))
 }
 
 /// Opens a position.
@@ -456,9 +450,7 @@ pub fn transfer_position(
         attr("position_token_id", position.token_id.to_string()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_event(event))
+    Ok(Response::new().add_attributes(event_attributes))
 }
 
 /// Allows an authorized user (owner of the position) to claim collected fees.
@@ -758,9 +750,7 @@ pub fn create_pool(
         attr("init_tick", init_tick.to_string()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_event(event))
+    Ok(Response::new().add_attributes(event_attributes))
 }
 
 /// Allows admin to add a custom fee tier.
@@ -805,9 +795,7 @@ pub fn add_fee_tier(
         attr("tick_spacing", fee_tier.tick_spacing.to_string()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_event(event))
+    Ok(Response::new().add_attributes(event_attributes))
 }
 
 /// Removes an existing fee tier.
@@ -845,9 +833,7 @@ pub fn remove_fee_tier(
         attr("tick_spacing", fee_tier.tick_spacing.to_string()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_event(event))
+    Ok(Response::new().add_attributes(event_attributes))
 }
 
 pub fn handle_approve(
