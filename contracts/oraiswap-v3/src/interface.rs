@@ -45,6 +45,13 @@ impl AssetInfo {
             }
         }
     }
+
+    pub fn denom(&self) -> String {
+        match self {
+            AssetInfo::Token { contract_addr } => contract_addr.to_string(),
+            AssetInfo::NativeToken { denom } => denom.to_string(),
+        }
+    }
 }
 
 #[cw_serde]

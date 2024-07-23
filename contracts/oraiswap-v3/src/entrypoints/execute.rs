@@ -13,7 +13,7 @@ use super::{
     check_can_send, create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal,
     transfer_nft, update_approvals, TimeStampExt,
 };
-use cosmwasm_std::{attr, Addr, Binary, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{attr, Addr, Binary, DepsMut, Env, Event, MessageInfo, Response};
 use cw20::Expiration;
 use decimal::Decimal;
 
@@ -40,9 +40,15 @@ pub fn change_admin(
     config.admin = new_admin.clone();
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new()
-        .add_attribute("action", "change_admin")
-        .add_attribute("new_admin", new_admin))
+    let event_attributes = vec![
+        attr("action", "change_admin"),
+        attr("old_admin", info.sender.as_str()),
+        attr("new_admin", new_admin.as_str()),
+    ];
+
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_event(event))
 }
 
 /// Allows an fee receiver to withdraw collected fees.
@@ -81,11 +87,17 @@ pub fn withdraw_protocol_fee(
     asset_0.transfer(&mut msgs, &info)?;
     asset_1.transfer(&mut msgs, &info)?;
 
-    Ok(Response::new()
-        .add_messages(msgs)
-        .add_attribute("action", "withdraw_protocol_fee")
-        .add_attribute("token_x", fee_protocol_token_x.to_string())
-        .add_attribute("token_y", fee_protocol_token_y.to_string()))
+    let event_attributes = vec![
+        attr("action", "withdraw_protocol_fee"),
+        attr("pool_key", pool_key.to_string()),
+        attr("token_x", fee_protocol_token_x.to_string()),
+        attr("token_y", fee_protocol_token_y.to_string()),
+        attr("receiver", pool.fee_receiver.as_str()),
+    ];
+
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_messages(msgs).add_event(event))
 }
 
 /// Allows an admin to adjust the protocol fee.
@@ -106,10 +118,21 @@ pub fn change_protocol_fee(
         return Err(ContractError::Unauthorized {});
     }
 
+    let old_protocol_fee = config.protocol_fee;
+
     config.protocol_fee = protocol_fee;
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().add_attribute("action", "change_protocol_fee"))
+    let event_attributes = vec![
+        attr("action", "change_protocol_fee"),
+        attr("admin", info.sender.as_str()),
+        attr("old_protocol_fee", old_protocol_fee.to_string()),
+        attr("new_protocol_fee", protocol_fee.to_string()),
+    ];
+
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_event(event))
 }
 
 /// Allows admin to change current fee receiver.
@@ -134,10 +157,21 @@ pub fn change_fee_receiver(
 
     let pool_key_db = pool_key.key();
     let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
+    let old_fee_receiver = pool.fee_receiver.clone();
     pool.fee_receiver = fee_receiver.to_string();
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
-    Ok(Response::new().add_attribute("action", "change_fee_receiver"))
+    let event_attributes = vec![
+        attr("action", "change_fee_receiver"),
+        attr("pool_key", pool_key.to_string()),
+        attr("admin", info.sender.as_str()),
+        attr("old_fee_receiver", old_fee_receiver.as_str()),
+        attr("new_fee_receiver", fee_receiver.as_str()),
+    ];
+
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_event(event))
 }
 
 /// Opens a position.
@@ -236,8 +270,9 @@ pub fn create_position(
 
     let event_attributes = vec![
         attr("action", "create_position"),
+        attr("pool_key", pool_key.to_string()),
         attr("token_id", position.token_id.to_string()),
-        attr("address", info.sender.as_str()),
+        attr("owner", info.sender.as_str()),
         attr("liquidity", liquidity_delta.to_string()),
         attr("lower_tick", lower_tick.index.to_string()),
         attr("upper_tick", upper_tick.index.to_string()),
@@ -246,9 +281,9 @@ pub fn create_position(
         attr("amount_y", y.to_string()),
     ];
 
-    Ok(Response::new()
-        .add_messages(msgs)
-        .add_attributes(event_attributes))
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_messages(msgs).add_event(event))
 }
 
 /// Performs a single swap based on the provided parameters.
@@ -271,6 +306,7 @@ pub fn create_position(
 /// - Fails if the allowance is insufficient or the user balance transfer fails.
 /// - Fails if there is insufficient liquidity in pool
 /// - Fails if pool does not
+/// TODO: config receipient?
 #[allow(clippy::too_many_arguments)]
 pub fn swap(
     deps: DepsMut,
@@ -308,14 +344,21 @@ pub fn swap(
         sqrt_price_limit,
     )?;
 
-    Ok(Response::new()
-        .add_messages(msgs)
-        .add_attribute("action", "swap")
-        .add_attribute("pool_key", pool_key.to_string())
-        .add_attribute("amount_in", amount_in.to_string())
-        .add_attribute("amount_out", amount_out.to_string())
-        .add_attribute("fee", fee.to_string())
-        .add_attribute("x_to_y", x_to_y.to_string()))
+    let event_attributes = vec![
+        attr("action", "swap"),
+        attr("pool_key", pool_key.to_string()),
+        attr("sender", info.sender.as_str()), // TODO: sender is contract or original sender?
+        attr("amount_in", amount_in.to_string()),
+        attr("amount_out", amount_out.to_string()),
+        attr("current_tick", pool.current_tick_index.to_string()),
+        attr("current_sqrt_price", pool.sqrt_price.to_string()),
+        attr("x_to_y", x_to_y.to_string()),
+        attr("fee", fee.to_string()),
+    ];
+
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_messages(msgs).add_event(event))
 }
 
 /// Performs atomic swap involving several pools based on the provided parameters.
@@ -406,7 +449,16 @@ pub fn transfer_position(
     position.approvals = vec![];
     state::add_position(deps.storage, &receiver_addr, &position)?;
 
-    Ok(Response::new().add_attribute("action", "transfer_position"))
+    let event_attributes = vec![
+        attr("action", "transfer_position"),
+        attr("sender", info.sender.as_str()),
+        attr("receiver", receiver),
+        attr("position_token_id", position.token_id.to_string()),
+    ];
+
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_event(event))
 }
 
 /// Allows an authorized user (owner of the position) to claim collected fees.
@@ -469,11 +521,18 @@ pub fn claim_fee(
     asset_0.transfer(&mut msgs, &info)?;
     asset_1.transfer(&mut msgs, &info)?;
 
-    Ok(Response::new()
-        .add_messages(msgs)
-        .add_attribute("action", "claim_fee")
-        .add_attribute("amount_x", x.to_string())
-        .add_attribute("amount_y", y.to_string()))
+    let event_attributes = vec![
+        attr("action", "claim_fee"),
+        attr("owner", info.sender.as_str()),
+        attr("pool_key", position.pool_key.to_string()),
+        attr("position_token_id", position.token_id.to_string()),
+        attr("amount_x", x.to_string()),
+        attr("amount_y", y.to_string()),
+    ];
+
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_messages(msgs).add_event(event))
 }
 
 /// Allows an authorized user (owner of the position) to claim incentives.
@@ -505,13 +564,36 @@ pub fn claim_incentives(
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
     let mut msgs = vec![];
-    for asset in incentives {
+    for asset in incentives.clone() {
         asset.transfer(&mut msgs, &info)?;
     }
 
-    Ok(Response::new()
-        .add_messages(msgs)
-        .add_attribute("action", "claim_incentives"))
+    let event_attributes = vec![
+        attr("action", "claim_incentives"),
+        attr("owner", info.sender.as_str()),
+        attr("pool_key", position.pool_key.to_string()),
+        attr("position_token_id", position.token_id.to_string()),
+        attr(
+            "incentives_token_address",
+            incentives
+                .iter()
+                .map(|x| x.info.denom())
+                .collect::<Vec<String>>()
+                .join(","),
+        ),
+        attr(
+            "incentives_amount",
+            incentives
+                .iter()
+                .map(|x| x.amount.to_string())
+                .collect::<Vec<String>>()
+                .join(","),
+        ),
+    ];
+
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_messages(msgs).add_event(event))
 }
 
 /// Removes a position. Sends tokens associated with specified position to the owner.
@@ -601,16 +683,15 @@ pub fn remove_position(
 
     let event_attributes = vec![
         attr("action", "remove_position"),
-        attr("address", info.sender.as_str()),
+        attr("owner", info.sender.as_str()),
+        attr("pool_key", position.pool_key.to_string()),
+        attr("position_token_id", position.token_id.to_string()),
         attr("liquidity", withdrawed_liquidity.to_string()),
-        attr("lower_tick", lower_tick.index.to_string()),
-        attr("upper_tick", upper_tick.index.to_string()),
-        attr("current_sqrt_price", pool.sqrt_price.to_string()),
     ];
 
-    Ok(Response::new()
-        .add_messages(msgs)
-        .add_attributes(event_attributes))
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_messages(msgs).add_event(event))
 }
 
 /// Allows a user to create a custom pool on a specified token pair and fee tier.
@@ -669,7 +750,17 @@ pub fn create_pool(
 
     POOLS.save(deps.storage, &db_key, &pool)?;
 
-    Ok(Response::new().add_attribute("action", "create_pool"))
+    let event_attributes = vec![
+        attr("action", "create_pool"),
+        attr("block", env.block.height.to_string()),
+        attr("pool_key", pool_key.to_string()),
+        attr("init_sqrt_price", init_sqrt_price.to_string()),
+        attr("init_tick", init_tick.to_string()),
+    ];
+
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_event(event))
 }
 
 /// Allows admin to add a custom fee tier.
@@ -707,7 +798,16 @@ pub fn add_fee_tier(
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().add_attribute("action", "add_fee_tier"))
+    let event_attributes = vec![
+        attr("action", "add_fee_tier"),
+        attr("admin", info.sender.as_str()),
+        attr("fee", fee_tier.fee.to_string()),
+        attr("tick_spacing", fee_tier.tick_spacing.to_string()),
+    ];
+
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_event(event))
 }
 
 /// Removes an existing fee tier.
@@ -738,7 +838,16 @@ pub fn remove_fee_tier(
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().add_attribute("action", "remove_fee_tier"))
+    let event_attributes = vec![
+        attr("action", "remove_fee_tier"),
+        attr("admin", info.sender.as_str()),
+        attr("fee", fee_tier.fee.to_string()),
+        attr("tick_spacing", fee_tier.tick_spacing.to_string()),
+    ];
+
+    let event = Event::new("amm_v3").add_attributes(event_attributes);
+
+    Ok(Response::new().add_event(event))
 }
 
 pub fn handle_approve(
@@ -753,6 +862,7 @@ pub fn handle_approve(
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "approve"),
+        attr("token_id", token_id.to_string()),
         attr("sender", info.sender),
         attr("spender", spender),
     ]))
@@ -769,6 +879,7 @@ pub fn handle_revoke(
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "revoke"),
+        attr("token_id", token_id.to_string()),
         attr("sender", info.sender),
         attr("spender", spender),
     ]))
@@ -830,6 +941,7 @@ pub fn handle_transfer_nft(
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "transfer_nft"),
+        attr("token_id", token_id.to_string()),
         attr("sender", info.sender),
         attr("recipient", recipient),
     ]))
@@ -874,6 +986,7 @@ pub fn handle_send_nft(
         .add_message(send.into_cosmos_msg(contract.to_string())?)
         .add_attributes(vec![
             attr("action", "send_nft"),
+            attr("token_id", token_id.to_string()),
             attr("sender", info.sender),
             attr("recipient", contract),
         ]))
@@ -943,12 +1056,12 @@ pub fn create_incentive(
 
     Ok(Response::new().add_attributes(vec![
         ("action", "create_incentive"),
-        ("pool", &format!("{:?}", pool_key)),
+        ("pool", &pool_key.to_string()),
         ("reward_token", &format!("{:?}", reward_token)),
         ("total_reward", &remaining.to_string()),
         ("reward_per_sec", &reward_per_sec.to_string()),
         (
-            "reward_per_sec",
+            "start_timestamp",
             &start_timestamp
                 .unwrap_or(env.block.time.seconds())
                 .to_string(),
@@ -993,7 +1106,7 @@ pub fn update_incentive(
 
     Ok(Response::new().add_attributes(vec![
         ("action", "update_incentive"),
-        ("pool", &format!("{:?}", pool_key)),
+        ("pool", &pool_key.to_string()),
         ("record_id", &record_id.to_string()),
     ]))
 }
