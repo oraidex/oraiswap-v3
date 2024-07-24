@@ -444,13 +444,6 @@ pub fn extract_amount(events: &[Event], key: &str) -> Option<TokenAmount> {
                 }
             }
         }
-        if event.ty == "wasm-amm_v3" {
-            for attr in &event.attributes {
-                if attr.key == key {
-                    return attr.value.parse::<u128>().map(TokenAmount).ok();
-                }
-            }
-        }
     }
     None
 }

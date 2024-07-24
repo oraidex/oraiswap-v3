@@ -13,7 +13,7 @@ use super::{
     check_can_send, create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal,
     transfer_nft, update_approvals, TimeStampExt,
 };
-use cosmwasm_std::{attr, Addr, Binary, DepsMut, Env, Event, MessageInfo, Response};
+use cosmwasm_std::{attr, Addr, Binary, DepsMut, Env, MessageInfo, Response};
 use cw20::Expiration;
 use decimal::Decimal;
 
@@ -93,9 +93,7 @@ pub fn withdraw_protocol_fee(
         attr("receiver", pool.fee_receiver.as_str()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_messages(msgs).add_event(event))
+    Ok(Response::new().add_messages(msgs).add_attributes(event_attributes))
 }
 
 /// Allows an admin to adjust the protocol fee.
@@ -275,9 +273,7 @@ pub fn create_position(
         attr("amount_y", y.to_string()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_messages(msgs).add_event(event))
+    Ok(Response::new().add_messages(msgs).add_attributes(event_attributes))
 }
 
 /// Performs a single swap based on the provided parameters.
@@ -300,7 +296,6 @@ pub fn create_position(
 /// - Fails if the allowance is insufficient or the user balance transfer fails.
 /// - Fails if there is insufficient liquidity in pool
 /// - Fails if pool does not
-/// TODO: config receipient?
 #[allow(clippy::too_many_arguments)]
 pub fn swap(
     deps: DepsMut,
@@ -341,7 +336,7 @@ pub fn swap(
     let event_attributes = vec![
         attr("action", "swap"),
         attr("pool_key", pool_key.to_string()),
-        attr("sender", info.sender.as_str()), // TODO: sender is contract or original sender?
+        attr("sender", info.sender.as_str()), 
         attr("amount_in", amount_in.to_string()),
         attr("amount_out", amount_out.to_string()),
         attr("current_tick", pool.current_tick_index.to_string()),
@@ -350,9 +345,7 @@ pub fn swap(
         attr("fee", fee.to_string()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_messages(msgs).add_event(event))
+    Ok(Response::new().add_messages(msgs).add_attributes(event_attributes))
 }
 
 /// Performs atomic swap involving several pools based on the provided parameters.
@@ -522,9 +515,9 @@ pub fn claim_fee(
         attr("amount_y", y.to_string()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
+    let resp = claim_incentives(deps, env, info, index)?;
 
-    Ok(Response::new().add_messages(msgs).add_event(event))
+    Ok(resp.add_messages(msgs).add_attributes(event_attributes))
 }
 
 /// Allows an authorized user (owner of the position) to claim incentives.
@@ -583,9 +576,7 @@ pub fn claim_incentives(
         ),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_messages(msgs).add_event(event))
+    Ok(Response::new().add_messages(msgs).add_attributes(event_attributes))
 }
 
 /// Removes a position. Sends tokens associated with specified position to the owner.
@@ -681,9 +672,7 @@ pub fn remove_position(
         attr("liquidity", withdrawed_liquidity.to_string()),
     ];
 
-    let event = Event::new("amm_v3").add_attributes(event_attributes);
-
-    Ok(Response::new().add_messages(msgs).add_event(event))
+    Ok(Response::new().add_messages(msgs).add_attributes(event_attributes))
 }
 
 /// Allows a user to create a custom pool on a specified token pair and fee tier.
