@@ -109,6 +109,7 @@ pub fn execute(
             init_tick,
         } => create_pool(
             deps,
+            info,
             env,
             token_0,
             token_1,
