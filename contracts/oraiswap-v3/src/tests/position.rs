@@ -20,7 +20,7 @@ fn test_create_position() {
 
     add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
 
-    let init_tick = 10;
+    let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
     create_pool!(
         app,

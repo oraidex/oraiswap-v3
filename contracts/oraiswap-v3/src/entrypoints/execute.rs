@@ -122,8 +122,8 @@ pub fn change_protocol_fee(
     let event_attributes = vec![
         attr("action", "change_protocol_fee"),
         attr("admin", info.sender.as_str()),
-        attr("old_protocol_fee", old_protocol_fee.to_string()),
-        attr("new_protocol_fee", protocol_fee.to_string()),
+        attr("old_protocol_fee", old_protocol_fee.get().to_string()),
+        attr("new_protocol_fee", protocol_fee.get().to_string()),
     ];
 
     Ok(Response::new().add_attributes(event_attributes))
@@ -265,10 +265,10 @@ pub fn create_position(
         attr("pool_key", pool_key.to_string()),
         attr("token_id", position.token_id.to_string()),
         attr("owner", info.sender.as_str()),
-        attr("liquidity", liquidity_delta.to_string()),
+        attr("liquidity", liquidity_delta.get().to_string()),
         attr("lower_tick", lower_tick.index.to_string()),
         attr("upper_tick", upper_tick.index.to_string()),
-        attr("current_sqrt_price", pool.sqrt_price.to_string()),
+        attr("current_sqrt_price", pool.sqrt_price.get().to_string()),
         attr("amount_x", x.to_string()),
         attr("amount_y", y.to_string()),
     ];
@@ -340,7 +340,7 @@ pub fn swap(
         attr("amount_in", amount_in.to_string()),
         attr("amount_out", amount_out.to_string()),
         attr("current_tick", pool.current_tick_index.to_string()),
-        attr("current_sqrt_price", pool.sqrt_price.to_string()),
+        attr("current_sqrt_price", pool.sqrt_price.get().to_string()),
         attr("x_to_y", x_to_y.to_string()),
         attr("fee", fee.to_string()),
     ];
@@ -669,7 +669,7 @@ pub fn remove_position(
         attr("owner", info.sender.as_str()),
         attr("pool_key", position.pool_key.to_string()),
         attr("position_token_id", position.token_id.to_string()),
-        attr("liquidity", withdrawed_liquidity.to_string()),
+        attr("liquidity", withdrawed_liquidity.get().to_string()),
     ];
 
     Ok(Response::new().add_messages(msgs).add_attributes(event_attributes))
@@ -735,7 +735,7 @@ pub fn create_pool(
         attr("action", "create_pool"),
         attr("block", env.block.height.to_string()),
         attr("pool_key", pool_key.to_string()),
-        attr("init_sqrt_price", init_sqrt_price.to_string()),
+        attr("init_sqrt_price", init_sqrt_price.get().to_string()),
         attr("init_tick", init_tick.to_string()),
     ];
 
@@ -780,7 +780,7 @@ pub fn add_fee_tier(
     let event_attributes = vec![
         attr("action", "add_fee_tier"),
         attr("admin", info.sender.as_str()),
-        attr("fee", fee_tier.fee.to_string()),
+        attr("fee", fee_tier.fee.get().to_string()),
         attr("tick_spacing", fee_tier.tick_spacing.to_string()),
     ];
 
@@ -818,7 +818,7 @@ pub fn remove_fee_tier(
     let event_attributes = vec![
         attr("action", "remove_fee_tier"),
         attr("admin", info.sender.as_str()),
-        attr("fee", fee_tier.fee.to_string()),
+        attr("fee", fee_tier.fee.get().to_string()),
         attr("tick_spacing", fee_tier.tick_spacing.to_string()),
     ];
 
