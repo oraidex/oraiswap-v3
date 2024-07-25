@@ -93,7 +93,9 @@ pub fn withdraw_protocol_fee(
         attr("receiver", pool.fee_receiver.as_str()),
     ];
 
-    Ok(Response::new().add_messages(msgs).add_attributes(event_attributes))
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attributes(event_attributes))
 }
 
 /// Allows an admin to adjust the protocol fee.
@@ -273,7 +275,9 @@ pub fn create_position(
         attr("amount_y", y.to_string()),
     ];
 
-    Ok(Response::new().add_messages(msgs).add_attributes(event_attributes))
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attributes(event_attributes))
 }
 
 /// Performs a single swap based on the provided parameters.
@@ -336,7 +340,7 @@ pub fn swap(
     let event_attributes = vec![
         attr("action", "swap"),
         attr("pool_key", pool_key.to_string()),
-        attr("sender", info.sender.as_str()), 
+        attr("sender", info.sender.as_str()),
         attr("amount_in", amount_in.to_string()),
         attr("amount_out", amount_out.to_string()),
         attr("current_tick", pool.current_tick_index.to_string()),
@@ -345,7 +349,9 @@ pub fn swap(
         attr("fee", fee.to_string()),
     ];
 
-    Ok(Response::new().add_messages(msgs).add_attributes(event_attributes))
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attributes(event_attributes))
 }
 
 /// Performs atomic swap involving several pools based on the provided parameters.
@@ -576,7 +582,9 @@ pub fn claim_incentives(
         ),
     ];
 
-    Ok(Response::new().add_messages(msgs).add_attributes(event_attributes))
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attributes(event_attributes))
 }
 
 /// Removes a position. Sends tokens associated with specified position to the owner.
@@ -672,7 +680,9 @@ pub fn remove_position(
         attr("liquidity", withdrawed_liquidity.get().to_string()),
     ];
 
-    Ok(Response::new().add_messages(msgs).add_attributes(event_attributes))
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attributes(event_attributes))
 }
 
 /// Allows a user to create a custom pool on a specified token pair and fee tier.
@@ -695,6 +705,7 @@ pub fn remove_position(
 #[allow(clippy::too_many_arguments)]
 pub fn create_pool(
     deps: DepsMut,
+    info: MessageInfo,
     env: Env,
     token_0: String,
     token_1: String,
@@ -733,6 +744,7 @@ pub fn create_pool(
 
     let event_attributes = vec![
         attr("action", "create_pool"),
+        attr("pool_creator", info.sender.as_str()),
         attr("block", env.block.height.to_string()),
         attr("pool_key", pool_key.to_string()),
         attr("init_sqrt_price", init_sqrt_price.get().to_string()),
