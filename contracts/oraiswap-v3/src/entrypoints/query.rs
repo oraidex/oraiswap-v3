@@ -121,6 +121,20 @@ pub fn get_pools(
     state::get_pools(deps.storage, limit, start_after)
 }
 
+pub fn get_pools_with_pool_keys(
+    deps: Deps,
+    pool_keys: Vec<PoolKey>,
+) -> Result<Vec<PoolWithPoolKey>, ContractError> {
+    let mut pools = vec![];
+    for pool_key in pool_keys {
+        if let Ok(pool) = state::get_pool(deps.storage, &pool_key) {
+            pools.push(PoolWithPoolKey { pool, pool_key });
+        }
+    }
+    Ok(pools)
+}
+
+
 /// Retrieves listed pools for provided token pair
 /// - `token_0`: Address of first token
 /// - `token_1`: Address of second token

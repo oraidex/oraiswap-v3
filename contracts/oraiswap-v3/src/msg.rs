@@ -304,4 +304,7 @@ pub enum QueryMsg {
 
     #[returns(Vec<Asset>)]
     PositionIncentives { owner_id: Addr, index: u32 },
+
+    #[returns(Vec<PoolWithPoolKey>)]
+    PoolsByPoolKeys { pool_keys: Vec<PoolKey> },
 }
