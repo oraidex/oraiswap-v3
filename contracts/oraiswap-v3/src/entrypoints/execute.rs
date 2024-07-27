@@ -411,14 +411,7 @@ pub fn swap_route(
         .add_messages(msgs)
         .add_attribute("action", "swap_route")
         .add_attribute("amount_out", amount_out.to_string())
-        .add_attribute(
-            "swap_hop",
-            swaps
-                .iter()
-                .map(|x| x.pool_key.to_string())
-                .collect::<Vec<String>>()
-                .join(","),
-        ))
+        .add_attribute("swap_hop", &format!("{:?}", swaps)))
 }
 
 /// Transfers a position between users.
@@ -564,22 +557,7 @@ pub fn claim_incentives(
         attr("owner", info.sender.as_str()),
         attr("pool_key", position.pool_key.to_string()),
         attr("position_token_id", position.token_id.to_string()),
-        attr(
-            "incentives_token_address",
-            incentives
-                .iter()
-                .map(|x| x.info.denom())
-                .collect::<Vec<String>>()
-                .join(","),
-        ),
-        attr(
-            "incentives_amount",
-            incentives
-                .iter()
-                .map(|x| x.amount.to_string())
-                .collect::<Vec<String>>()
-                .join(","),
-        ),
+        attr("incentives_info", &format!("{:?}", incentives)),
     ];
 
     Ok(Response::new()
