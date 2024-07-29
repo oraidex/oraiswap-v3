@@ -310,7 +310,7 @@ impl Position {
         lower_tick: &mut Tick,
         upper_tick: &mut Tick,
         tick_spacing: u16,
-    ) -> Result<(TokenAmount, TokenAmount, bool, bool), ContractError> {
+    ) -> Result<(TokenAmount, TokenAmount, TokenAmount, TokenAmount, bool, bool), ContractError> {
         let liquidity_delta = self.liquidity;
         let (mut amount_x, mut amount_y) = self.modify(
             pool,
@@ -322,6 +322,8 @@ impl Position {
             tick_spacing,
         )?;
 
+        let liquidity_x = amount_x;
+        let liquidity_y = amount_y;
         amount_x = amount_x.checked_add(self.tokens_owed_x)?;
         amount_y = amount_y.checked_add(self.tokens_owed_y)?;
 
@@ -331,6 +333,8 @@ impl Position {
         Ok((
             amount_x,
             amount_y,
+            liquidity_x,
+            liquidity_y,
             deinitialize_lower_tick,
             deinitialize_upper_tick,
         ))

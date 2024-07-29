@@ -599,7 +599,7 @@ pub fn remove_position(
     // calculate pending incentives
     let incentives = position.claim_incentives(&pool, &upper_tick, &lower_tick)?;
 
-    let (amount_x, amount_y, deinitialize_lower_tick, deinitialize_upper_tick) = position.remove(
+    let (amount_x, amount_y, liquidity_x, liquidity_y, deinitialize_lower_tick, deinitialize_upper_tick) = position.remove(
         &mut pool,
         current_timestamp,
         &mut lower_tick,
@@ -656,6 +656,8 @@ pub fn remove_position(
         attr("pool_key", position.pool_key.to_string()),
         attr("position_token_id", position.token_id.to_string()),
         attr("liquidity", withdrawed_liquidity.get().to_string()),
+        attr("liquidity_x", liquidity_x.to_string()),
+        attr("liquidity_y", liquidity_y.to_string()),
     ];
 
     Ok(Response::new()
