@@ -2,6 +2,9 @@ use cosmwasm_std::coin;
 use cosmwasm_std::Addr;
 use decimal::{Decimal, Factories};
 
+use crate::fee_growth::FeeGrowth;
+use crate::token_amount::TokenAmount;
+use crate::Position;
 use crate::POSITION_TICK_LIMIT;
 use crate::{
     liquidity::Liquidity,
@@ -219,4 +222,113 @@ fn test_get_position_ticks_with_offset() {
 
     assert_eq!(result_1[2], result_2[0]);
     assert_eq!(result_1[3], result_2[1]);
+}
+
+#[test]
+fn test_query_all_positions() {
+    let initial_mint = 10u128.pow(10);
+    let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
+
+    let dex = app
+        .create_dex("alice", Percentage::from_scale(1, 2))
+        .unwrap();
+
+    let initial_amount = 10u128.pow(10);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+
+    let fee_tier = FeeTier::new(Percentage::from_scale(1, 2), 1).unwrap();
+
+    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+
+    let init_tick = 0;
+    let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+    create_pool!(
+        app,
+        dex,
+        token_x,
+        token_y,
+        fee_tier,
+        init_sqrt_price,
+        init_tick,
+        "alice"
+    )
+    .unwrap();
+
+    approve!(app, token_x, dex, 500, "alice").unwrap();
+    approve!(app, token_y, dex, 500, "alice").unwrap();
+
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        -10,
+        10,
+        Liquidity::new(10),
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        "alice"
+    )
+    .unwrap();
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        -100,
+        100,
+        Liquidity::new(10),
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        "alice"
+    )
+    .unwrap();
+    let positions = app.query_all_positions(dex.as_str(), None, None).unwrap();
+    assert_eq!(positions.len(), 2);
+    assert_eq!(
+        positions,
+        [
+            Position {
+                pool_key: PoolKey {
+                    token_x: String::from("contract1"),
+                    token_y: String::from("contract2"),
+                    fee_tier: FeeTier {
+                        fee: Percentage(10000000000),
+                        tick_spacing: 1
+                    }
+                },
+                liquidity: Liquidity(10),
+                lower_tick_index: -10,
+                upper_tick_index: 10,
+                fee_growth_inside_x: FeeGrowth(0),
+                fee_growth_inside_y: FeeGrowth(0),
+                last_block_number: 12353,
+                tokens_owed_x: TokenAmount(0),
+                tokens_owed_y: TokenAmount(0),
+                approvals: vec![],
+                token_id: 1,
+                incentives: vec![]
+            },
+            Position {
+                pool_key: PoolKey {
+                    token_x: String::from("contract1"),
+                    token_y: String::from("contract2"),
+                    fee_tier: FeeTier {
+                        fee: Percentage(10000000000),
+                        tick_spacing: 1
+                    }
+                },
+                liquidity: Liquidity(10),
+                lower_tick_index: -100,
+                upper_tick_index: 100,
+                fee_growth_inside_x: FeeGrowth(0),
+                fee_growth_inside_y: FeeGrowth(0),
+                last_block_number: 12354,
+                tokens_owed_x: TokenAmount(0),
+                tokens_owed_y: TokenAmount(0),
+                token_id: 2,
+                approvals: vec![],
+                incentives: vec![]
+            }
+        ]
+    )
 }

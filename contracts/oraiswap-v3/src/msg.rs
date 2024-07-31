@@ -174,6 +174,12 @@ pub enum QueryMsg {
         offset: Option<u32>,
     },
 
+    #[returns(Vec<Position>)]
+    AllPosition {
+        limit: Option<u32>,
+        start_after: Option<Binary>,
+    },
+
     #[returns(bool)]
     FeeTierExist { fee_tier: FeeTier },
 

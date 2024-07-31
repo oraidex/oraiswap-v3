@@ -308,10 +308,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::NumTokens {} => to_json_binary(&query_num_tokens(deps)?),
         QueryMsg::PositionIncentives { owner_id, index } => {
             to_json_binary(&query_position_incentives(deps, env, owner_id, index)?)
-        },
+        }
         QueryMsg::PoolsByPoolKeys { pool_keys } => {
             to_json_binary(&get_pools_with_pool_keys(deps, pool_keys)?)
-        },
+        }
+        QueryMsg::AllPosition { limit, start_after } => {
+            to_json_binary(&query_positions(deps, limit, start_after)?)
+        }
     }
 }
 
