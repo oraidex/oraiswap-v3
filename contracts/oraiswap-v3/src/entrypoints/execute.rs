@@ -667,11 +667,8 @@ pub fn remove_position(
     )?;
 
     event_attributes.append(&mut vec![
-        attr("owner", info.sender.as_str()),
-        attr("pool_key", position.pool_key.to_string()),
-        attr("position_token_id", position.token_id.to_string()),
-        attr("amount_x", fee_x.to_string()),
-        attr("amount_y", fee_y.to_string()),
+        attr("fee_x", fee_x.to_string()),
+        attr("fee_y", fee_y.to_string()),
     ]);
 
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
@@ -728,7 +725,7 @@ pub fn remove_position(
         attr("liquidity_x", liquidity_x.to_string()),
         attr("liquidity_y", liquidity_y.to_string()),
         attr("after_liquidity ", after_liquidity.get().to_string()),
-        attr("ater_tick_index", ater_tick_index.to_string()),
+        attr("after_tick_index", ater_tick_index.to_string()),
     ]);
 
     Ok(Response::new()
