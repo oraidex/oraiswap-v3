@@ -310,7 +310,21 @@ impl Position {
         lower_tick: &mut Tick,
         upper_tick: &mut Tick,
         tick_spacing: u16,
-    ) -> Result<(TokenAmount, TokenAmount, TokenAmount, TokenAmount, TokenAmount, TokenAmount, Liquidity, i32, bool, bool), ContractError> {
+    ) -> Result<
+        (
+            TokenAmount,
+            TokenAmount,
+            TokenAmount,
+            TokenAmount,
+            TokenAmount,
+            TokenAmount,
+            Liquidity,
+            i32,
+            bool,
+            bool,
+        ),
+        ContractError,
+    > {
         let liquidity_delta = self.liquidity;
         let (mut amount_x, mut amount_y) = self.modify(
             pool,
@@ -335,7 +349,7 @@ impl Position {
             amount_y,
             liquidity_x,
             liquidity_y,
-            self.tokens_owed_x, 
+            self.tokens_owed_x,
             self.tokens_owed_y,
             pool.liquidity,
             pool.current_tick_index,

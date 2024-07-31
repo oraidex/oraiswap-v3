@@ -418,7 +418,7 @@ pub fn swap_route(
         .add_messages(msgs)
         .add_attribute("action", "swap_route")
         .add_attribute("amount_out", amount_out.to_string())
-        .add_attribute("swap_hop", &format!("{:?}", swaps)))
+        .add_attribute("swap_hop", format!("{:?}", swaps)))
 }
 
 /// Transfers a position between users.
@@ -563,7 +563,7 @@ pub fn claim_incentives(
 
     let mut event_attributes: Vec<Attribute> = vec![];
 
-    if incentives.len() > 0 {
+    if !incentives.is_empty() {
         event_attributes.append(&mut vec![
             attr(
                 "incentives_token_address",
@@ -625,7 +625,7 @@ pub fn remove_position(
 
     let mut event_attributes: Vec<Attribute> = vec![attr("action", "remove_position")];
 
-    if incentives.len() > 0 {
+    if !incentives.is_empty() {
         event_attributes.append(&mut vec![
             // attr("_contract_address", env.contract.address.to_string()),
             attr(
@@ -1146,8 +1146,17 @@ pub fn update_incentive(
         ("action", "update_incentive"),
         ("pool", &pool_key.to_string()),
         ("record_id", &record_id.to_string()),
-        ("remaining_reward", &remaining_reward.unwrap_or_default().to_string()),
-        ("start_timestamp", &start_timestamp.unwrap_or_default().to_string()),
-        ("reward_per_sec", &reward_per_sec.unwrap_or_default().to_string()),
+        (
+            "remaining_reward",
+            &remaining_reward.unwrap_or_default().to_string(),
+        ),
+        (
+            "start_timestamp",
+            &start_timestamp.unwrap_or_default().to_string(),
+        ),
+        (
+            "reward_per_sec",
+            &reward_per_sec.unwrap_or_default().to_string(),
+        ),
     ]))
 }
