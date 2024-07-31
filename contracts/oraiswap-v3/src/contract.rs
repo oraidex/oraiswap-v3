@@ -313,7 +313,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary(&get_pools_with_pool_keys(deps, pool_keys)?)
         }
         QueryMsg::AllPosition { limit, start_after } => {
-            to_json_binary(&query_positions(deps, limit, start_after)?)
+            to_json_binary(&query_all_positions(deps, limit, start_after)?)
         }
     }
 }

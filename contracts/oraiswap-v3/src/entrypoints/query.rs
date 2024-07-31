@@ -558,7 +558,7 @@ pub fn query_position_incentives(
     Ok(incentives)
 }
 
-pub fn query_positions(
+pub fn query_all_positions(
     deps: Deps,
     limit: Option<u32>,
     start_after: Option<Binary>,
