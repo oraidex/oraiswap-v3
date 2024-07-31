@@ -13,7 +13,7 @@ use super::{
     check_can_send, create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal,
     transfer_nft, update_approvals, TimeStampExt,
 };
-use cosmwasm_std::{attr, Addr, Binary, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{attr, Addr, Attribute, Binary, DepsMut, Env, MessageInfo, Response};
 use cw20::Expiration;
 use decimal::Decimal;
 
@@ -267,12 +267,14 @@ pub fn create_position(
         attr("pool_key", pool_key.to_string()),
         attr("token_id", position.token_id.to_string()),
         attr("owner", info.sender.as_str()),
-        attr("liquidity", liquidity_delta.get().to_string()),
+        attr("position_liquidity", liquidity_delta.get().to_string()),
         attr("lower_tick", lower_tick.index.to_string()),
         attr("upper_tick", upper_tick.index.to_string()),
         attr("current_sqrt_price", pool.sqrt_price.get().to_string()),
-        attr("amount_x", x.to_string()),
-        attr("amount_y", y.to_string()),
+        attr("liquidity_x", x.to_string()),
+        attr("liquidity_y", y.to_string()),
+        attr("after_liquidity ", pool.liquidity.get().to_string()),
+        attr("ater_tick_index", pool.current_tick_index.to_string()),
     ];
 
     Ok(Response::new()
@@ -322,6 +324,7 @@ pub fn swap(
         amount_in,
         amount_out,
         fee,
+        pool: after_pool,
         ..
     } = swap_internal(
         deps.storage,
@@ -343,8 +346,12 @@ pub fn swap(
         attr("sender", info.sender.as_str()),
         attr("amount_in", amount_in.to_string()),
         attr("amount_out", amount_out.to_string()),
-        attr("current_tick", pool.current_tick_index.to_string()),
-        attr("current_sqrt_price", pool.sqrt_price.get().to_string()),
+        attr("current_tick", after_pool.current_tick_index.to_string()),
+        attr(
+            "current_sqrt_price",
+            after_pool.sqrt_price.get().to_string(),
+        ),
+        attr("liquidity", after_pool.liquidity.get().to_string()),
         attr("x_to_y", x_to_y.to_string()),
         attr("fee", fee.to_string()),
     ];
@@ -542,7 +549,9 @@ pub fn claim_incentives(
     // update global incentive
     pool.update_global_incentives(env.block.time.seconds())?;
 
-    let incentives = position.claim_incentives(&pool, &upper_tick, &lower_tick)?;
+    let incentives = position
+        .claim_incentives(&pool, &upper_tick, &lower_tick)
+        .unwrap_or(vec![]);
 
     state::update_position(deps.storage, &position)?;
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
@@ -552,13 +561,28 @@ pub fn claim_incentives(
         asset.transfer(&mut msgs, &info)?;
     }
 
-    let event_attributes = vec![
-        attr("action", "claim_incentives"),
-        attr("owner", info.sender.as_str()),
-        attr("pool_key", position.pool_key.to_string()),
-        attr("position_token_id", position.token_id.to_string()),
-        attr("incentives_info", &format!("{:?}", incentives)),
-    ];
+    let mut event_attributes: Vec<Attribute> = vec![];
+
+    if incentives.len() > 0 {
+        event_attributes.append(&mut vec![
+            attr(
+                "incentives_token_address",
+                incentives
+                    .iter()
+                    .map(|x| x.info.denom())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            ),
+            attr(
+                "incentives_amount",
+                incentives
+                    .iter()
+                    .map(|x| x.amount.to_string())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            ),
+        ]);
+    }
 
     Ok(Response::new()
         .add_messages(msgs)
@@ -599,13 +623,56 @@ pub fn remove_position(
     // calculate pending incentives
     let incentives = position.claim_incentives(&pool, &upper_tick, &lower_tick)?;
 
-    let (amount_x, amount_y, liquidity_x, liquidity_y, deinitialize_lower_tick, deinitialize_upper_tick) = position.remove(
+    let mut event_attributes: Vec<Attribute> = vec![attr("action", "remove_position")];
+
+    if incentives.len() > 0 {
+        event_attributes.append(&mut vec![
+            // attr("_contract_address", env.contract.address.to_string()),
+            attr(
+                "incentives_token_address",
+                incentives
+                    .iter()
+                    .map(|x| x.info.denom())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            ),
+            attr(
+                "incentives_amount",
+                incentives
+                    .iter()
+                    .map(|x| x.amount.to_string())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            ),
+        ]);
+    }
+
+    let (
+        amount_x,
+        amount_y,
+        liquidity_x,
+        liquidity_y,
+        fee_x,
+        fee_y,
+        after_liquidity,
+        ater_tick_index,
+        deinitialize_lower_tick,
+        deinitialize_upper_tick,
+    ) = position.remove(
         &mut pool,
         current_timestamp,
         &mut lower_tick,
         &mut upper_tick,
         position.pool_key.fee_tier.tick_spacing,
     )?;
+
+    event_attributes.append(&mut vec![
+        attr("owner", info.sender.as_str()),
+        attr("pool_key", position.pool_key.to_string()),
+        attr("position_token_id", position.token_id.to_string()),
+        attr("amount_x", fee_x.to_string()),
+        attr("amount_y", fee_y.to_string()),
+    ]);
 
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
@@ -650,15 +717,19 @@ pub fn remove_position(
         asset.transfer(&mut msgs, &info)?;
     }
 
-    let event_attributes = vec![
-        attr("action", "remove_position"),
-        attr("owner", info.sender.as_str()),
+    event_attributes.append(&mut vec![
         attr("pool_key", position.pool_key.to_string()),
-        attr("position_token_id", position.token_id.to_string()),
-        attr("liquidity", withdrawed_liquidity.get().to_string()),
+        attr("token_id", position.token_id.to_string()),
+        attr("owner", info.sender.as_str()),
+        attr("position_liquidity", withdrawed_liquidity.get().to_string()),
+        attr("lower_tick", lower_tick.index.to_string()),
+        attr("upper_tick", upper_tick.index.to_string()),
+        attr("current_sqrt_price", pool.sqrt_price.get().to_string()),
         attr("liquidity_x", liquidity_x.to_string()),
         attr("liquidity_y", liquidity_y.to_string()),
-    ];
+        attr("after_liquidity ", after_liquidity.get().to_string()),
+        attr("ater_tick_index", ater_tick_index.to_string()),
+    ]);
 
     Ok(Response::new()
         .add_messages(msgs)
@@ -1012,7 +1083,7 @@ pub fn create_incentive(
         id,
         reward_per_sec,
         reward_token: reward_token.clone(),
-        remaining: remaining,
+        remaining,
         start_timestamp: start_timestamp.unwrap_or(env.block.time.seconds()),
         incentive_growth_global: FeeGrowth(0),
         last_updated: env.block.time.seconds(),
@@ -1024,7 +1095,7 @@ pub fn create_incentive(
     Ok(Response::new().add_attributes(vec![
         ("action", "create_incentive"),
         ("pool", &pool_key.to_string()),
-        ("reward_token", &format!("{:?}", reward_token)),
+        ("reward_token", &reward_token.denom()),
         ("total_reward", &remaining.to_string()),
         ("reward_per_sec", &reward_per_sec.to_string()),
         (
@@ -1075,5 +1146,8 @@ pub fn update_incentive(
         ("action", "update_incentive"),
         ("pool", &pool_key.to_string()),
         ("record_id", &record_id.to_string()),
+        ("remaining_reward", &remaining_reward.unwrap_or_default().to_string()),
+        ("start_timestamp", &start_timestamp.unwrap_or_default().to_string()),
+        ("reward_per_sec", &reward_per_sec.unwrap_or_default().to_string()),
     ]))
 }

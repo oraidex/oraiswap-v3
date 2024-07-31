@@ -2,7 +2,13 @@ use cosmwasm_std::Timestamp;
 use decimal::{Decimal, Factories};
 
 use crate::{
-    interface::AssetInfo, liquidity::Liquidity, percentage::Percentage, sqrt_price::{self, calculate_sqrt_price, SqrtPrice}, tests::helper::{macros::*, MockApp}, token_amount::TokenAmount, FeeTier, PoolKey
+    interface::AssetInfo,
+    liquidity::Liquidity,
+    percentage::Percentage,
+    sqrt_price::{self, calculate_sqrt_price, SqrtPrice},
+    tests::helper::{macros::*, MockApp},
+    token_amount::TokenAmount,
+    FeeTier, PoolKey,
 };
 
 #[test]
@@ -61,6 +67,9 @@ fn claim_both_fee_and_incentives() {
     let (token_x, token_y, token_z) =
         create_3_tokens!(app, initial_amount, initial_amount, initial_amount);
     mint!(app, token_z, dex_raw, initial_amount, "alice").unwrap();
+    let (token_a, token_b) = create_tokens!(app, initial_amount, initial_amount);
+    mint!(app, token_a, dex_raw, initial_amount, "alice").unwrap();
+    mint!(app, token_b, dex_raw, initial_amount, "alice").unwrap();
 
     let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
 
@@ -82,8 +91,14 @@ fn claim_both_fee_and_incentives() {
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
-    let reward_token = AssetInfo::Token {
+    let reward_token_1 = AssetInfo::Token {
         contract_addr: token_z.clone(),
+    };
+    let reward_token_2 = AssetInfo::Token {
+        contract_addr: token_a.clone(),
+    };
+    let reward_token_3 = AssetInfo::Token {
+        contract_addr: token_b.clone(),
     };
     let total_reward = Some(TokenAmount::from_integer(1000000000));
     let reward_per_sec = TokenAmount(100);
@@ -111,7 +126,29 @@ fn claim_both_fee_and_incentives() {
         app,
         dex,
         pool_key,
-        reward_token.clone(),
+        reward_token_1.clone(),
+        total_reward,
+        reward_per_sec,
+        start_timestamp,
+        "alice"
+    )
+    .unwrap();
+    create_incentive!(
+        app,
+        dex,
+        pool_key,
+        reward_token_2.clone(),
+        total_reward,
+        reward_per_sec,
+        start_timestamp,
+        "alice"
+    )
+    .unwrap();
+    create_incentive!(
+        app,
+        dex,
+        pool_key,
+        reward_token_3.clone(),
         total_reward,
         reward_per_sec,
         start_timestamp,
@@ -127,7 +164,17 @@ fn claim_both_fee_and_incentives() {
     // swap to increase fee growth
     mint!(app, token_x, "bob", initial_amount, "alice").unwrap();
     approve!(app, token_x, dex, initial_amount, "bob").unwrap();
-    swap!(app, dex, pool_key, true, TokenAmount(1000), true, sqrt_price::get_min_sqrt_price(fee_tier.tick_spacing), "bob").unwrap();
+    swap!(
+        app,
+        dex,
+        pool_key,
+        true,
+        TokenAmount(1000),
+        true,
+        sqrt_price::get_min_sqrt_price(fee_tier.tick_spacing),
+        "bob"
+    )
+    .unwrap();
 
     // increase time to have incentives
     let mut block_info = app.app.block_info();
@@ -149,9 +196,8 @@ fn claim_both_fee_and_incentives() {
     // incentive assert
     assert!(before_dex_balance_token_z.gt(&after_dex_balance_token_z));
     assert!(before_user_balance_token_z.lt(&after_user_balance_token_z));
-    assert!(
-        (before_user_balance_token_z + before_dex_balance_token_z).eq(&(after_user_balance_token_z + after_dex_balance_token_z))
-    );
+    assert!((before_user_balance_token_z + before_dex_balance_token_z)
+        .eq(&(after_user_balance_token_z + after_dex_balance_token_z)));
     assert!((after_user_balance_token_z - before_user_balance_token_z).le(&total_emit));
 
     // fee claimed assert
