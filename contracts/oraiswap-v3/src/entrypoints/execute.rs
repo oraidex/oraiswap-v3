@@ -1092,6 +1092,7 @@ pub fn create_incentive(
     Ok(Response::new().add_attributes(vec![
         ("action", "create_incentive"),
         ("pool", &pool_key.to_string()),
+        ("record_id", &id.to_string()),
         ("reward_token", &reward_token.denom()),
         ("total_reward", &remaining.to_string()),
         ("reward_per_sec", &reward_per_sec.to_string()),
