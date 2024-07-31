@@ -521,7 +521,7 @@ pub fn claim_fee(
         attr("amount_y", y.to_string()),
     ];
 
-    let resp = claim_incentives(deps, env, info, index)?;
+    let resp: Response = claim_incentives(deps, env, info, index)?;
 
     Ok(resp.add_messages(msgs).add_attributes(event_attributes))
 }

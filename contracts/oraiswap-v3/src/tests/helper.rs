@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, Event, StdResult, Timestamp};
+use cosmwasm_std::{Addr, Binary, Coin, Event, StdResult, Timestamp};
 use cosmwasm_testing_util::{AppResponse, ContractWrapper, MockResult};
 
 use crate::{
@@ -425,6 +425,17 @@ impl MockApp {
                 start_timestamp,
             },
             &[],
+        )
+    }
+    pub fn query_all_positions(
+        &self,
+        dex: &str,
+        limit: Option<u32>,
+        start_after: Option<Binary>,
+    ) -> StdResult<Vec<Position>> {
+        self.query(
+            Addr::unchecked(dex),
+            &msg::QueryMsg::AllPosition { limit, start_after },
         )
     }
 

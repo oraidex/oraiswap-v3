@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Deps, Env, Order, StdResult};
+use cosmwasm_std::{Addr, Binary, Deps, Env, Order, StdResult};
 use cw_storage_plus::Bound;
 
 use crate::{
@@ -9,7 +9,7 @@ use crate::{
     },
     percentage::Percentage,
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
-    state::{self, CONFIG, MAX_LIMIT},
+    state::{self, CONFIG, MAX_LIMIT, POSITIONS},
     tick_to_position,
     token_amount::TokenAmount,
     ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
@@ -133,7 +133,6 @@ pub fn get_pools_with_pool_keys(
     }
     Ok(pools)
 }
-
 
 /// Retrieves listed pools for provided token pair
 /// - `token_0`: Address of first token
@@ -557,4 +556,19 @@ pub fn query_position_incentives(
     let incentives = position.claim_incentives(&pool, &upper_tick, &lower_tick)?;
 
     Ok(incentives)
+}
+
+pub fn query_all_positions(
+    deps: Deps,
+    limit: Option<u32>,
+    start_after: Option<Binary>,
+) -> Result<Vec<Position>, ContractError> {
+    let limit = limit.unwrap_or(MAX_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.map(|x| x.to_vec()).map(Bound::ExclusiveRaw);
+    Ok(POSITIONS
+        .range(deps.storage, start, None, Order::Ascending)
+        .take(limit)
+        .filter_map(Result::ok)
+        .map(|(_, position)| position)
+        .collect::<Vec<Position>>())
 }
