@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "decimal"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "decimal-core",
  "integer-sqrt",
@@ -672,7 +672,7 @@ dependencies = [
 
 [[package]]
 name = "decimal-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1221,7 +1221,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "oraiswap-v3"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1238,7 +1238,7 @@ dependencies = [
 
 [[package]]
 name = "oraiswap-v3-wasm"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "decimal",
  "derive_more",
