@@ -6,7 +6,7 @@ use crate::{
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp},
     token_amount::TokenAmount,
-    FeeTier, PoolKey, MAX_SQRT_PRICE,
+    ContractError, FeeTier, PoolKey, MAX_SQRT_PRICE,
 };
 
 #[test]
@@ -66,7 +66,7 @@ fn test_swap_close_to_limit() {
 
     let target_sqrt_price = quoted_target_sqrt_price - SqrtPrice::new(1);
 
-    swap!(
+    let error = swap!(
         app,
         dex,
         pool_key,
@@ -77,6 +77,11 @@ fn test_swap_close_to_limit() {
         "alice"
     )
     .unwrap_err();
+
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::PriceLimitReached {}.to_string()
+    );
 }
 
 #[test]

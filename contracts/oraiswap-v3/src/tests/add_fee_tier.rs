@@ -1,6 +1,7 @@
 use crate::math::types::percentage::Percentage;
 use crate::msg::QueryMsg;
 use crate::tests::helper::{macros::*, MockApp};
+use crate::ContractError;
 use crate::FeeTier;
 use decimal::Decimal;
 
@@ -30,8 +31,12 @@ fn test_add_fee_tier_not_admin() {
     let dex = create_dex!(app, Percentage::new(0));
 
     let fee_tier = FeeTier::new(Percentage::new(1), 1).unwrap();
-    let result = add_fee_tier!(app, dex, fee_tier, "bob").unwrap_err();
-    assert!(result.contains("error executing WasmMsg"));
+    let error = add_fee_tier!(app, dex, fee_tier, "bob").unwrap_err();
+
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::Unauthorized {}.to_string()
+    );
 }
 
 #[test]
@@ -53,9 +58,12 @@ fn test_add_fee_tier_tick_spacing_zero() {
         fee: Percentage::new(1),
         tick_spacing: 0,
     };
-    let result = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
+    let error = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
 
-    assert!(result.contains("error executing WasmMsg"));
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::InvalidTickSpacing {}.to_string()
+    );
 }
 
 #[test]
@@ -67,9 +75,12 @@ fn test_add_fee_tier_over_upper_bound_tick_spacing() {
         fee: Percentage::new(1),
         tick_spacing: 101,
     };
-    let result = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
+    let error = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
 
-    assert!(result.contains("error executing WasmMsg"));
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::InvalidTickSpacing {}.to_string()
+    );
 }
 
 #[test]
@@ -81,7 +92,10 @@ fn test_add_fee_tier_fee_above_limit() {
         fee: Percentage::new(1000000000000),
         tick_spacing: 10,
     };
-    let result = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
+    let error = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
 
-    assert!(result.contains("error executing WasmMsg"));
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::InvalidFee {}.to_string()
+    );
 }

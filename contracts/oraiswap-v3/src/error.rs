@@ -119,7 +119,7 @@ pub enum ContractError {
     #[error("Current Sqrt Price < Lower Sqrt Price")]
     CurrentSqrtPriceLess,
 
-    #[error("unauthorized")]
+    #[error("Unauthorized")]
     Unauthorized {},
 
     #[error("Cannot set approval that is already expired")]

@@ -5,7 +5,7 @@ members = ["packages/*", "contracts/*", "wasm"]
 
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Oraichain Labs"]
 edition = "2021"
 license = "MIT"
@@ -19,10 +19,10 @@ exclude = [
 ]
 
 [workspace.dependencies]
-cosmwasm-std = { version = "=1.2" }
-cosmwasm-schema = { version = "=1.2" }
-cosmwasm-storage = { version = "=1.2" }
-cosmwasm-vm = { version = "=1.2" }
+cosmwasm-std = { version = "1.5" }
+cosmwasm-schema = { version = "1.5" }
+cosmwasm-storage = { version = "1.5" }
+cosmwasm-vm = { version = "1.5" }
 
 thiserror = "1.0.26"
 
@@ -30,8 +30,6 @@ cw2 = { version = "1.0.1" }
 cw20 = { version = "1.0.1" }
 cw20-base = { version = "1.0.1" }
 cw-storage-plus = { version = "1.0.1" }
-cw-multi-test = "0.16.6"
-cw-utils = "0.16.0"
 derive_more = "0.99.17"
 decimal-core = { path = "./packages/decimal-core" }
 decimal = { path = "./packages/decimal" }
@@ -46,6 +44,3 @@ rpath = false
 lto = true
 overflow-checks = true
 panic = 'abort'
-
-[patch.crates-io]
-curve25519-dalek = { git = 'https://github.com/dalek-cryptography/curve25519-dalek.git' }

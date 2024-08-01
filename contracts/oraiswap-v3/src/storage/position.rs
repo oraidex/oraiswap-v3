@@ -1,6 +1,7 @@
 use super::{Pool, PoolKey, Tick};
 use crate::{
-    interface::Approval,
+    incentive::{calculate_incentive_growth_inside, PositionIncentives},
+    interface::{Approval, Asset},
     math::{
         clamm::*,
         types::{
@@ -32,6 +33,8 @@ pub struct Position {
     pub approvals: Vec<Approval>,
     #[serde(default)]
     pub token_id: u64,
+    #[serde(default)]
+    pub incentives: Vec<PositionIncentives>,
 }
 
 impl Position {
@@ -78,6 +81,65 @@ impl Position {
 
         // calculate tokens amounts and update pool liquidity
         pool.update_liquidity(liquidity_delta, add, upper_tick.index, lower_tick.index)
+    }
+
+    pub fn update_incentives(
+        &mut self,
+        pool: &Pool,
+        upper_tick: &Tick,
+        lower_tick: &Tick,
+    ) -> Result<(), ContractError> {
+        // try update incentives
+        for record in &pool.incentives {
+            let tick_lower_incentive_growth_outside = lower_tick
+                .incentives
+                .iter()
+                .find(|i| i.incentive_id == record.id)
+                .map_or(FeeGrowth::new(0), |incentive| {
+                    incentive.incentive_growth_outside
+                });
+
+            let tick_upper_incentive_growth_outside = upper_tick
+                .incentives
+                .iter()
+                .find(|i| i.incentive_id == record.id)
+                .map_or(FeeGrowth::new(0), |incentive| {
+                    incentive.incentive_growth_outside
+                });
+
+            let incentive_growth_inside = calculate_incentive_growth_inside(
+                lower_tick.index,
+                tick_lower_incentive_growth_outside,
+                upper_tick.index,
+                tick_upper_incentive_growth_outside,
+                pool.current_tick_index,
+                record.incentive_growth_global,
+            );
+
+            if let Some(incentive) = self
+                .incentives
+                .iter_mut()
+                .find(|i| i.incentive_id == record.id)
+            {
+                incentive.pending_rewards += incentive_growth_inside
+                    .unchecked_sub(incentive.incentive_growth_inside)
+                    .to_fee(self.liquidity)?;
+                incentive.incentive_growth_inside = incentive_growth_inside;
+                continue;
+            }
+            let pending_rewards = incentive_growth_inside.to_fee(self.liquidity)?;
+            if pending_rewards.is_zero() && incentive_growth_inside.is_zero() {
+                continue;
+            }
+            let incentive = PositionIncentives {
+                incentive_id: record.id,
+                pending_rewards,
+                incentive_growth_inside,
+            };
+            self.incentives.push(incentive);
+        }
+
+        Ok(())
     }
 
     pub fn update(
@@ -149,6 +211,39 @@ impl Position {
 
         Ok((tokens_owed_x, tokens_owed_y))
     }
+
+    pub fn claim_incentives(
+        &mut self,
+        pool: &Pool,
+        upper_tick: &Tick,
+        lower_tick: &Tick,
+    ) -> Result<Vec<Asset>, ContractError> {
+        self.update_incentives(pool, upper_tick, lower_tick)?;
+        let incentives: Vec<Asset> = self
+            .incentives
+            .iter_mut()
+            .filter_map(|incentive| {
+                if incentive.pending_rewards.is_zero() {
+                    return None;
+                }
+                if let Some(record) = pool
+                    .incentives
+                    .iter()
+                    .find(|i| i.id == incentive.incentive_id)
+                {
+                    let reward = incentive.pending_rewards;
+                    incentive.pending_rewards = TokenAmount::new(0);
+                    return Some(Asset {
+                        info: record.reward_token.clone(),
+                        amount: reward.into(),
+                    });
+                }
+                None
+            })
+            .collect();
+
+        Ok(incentives)
+    }
     #[allow(clippy::too_many_arguments)]
     pub fn create(
         pool: &mut Pool,
@@ -166,6 +261,16 @@ impl Position {
             return Err(ContractError::PriceLimitReached);
         }
 
+        let incentives: Vec<PositionIncentives> = pool
+            .incentives
+            .iter()
+            .map(|record| PositionIncentives {
+                incentive_id: record.id,
+                pending_rewards: TokenAmount::new(0),
+                incentive_growth_inside: FeeGrowth::new(0),
+            })
+            .collect();
+
         // init position
         let mut position = Self {
             token_id: 0,
@@ -179,7 +284,11 @@ impl Position {
             tokens_owed_x: TokenAmount::new(0),
             tokens_owed_y: TokenAmount::new(0),
             approvals: vec![],
+            incentives,
         };
+
+        // try update incentives first
+        position.update_incentives(pool, upper_tick, lower_tick)?;
 
         let (required_x, required_y) = position.modify(
             pool,
@@ -201,7 +310,21 @@ impl Position {
         lower_tick: &mut Tick,
         upper_tick: &mut Tick,
         tick_spacing: u16,
-    ) -> Result<(TokenAmount, TokenAmount, bool, bool), ContractError> {
+    ) -> Result<
+        (
+            TokenAmount,
+            TokenAmount,
+            TokenAmount,
+            TokenAmount,
+            TokenAmount,
+            TokenAmount,
+            Liquidity,
+            i32,
+            bool,
+            bool,
+        ),
+        ContractError,
+    > {
         let liquidity_delta = self.liquidity;
         let (mut amount_x, mut amount_y) = self.modify(
             pool,
@@ -213,6 +336,8 @@ impl Position {
             tick_spacing,
         )?;
 
+        let liquidity_x = amount_x;
+        let liquidity_y = amount_y;
         amount_x = amount_x.checked_add(self.tokens_owed_x)?;
         amount_y = amount_y.checked_add(self.tokens_owed_y)?;
 
@@ -222,6 +347,12 @@ impl Position {
         Ok((
             amount_x,
             amount_y,
+            liquidity_x,
+            liquidity_y,
+            self.tokens_owed_x,
+            self.tokens_owed_y,
+            pool.liquidity,
+            pool.current_tick_index,
             deinitialize_lower_tick,
             deinitialize_upper_tick,
         ))

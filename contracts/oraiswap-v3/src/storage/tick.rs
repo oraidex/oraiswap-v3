@@ -1,5 +1,6 @@
 use super::Pool;
 use crate::{
+    incentive::TickIncentive,
     math::types::{
         fee_growth::FeeGrowth,
         liquidity::Liquidity,
@@ -11,7 +12,7 @@ use cosmwasm_schema::cw_serde;
 use decimal::*;
 
 #[cw_serde]
-#[derive(Eq, Copy, Default)]
+#[derive(Eq, Default)]
 pub struct Tick {
     pub index: i32,
     pub sign: bool,
@@ -21,6 +22,9 @@ pub struct Tick {
     pub fee_growth_outside_x: FeeGrowth,
     pub fee_growth_outside_y: FeeGrowth,
     pub seconds_outside: u64,
+
+    #[serde(default)]
+    pub incentives: Vec<TickIncentive>,
 }
 
 pub const MAX_RESULT_SIZE: usize = 16 * 1024 * 8;
@@ -60,6 +64,20 @@ impl Tick {
     pub fn create(index: i32, pool: &Pool, current_timestamp: u64) -> Self {
         let below_current_tick = index <= pool.current_tick_index;
 
+        // ensure update global incentive before
+        // reference: https://uniswap.org/whitepaper-v3.pdf (6.21)
+        let incentives: Vec<TickIncentive> = pool
+            .incentives
+            .iter()
+            .map(|record| TickIncentive {
+                incentive_id: record.id,
+                incentive_growth_outside: match below_current_tick {
+                    true => record.incentive_growth_global,
+                    false => FeeGrowth::new(0),
+                },
+            })
+            .collect();
+
         Self {
             index,
             sign: true,
@@ -76,11 +94,13 @@ impl Tick {
                 true => current_timestamp - pool.start_timestamp,
                 false => 0,
             },
+            incentives,
             ..Self::default()
         }
     }
 
     pub fn cross(&mut self, pool: &mut Pool, current_timestamp: u64) -> Result<(), ContractError> {
+        // reference: https://uniswap.org/whitepaper-v3.pdf (6.20)
         self.fee_growth_outside_x = pool
             .fee_growth_global_x
             .unchecked_sub(self.fee_growth_outside_x);
@@ -94,6 +114,29 @@ impl Tick {
         self.seconds_outside = seconds_passed.wrapping_sub(self.seconds_outside);
 
         pool.last_timestamp = current_timestamp;
+
+        // ensure update global incentive before
+        // Iterate through the pool incentives
+        for record in &pool.incentives {
+            // Check if the incentive ID exists in the existing set
+            if let Some(incentive) = self
+                .incentives
+                .iter_mut()
+                .find(|i| i.incentive_id == record.id)
+            {
+                // reference: https://uniswap.org/whitepaper-v3.pdf (6.20)
+                // Update the incentive growth if it exists
+                incentive.incentive_growth_outside = record
+                    .incentive_growth_global
+                    .unchecked_sub(incentive.incentive_growth_outside);
+            } else {
+                // If the incentive ID doesn't exist, add a new incentive
+                self.incentives.push(TickIncentive {
+                    incentive_id: record.id,
+                    incentive_growth_outside: record.incentive_growth_global,
+                });
+            }
+        }
 
         // When going to higher tick net_liquidity should be added and for going lower subtracted
         if (pool.current_tick_index >= self.index) ^ self.sign {
@@ -141,7 +184,7 @@ impl Tick {
     }
 
     fn calculate_new_liquidity_gross(
-        self,
+        &self,
         sign: bool,
         liquidity_delta: Liquidity,
         max_liquidity_per_tick: Liquidity,

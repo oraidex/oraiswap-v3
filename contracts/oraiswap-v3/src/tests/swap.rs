@@ -7,7 +7,7 @@ use crate::{
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::macros::*,
     token_amount::TokenAmount,
-    FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+    ContractError, FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
 };
 
 use super::helper::MockApp;
@@ -301,7 +301,7 @@ fn test_swap_y_to_x() {
 
 #[test]
 fn test_swap_not_enough_liquidity_token_x() {
-    let protocol_fee = Percentage::from_scale(6, 3);
+    let protocol_fee: Percentage = Percentage::from_scale(6, 3);
     let mut app = MockApp::new(&[]);
     let dex = create_dex!(app, protocol_fee);
 
@@ -373,7 +373,7 @@ fn test_swap_not_enough_liquidity_token_x() {
 
     let target_sqrt_price = SqrtPrice::new(MIN_SQRT_PRICE);
 
-    swap!(
+    let error = swap!(
         app,
         dex,
         pool_key,
@@ -384,6 +384,11 @@ fn test_swap_not_enough_liquidity_token_x() {
         "bob"
     )
     .unwrap_err();
+
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::TickLimitReached {}.to_string()
+    );
 }
 
 #[test]
@@ -460,7 +465,7 @@ fn test_swap_not_enough_liquidity_token_y() {
 
     let slippage = SqrtPrice::new(MAX_SQRT_PRICE);
 
-    swap!(
+    let error = swap!(
         app,
         dex,
         pool_key,
@@ -471,4 +476,8 @@ fn test_swap_not_enough_liquidity_token_y() {
         "bob"
     )
     .unwrap_err();
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::TickLimitReached {}.to_string()
+    );
 }

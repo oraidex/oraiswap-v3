@@ -4,7 +4,7 @@ use crate::{
     percentage::Percentage,
     tests::helper::{macros::*, MockApp},
     token_amount::TokenAmount,
-    FeeTier, PoolKey,
+    ContractError, FeeTier, PoolKey,
 };
 
 #[test]
@@ -60,7 +60,11 @@ fn test_protocol_fee_not_admin() {
     )
     .unwrap();
 
-    withdraw_protocol_fee!(app, dex, pool_key, "bob").unwrap_err();
+    let error = withdraw_protocol_fee!(app, dex, pool_key, "bob").unwrap_err();
+    assert_eq!(
+        error.root_cause().to_string(),
+        ContractError::Unauthorized {}.to_string()
+    );
 }
 
 #[test]

@@ -6,7 +6,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::CONFIG;
 use crate::{entrypoints::*, Config};
 
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
 // version info for migration info
@@ -109,6 +109,7 @@ pub fn execute(
             init_tick,
         } => create_pool(
             deps,
+            info,
             env,
             token_0,
             token_1,
@@ -151,44 +152,81 @@ pub fn execute(
             extension.slippage_limit_lower,
             extension.slippage_limit_upper,
         ),
+        ExecuteMsg::CreateIncentive {
+            pool_key,
+            reward_token,
+            total_reward,
+            reward_per_sec,
+            start_timestamp,
+        } => create_incentive(
+            deps,
+            env,
+            info,
+            pool_key,
+            reward_token,
+            total_reward,
+            reward_per_sec,
+            start_timestamp,
+        ),
+        ExecuteMsg::ClaimIncentive { index } => claim_incentives(deps, env, info, index),
+        ExecuteMsg::UpdateIncentive {
+            pool_key,
+            incentive_id,
+            remaining_reward,
+            start_timestamp,
+            reward_per_sec,
+        } => update_incentive(
+            deps,
+            env,
+            info,
+            pool_key,
+            incentive_id,
+            remaining_reward,
+            start_timestamp,
+            reward_per_sec,
+        ),
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Admin {} => to_binary(&query_admin(deps)?),
-        QueryMsg::ProtocolFee {} => to_binary(&get_protocol_fee(deps)?),
-        QueryMsg::Position { owner_id, index } => to_binary(&get_position(deps, owner_id, index)?),
+        QueryMsg::Admin {} => to_json_binary(&query_admin(deps)?),
+        QueryMsg::ProtocolFee {} => to_json_binary(&get_protocol_fee(deps)?),
+        QueryMsg::Position { owner_id, index } => {
+            to_json_binary(&get_position(deps, owner_id, index)?)
+        }
         QueryMsg::Positions {
             owner_id,
             limit,
             offset,
-        } => to_binary(&get_positions(deps, owner_id, limit, offset)?),
-        QueryMsg::FeeTierExist { fee_tier } => to_binary(&fee_tier_exist(deps, fee_tier)?),
+        } => to_json_binary(&get_positions(deps, owner_id, limit, offset)?),
+        QueryMsg::FeeTierExist { fee_tier } => to_json_binary(&fee_tier_exist(deps, fee_tier)?),
         QueryMsg::Pool {
             token_0,
             token_1,
             fee_tier,
-        } => to_binary(&get_pool(deps, token_0, token_1, fee_tier)?),
-        QueryMsg::Pools { limit, start_after } => to_binary(&get_pools(deps, limit, start_after)?),
-        QueryMsg::Tick { key, index } => to_binary(&get_tick(deps, key, index)?),
-        QueryMsg::IsTickInitialized { key, index } => {
-            to_binary(&is_tick_initialized(deps, key, index)?)
+        } => to_json_binary(&get_pool(deps, token_0, token_1, fee_tier)?),
+        QueryMsg::Pools { limit, start_after } => {
+            to_json_binary(&get_pools(deps, limit, start_after)?)
         }
-        QueryMsg::FeeTiers {} => to_binary(&get_fee_tiers(deps)?),
+        QueryMsg::Tick { key, index } => to_json_binary(&get_tick(deps, key, index)?),
+        QueryMsg::IsTickInitialized { key, index } => {
+            to_json_binary(&is_tick_initialized(deps, key, index)?)
+        }
+        QueryMsg::FeeTiers {} => to_json_binary(&get_fee_tiers(deps)?),
         QueryMsg::PositionTicks { owner, offset } => {
-            to_binary(&get_position_ticks(deps, owner, offset)?)
+            to_json_binary(&get_position_ticks(deps, owner, offset)?)
         }
         QueryMsg::UserPositionAmount { owner } => {
-            to_binary(&get_user_position_amount(deps, owner)?)
+            to_json_binary(&get_user_position_amount(deps, owner)?)
         }
         QueryMsg::TickMap {
             pool_key,
             lower_tick_index,
             upper_tick_index,
             x_to_y,
-        } => to_binary(&get_tickmap(
+        } => to_json_binary(&get_tickmap(
             deps,
             pool_key,
             lower_tick_index,
@@ -198,16 +236,16 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::LiquidityTicks {
             pool_key,
             tick_indexes,
-        } => to_binary(&get_liquidity_ticks(deps, pool_key, tick_indexes)?),
+        } => to_json_binary(&get_liquidity_ticks(deps, pool_key, tick_indexes)?),
         QueryMsg::LiquidityTicksAmount {
             pool_key,
             lower_tick,
             upper_tick,
-        } => to_binary(&get_liquidity_ticks_amount(
+        } => to_json_binary(&get_liquidity_ticks_amount(
             deps, pool_key, lower_tick, upper_tick,
         )?),
         QueryMsg::PoolsForPair { token_0, token_1 } => {
-            to_binary(&get_all_pools_for_pair(deps, token_0, token_1)?)
+            to_json_binary(&get_all_pools_for_pair(deps, token_0, token_1)?)
         }
         QueryMsg::Quote {
             pool_key,
@@ -215,7 +253,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             amount,
             by_amount_in,
             sqrt_price_limit,
-        } => to_binary(&quote(
+        } => to_json_binary(&quote(
             deps,
             env,
             pool_key,
@@ -225,12 +263,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             sqrt_price_limit,
         )?),
         QueryMsg::QuoteRoute { amount_in, swaps } => {
-            to_binary(&quote_route(deps, env, amount_in, swaps)?)
+            to_json_binary(&quote_route(deps, env, amount_in, swaps)?)
         }
         QueryMsg::OwnerOf {
             token_id,
             include_expired,
-        } => to_binary(&query_owner_of(
+        } => to_json_binary(&query_owner_of(
             deps,
             env,
             token_id,
@@ -241,7 +279,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             include_expired,
             start_after,
             limit,
-        } => to_binary(&query_all_approvals(
+        } => to_json_binary(&query_all_approvals(
             deps,
             env,
             owner,
@@ -249,11 +287,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         )?),
-        QueryMsg::NftInfo { token_id } => to_binary(&query_nft_info(deps, token_id)?),
+        QueryMsg::NftInfo { token_id } => to_json_binary(&query_nft_info(deps, token_id)?),
         QueryMsg::AllNftInfo {
             token_id,
             include_expired,
-        } => to_binary(&query_all_nft_info(
+        } => to_json_binary(&query_all_nft_info(
             deps,
             env,
             token_id,
@@ -263,43 +301,52 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             owner,
             start_after,
             limit,
-        } => to_binary(&query_tokens(deps, owner, start_after, limit)?),
+        } => to_json_binary(&query_tokens(deps, owner, start_after, limit)?),
         QueryMsg::AllTokens { start_after, limit } => {
-            to_binary(&query_all_tokens(deps, start_after, limit)?)
+            to_json_binary(&query_all_tokens(deps, start_after, limit)?)
         }
-        QueryMsg::NumTokens {} => to_binary(&query_num_tokens(deps)?),
+        QueryMsg::NumTokens {} => to_json_binary(&query_num_tokens(deps)?),
+        QueryMsg::PositionIncentives { owner_id, index } => {
+            to_json_binary(&query_position_incentives(deps, env, owner_id, index)?)
+        }
+        QueryMsg::PoolsByPoolKeys { pool_keys } => {
+            to_json_binary(&get_pools_with_pool_keys(deps, pool_keys)?)
+        }
+        QueryMsg::AllPosition { limit, start_after } => {
+            to_json_binary(&query_all_positions(deps, limit, start_after)?)
+        }
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let original_version =
-        cw_utils::ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+        cw2::ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    // query all position, then update token id
-    let positions: Vec<_> = crate::state::POSITIONS
-        .range_raw(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .collect();
-    let mut token_id = 0;
-    for item in positions {
-        if let Ok((key, mut position)) = item {
-            token_id += 1;
-            position.token_id = token_id;
-            let account_id = &key[..key.len() - 4];
-            let index = u32::from_be_bytes(key[key.len() - 4..].try_into().unwrap());
-            // update position and its index
-            crate::state::POSITIONS.save(deps.storage, &key, &position)?;
-            crate::state::POSITION_KEYS_BY_TOKEN_ID.save(
-                deps.storage,
-                position.token_id,
-                &(account_id.to_vec(), index),
-            )?;
-        }
-    }
+    // // query all position, then update token id
+    // let positions: Vec<_> = crate::state::POSITIONS
+    //     .range_raw(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+    //     .collect();
+    // let mut token_id = 0;
+    // for item in positions {
+    //     if let Ok((key, mut position)) = item {
+    //         token_id += 1;
+    //         position.token_id = token_id;
+    //         let account_id = &key[..key.len() - 4];
+    //         let index = u32::from_be_bytes(key[key.len() - 4..].try_into().unwrap());
+    //         // update position and its index
+    //         crate::state::POSITIONS.save(deps.storage, &key, &position)?;
+    //         crate::state::POSITION_KEYS_BY_TOKEN_ID.save(
+    //             deps.storage,
+    //             position.token_id,
+    //             &(account_id.to_vec(), index),
+    //         )?;
+    //     }
+    // }
 
-    // update total token id, first time token count is total token ids
-    crate::state::TOKEN_COUNT.save(deps.storage, &token_id)?;
-    crate::state::TOKEN_ID.save(deps.storage, &token_id)?;
+    // // update total token id, first time token count is total token ids
+    // crate::state::TOKEN_COUNT.save(deps.storage, &token_id)?;
+    // crate::state::TOKEN_ID.save(deps.storage, &token_id)?;
 
     Ok(Response::new().add_attribute("new_version", original_version.to_string()))
 }

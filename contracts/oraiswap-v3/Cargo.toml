@@ -25,12 +25,10 @@ cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw2 = { workspace = true }
 cw20 = { workspace = true }
-cw-utils = { workspace = true }
 thiserror = { workspace = true }
 decimal = { workspace = true }
 derive_more = { workspace = true }
 
 [dev-dependencies]
-cw-multi-test = { workspace = true }
 cw20-base = { workspace = true, features = ["library"] }
-cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-util.git", rev = "aaa09cf" }
+cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-util.git", rev = "1b9c412" }

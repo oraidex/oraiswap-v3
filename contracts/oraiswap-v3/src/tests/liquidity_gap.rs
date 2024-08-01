@@ -7,7 +7,7 @@ use crate::{
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp},
     token_amount::TokenAmount,
-    FeeTier, PoolKey, MIN_SQRT_PRICE,
+    ContractError, FeeTier, PoolKey, MIN_SQRT_PRICE,
 };
 
 #[test]
@@ -137,7 +137,7 @@ fn test_liquidity_gap() {
         let swap_amount = TokenAmount(1);
         let target_sqrt_price = SqrtPrice::new(MIN_SQRT_PRICE);
 
-        swap!(
+        let error = swap!(
             app,
             dex,
             pool_key,
@@ -148,6 +148,10 @@ fn test_liquidity_gap() {
             "bob"
         )
         .unwrap_err();
+        assert_eq!(
+            error.root_cause().to_string(),
+            ContractError::NoGainSwap {}.to_string()
+        );
     }
 
     // Should skip gap and then swap

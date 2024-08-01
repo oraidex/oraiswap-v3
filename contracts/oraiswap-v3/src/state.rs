@@ -4,6 +4,7 @@ use cw_storage_plus::{Bound, Item, Map};
 
 use crate::{
     flip_bit_at_position, get_bit_at_position, get_search_limit,
+    incentive::IncentiveRecord,
     interface::PoolWithPoolKey,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tick_to_position, Config, ContractError, Pool, PoolKey, Position, Tick, CHUNK_SIZE, MAX_TICK,
@@ -28,6 +29,8 @@ pub const TOKEN_ID: Item<u64> = Item::new("token_id");
 pub const POSITION_KEYS_BY_TOKEN_ID: Map<u64, (Vec<u8>, u32)> = Map::new("position_keys_by_id");
 pub const TOKEN_COUNT: Item<u64> = Item::new("num_tokens");
 pub const OPERATORS: Map<(&[u8], &[u8]), Expiration> = Map::new("operators");
+
+pub const INCENTIVE_RECORD: Map<u64, IncentiveRecord> = Map::new("incentive_record");
 
 pub const MAX_LIMIT: u32 = 100;
 

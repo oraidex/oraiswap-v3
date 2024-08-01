@@ -392,24 +392,6 @@ mod tests {
     }
 
     #[test]
-    fn test_domain_calculate_sqrt_price() {
-        // Over max tick
-        // {
-        //     let tick_out_of_range = MAX_TICK + 1;
-        //     let (_, cause, stack) = SqrtPrice::from_tick(tick_out_of_range).unwrap_err().get();
-        //     assert_eq!("tick over bounds", cause);
-        //     assert_eq!(1, stack.len());
-        // }
-        // // Below min tick
-        // {
-        //     let tick_out_of_range = -MAX_TICK - 1;
-        //     let (_, cause, stack) = SqrtPrice::from_tick(tick_out_of_range).unwrap_err().get();
-        //     assert_eq!("tick over bounds", cause);
-        //     assert_eq!(1, stack.len());
-        // }
-    }
-
-    #[test]
     fn test_align_tick_with_spacing() {
         // zero
         {

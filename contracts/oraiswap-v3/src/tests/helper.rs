@@ -1,9 +1,8 @@
-use cosmwasm_std::{Addr, Coin, Event, StdResult};
-use cw_multi_test::{AppResponse, ContractWrapper};
+use cosmwasm_std::{Addr, Binary, Coin, Event, StdResult, Timestamp};
+use cosmwasm_testing_util::{AppResponse, ContractWrapper, MockResult};
 
 use crate::{
-    interface::SwapHop,
-    interface::{PoolWithPoolKey, QuoteResult},
+    interface::{Asset, AssetInfo, PoolWithPoolKey, QuoteResult, SwapHop},
     liquidity::Liquidity,
     msg::{self},
     percentage::Percentage,
@@ -36,7 +35,7 @@ impl MockApp {
         Self { app, dex_id }
     }
 
-    pub fn create_dex(&mut self, owner: &str, protocol_fee: Percentage) -> Result<Addr, String> {
+    pub fn create_dex(&mut self, owner: &str, protocol_fee: Percentage) -> MockResult<Addr> {
         let code_id = self.dex_id;
         self.instantiate(
             code_id,
@@ -52,7 +51,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         fee_tier: FeeTier,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -66,7 +65,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         fee_tier: FeeTier,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -84,7 +83,7 @@ impl MockApp {
         fee_tier: FeeTier,
         init_sqrt_price: SqrtPrice,
         init_tick: i32,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -104,7 +103,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         pool_key: &PoolKey,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -121,7 +120,7 @@ impl MockApp {
         dex: &str,
         pool_key: &PoolKey,
         fee_recevier: &str,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -143,7 +142,7 @@ impl MockApp {
         liquidity_delta: Liquidity,
         slippage_limit_lower: SqrtPrice,
         slippage_limit_upper: SqrtPrice,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -165,7 +164,7 @@ impl MockApp {
         dex: &str,
         index: u32,
         receiver: &str,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -182,7 +181,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         index: u32,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -199,7 +198,7 @@ impl MockApp {
         expected_amount_out: TokenAmount,
         slippage: Percentage,
         swaps: Vec<SwapHop>,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -222,7 +221,7 @@ impl MockApp {
         amount: TokenAmount,
         by_amount_in: bool,
         sqrt_price_limit: SqrtPrice,
-    ) -> Result<AppResponse, String> {
+    ) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -237,16 +236,25 @@ impl MockApp {
         )
     }
 
-    pub fn claim_fee(
-        &mut self,
-        sender: &str,
-        dex: &str,
-        index: u32,
-    ) -> Result<AppResponse, String> {
+    pub fn claim_fee(&mut self, sender: &str, dex: &str, index: u32) -> MockResult<AppResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
             &msg::ExecuteMsg::ClaimFee { index },
+            &[],
+        )
+    }
+
+    pub fn claim_incentives(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        index: u32,
+    ) -> MockResult<AppResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &msg::ExecuteMsg::ClaimIncentive { index },
             &[],
         )
     }
@@ -338,6 +346,21 @@ impl MockApp {
         )
     }
 
+    pub fn get_position_incentives(
+        &self,
+        dex: &str,
+        owner_id: &str,
+        index: u32,
+    ) -> StdResult<Vec<Asset>> {
+        self.query(
+            Addr::unchecked(dex),
+            &msg::QueryMsg::PositionIncentives {
+                owner_id: Addr::unchecked(owner_id),
+                index,
+            },
+        )
+    }
+
     pub fn get_all_positions(&self, dex: &str, owner_id: &str) -> StdResult<Vec<Position>> {
         self.query(
             Addr::unchecked(dex),
@@ -381,12 +404,45 @@ impl MockApp {
         )
     }
 
-    pub fn assert_fail(&self, res: Result<AppResponse, String>) {
-        // new version of cosmwasm does not return detail error
-        match res.err() {
-            Some(msg) => assert!(msg.contains("error executing WasmMsg")),
-            None => panic!("Must return generic error"),
-        }
+    pub fn create_incentive(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        pool_key: &PoolKey,
+        reward_token: AssetInfo,
+        total_reward: Option<TokenAmount>,
+        reward_per_sec: TokenAmount,
+        start_timestamp: Option<u64>,
+    ) -> MockResult<AppResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &msg::ExecuteMsg::CreateIncentive {
+                pool_key: pool_key.clone(),
+                reward_token,
+                total_reward,
+                reward_per_sec,
+                start_timestamp,
+            },
+            &[],
+        )
+    }
+    pub fn query_all_positions(
+        &self,
+        dex: &str,
+        limit: Option<u32>,
+        start_after: Option<Binary>,
+    ) -> StdResult<Vec<Position>> {
+        self.query(
+            Addr::unchecked(dex),
+            &msg::QueryMsg::AllPosition { limit, start_after },
+        )
+    }
+
+    pub fn increase_block_time_by_seconds(&mut self, seconds: u64) {
+        let mut block_info = self.app.app.block_info();
+        block_info.time = Timestamp::from_seconds(block_info.time.seconds() + seconds);
+        self.app.app.set_block(block_info);
     }
 }
 
@@ -494,6 +550,21 @@ pub mod macros {
     }
     pub(crate) use fee_tier_exist;
 
+    macro_rules! create_incentive {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $reward_token:expr, $total_reward:expr, $reward_per_sec:expr, $start_timestamp:expr, $caller:tt) => {{
+            $app.create_incentive(
+                $caller,
+                $dex_address.as_str(),
+                &$pool_key,
+                $reward_token,
+                $total_reward,
+                $reward_per_sec,
+                $start_timestamp,
+            )
+        }};
+    }
+    pub(crate) use create_incentive;
+
     macro_rules! create_position {
         ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick:expr, $upper_tick:expr, $liquidity_delta:expr, $slippage_limit_lower:expr, $slippage_limit_upper:expr, $caller:tt) => {{
             $app.create_position(
@@ -535,6 +606,13 @@ pub mod macros {
         }};
     }
     pub(crate) use get_position;
+
+    macro_rules! get_position_incentives {
+        ($app:ident, $dex_address:expr, $index:expr, $owner:tt) => {{
+            $app.get_position_incentives($dex_address.as_str(), $owner, $index)
+        }};
+    }
+    pub(crate) use get_position_incentives;
 
     macro_rules! get_tick {
         ($app:ident, $dex_address:expr, $key:expr, $index:expr) => {{
@@ -629,6 +707,13 @@ pub mod macros {
         }};
     }
     pub(crate) use claim_fee;
+
+    macro_rules! claim_incentives {
+        ($app:ident, $dex_address:expr, $index:expr, $caller:tt) => {{
+            $app.claim_incentives($caller, $dex_address.as_str(), $index)
+        }};
+    }
+    pub(crate) use claim_incentives;
 
     macro_rules! init_slippage_pool_with_liquidity {
         ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{

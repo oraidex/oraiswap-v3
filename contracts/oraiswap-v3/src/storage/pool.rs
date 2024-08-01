@@ -1,4 +1,5 @@
 use super::{FeeTier, Tick};
+use crate::incentive::IncentiveRecord;
 use crate::math::types::sqrt_price::check_tick_to_sqrt_price_relationship;
 use crate::{
     math::{
@@ -29,6 +30,9 @@ pub struct Pool {
     pub start_timestamp: u64,
     pub last_timestamp: u64,
     pub fee_receiver: String,
+
+    #[serde(default)]
+    pub incentives: Vec<IncentiveRecord>,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -184,6 +188,17 @@ impl Pool {
         self.fee_protocol_token_y = TokenAmount(0);
 
         (fee_protocol_token_x, fee_protocol_token_y)
+    }
+
+    pub fn update_global_incentives(
+        &mut self,
+        current_timestamp: u64,
+    ) -> Result<(), ContractError> {
+        for record in &mut self.incentives {
+            record.update_global_incentive_growth(self.liquidity, current_timestamp)?;
+        }
+
+        Ok(())
     }
 }
 
