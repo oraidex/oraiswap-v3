@@ -1,9 +1,7 @@
-use crate::{
-    math::types::{liquidity::*, token_amount::*},
-    ContractError,
-};
+use crate::math::types::{liquidity::*, token_amount::*};
 use cosmwasm_schema::cw_serde;
 use decimal::*;
+use oraiswap_v3_common::error::ContractError;
 
 #[decimal(28)]
 #[cw_serde]

@@ -14,5 +14,3 @@ pub use pool_key::*;
 pub use position::*;
 pub use tick::*;
 pub use tickmap::*;
-
-pub use crate::error::ContractError;

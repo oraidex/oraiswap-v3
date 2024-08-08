@@ -4,17 +4,18 @@ use cw_storage_plus::Bound;
 use crate::{
     get_max_chunk, get_min_chunk,
     interface::{
-        AllNftInfoResponse, Approval, ApprovedForAllResponse, Asset, NftInfoResponse,
-        NumTokensResponse, OwnerOfResponse, PoolWithPoolKey, QuoteResult, SwapHop, TokensResponse,
+        AllNftInfoResponse, Approval, ApprovedForAllResponse, NftInfoResponse, NumTokensResponse,
+        OwnerOfResponse, PoolWithPoolKey, QuoteResult, SwapHop, TokensResponse,
     },
     percentage::Percentage,
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
     state::{self, CONFIG, MAX_LIMIT, POSITIONS},
     tick_to_position,
     token_amount::TokenAmount,
-    ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
+    FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
     LIQUIDITY_TICK_LIMIT, POSITION_TICK_LIMIT,
 };
+use oraiswap_v3_common::{asset::Asset, error::ContractError};
 
 use super::{calculate_swap, route, tickmap_slice, TimeStampExt};
 
@@ -28,6 +29,12 @@ pub fn query_admin(deps: Deps) -> Result<Addr, ContractError> {
 pub fn get_protocol_fee(deps: Deps) -> Result<Percentage, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     Ok(config.protocol_fee)
+}
+
+/// Retrieves the incentives_fund_manager contract address.
+pub fn get_incentives_fund_manager(deps: Deps) -> Result<Addr, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    Ok(config.incentives_fund_manager)
 }
 
 /// Retrieves information about a single position.

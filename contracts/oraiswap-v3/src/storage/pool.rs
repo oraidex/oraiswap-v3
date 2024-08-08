@@ -1,17 +1,15 @@
 use super::{FeeTier, Tick};
 use crate::incentive::IncentiveRecord;
 use crate::math::types::sqrt_price::check_tick_to_sqrt_price_relationship;
-use crate::{
-    math::{
-        clamm::*,
-        log::get_tick_at_sqrt_price,
-        types::{
-            fee_growth::FeeGrowth, liquidity::Liquidity, percentage::Percentage,
-            sqrt_price::SqrtPrice, token_amount::TokenAmount,
-        },
+use crate::math::{
+    clamm::*,
+    log::get_tick_at_sqrt_price,
+    types::{
+        fee_growth::FeeGrowth, liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice,
+        token_amount::TokenAmount,
     },
-    ContractError,
 };
+use oraiswap_v3_common::error::ContractError;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;

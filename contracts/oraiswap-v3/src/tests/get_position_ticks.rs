@@ -289,8 +289,8 @@ fn test_query_all_positions() {
         [
             Position {
                 pool_key: PoolKey {
-                    token_x: String::from("contract1"),
-                    token_y: String::from("contract2"),
+                    token_x: String::from("contract2"),
+                    token_y: String::from("contract3"),
                     fee_tier: FeeTier {
                         fee: Percentage(10000000000),
                         tick_spacing: 1
@@ -301,7 +301,7 @@ fn test_query_all_positions() {
                 upper_tick_index: 10,
                 fee_growth_inside_x: FeeGrowth(0),
                 fee_growth_inside_y: FeeGrowth(0),
-                last_block_number: 12353,
+                last_block_number: 12356,
                 tokens_owed_x: TokenAmount(0),
                 tokens_owed_y: TokenAmount(0),
                 approvals: vec![],
@@ -310,8 +310,8 @@ fn test_query_all_positions() {
             },
             Position {
                 pool_key: PoolKey {
-                    token_x: String::from("contract1"),
-                    token_y: String::from("contract2"),
+                    token_x: String::from("contract2"),
+                    token_y: String::from("contract3"),
                     fee_tier: FeeTier {
                         fee: Percentage(10000000000),
                         tick_spacing: 1
@@ -322,7 +322,7 @@ fn test_query_all_positions() {
                 upper_tick_index: 100,
                 fee_growth_inside_x: FeeGrowth(0),
                 fee_growth_inside_y: FeeGrowth(0),
-                last_block_number: 12354,
+                last_block_number: 12357,
                 tokens_owed_x: TokenAmount(0),
                 tokens_owed_y: TokenAmount(0),
                 token_id: 2,

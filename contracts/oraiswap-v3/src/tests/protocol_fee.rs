@@ -4,8 +4,9 @@ use crate::{
     percentage::Percentage,
     tests::helper::{macros::*, MockApp},
     token_amount::TokenAmount,
-    ContractError, FeeTier, PoolKey,
+    FeeTier, PoolKey,
 };
+use oraiswap_v3_common::error::ContractError;
 
 #[test]
 fn test_protocol_fee() {

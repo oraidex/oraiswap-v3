@@ -6,8 +6,9 @@ use crate::{
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp},
     token_amount::TokenAmount,
-    ContractError, FeeTier, PoolKey, MAX_SQRT_PRICE,
+    FeeTier, PoolKey, MAX_SQRT_PRICE,
 };
+use oraiswap_v3_common::error::ContractError;
 
 #[test]
 fn test_basic_slippage() {

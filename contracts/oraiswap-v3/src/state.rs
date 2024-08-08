@@ -7,8 +7,9 @@ use crate::{
     incentive::IncentiveRecord,
     interface::PoolWithPoolKey,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tick_to_position, Config, ContractError, Pool, PoolKey, Position, Tick, CHUNK_SIZE, MAX_TICK,
+    tick_to_position, Config, Pool, PoolKey, Position, Tick, CHUNK_SIZE, MAX_TICK,
 };
+use oraiswap_v3_common::error::ContractError;
 
 pub const CONFIG: Item<Config> = Item::new("config");
 

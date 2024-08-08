@@ -3,8 +3,9 @@ use decimal::*;
 use crate::{
     percentage::Percentage,
     tests::helper::{macros::*, MockApp},
-    ContractError, FeeTier,
+    FeeTier,
 };
+use oraiswap_v3_common::error::ContractError;
 
 #[test]
 fn test_remove_fee_tier() {

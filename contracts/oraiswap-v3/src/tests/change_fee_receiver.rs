@@ -2,10 +2,10 @@ use crate::math::types::percentage::Percentage;
 use crate::math::types::sqrt_price::calculate_sqrt_price;
 use crate::tests::helper::macros::*;
 use crate::tests::helper::MockApp;
-use crate::ContractError;
 use crate::{FeeTier, PoolKey};
 use cosmwasm_std::Addr;
 use decimal::Decimal;
+use oraiswap_v3_common::error::ContractError;
 
 #[test]
 fn test_change_fee_reciever() {

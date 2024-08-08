@@ -1,9 +1,9 @@
 use crate::math::types::percentage::Percentage;
 use crate::msg::QueryMsg;
 use crate::tests::helper::{macros::*, MockApp};
-use crate::ContractError;
 use crate::FeeTier;
 use decimal::Decimal;
+use oraiswap_v3_common::error::ContractError;
 
 #[test]
 fn test_add_multiple_fee_tiers() {

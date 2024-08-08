@@ -2,7 +2,7 @@ use crate::msg::{ExecuteMsg, QueryMsg};
 use crate::percentage::Percentage;
 use crate::tests::helper::macros::*;
 use crate::tests::helper::MockApp;
-use crate::ContractError;
+use oraiswap_v3_common::error::ContractError;
 use cosmwasm_std::Addr;
 use decimal::Decimal;
 

@@ -33,6 +33,8 @@ cw-storage-plus = { version = "1.0.1" }
 derive_more = "0.99.17"
 decimal-core = { path = "./packages/decimal-core" }
 decimal = { path = "./packages/decimal" }
+oraiswap-v3-common = { path = "./packages/oraiswap-v3-common" }
+incentives-fund-manager = { path = "./contracts/incentives-fund-manager" }
 
 [profile.release]
 opt-level = 3

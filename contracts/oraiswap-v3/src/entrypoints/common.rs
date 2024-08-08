@@ -5,12 +5,16 @@ use decimal::{CheckedOps, Decimal};
 
 use crate::{
     check_tick, compute_swap_step,
-    interface::{Approval, Asset, AssetInfo, CalculateSwapResult, SwapHop},
+    interface::{Approval, CalculateSwapResult, SwapHop},
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
     state::{self},
     token_amount::TokenAmount,
-    ContractError, PoolKey, Position, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MAX_TICKMAP_QUERY_SIZE,
+    PoolKey, Position, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MAX_TICKMAP_QUERY_SIZE,
     MIN_SQRT_PRICE,
+};
+use oraiswap_v3_common::{
+    asset::{Asset, AssetInfo},
+    error::ContractError,
 };
 
 pub trait TimeStampExt {
