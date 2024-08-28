@@ -1569,35 +1569,35 @@ pub mod macros {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{testing::MOCK_CONTRACT_ADDR, Addr, Coin, Uint128};
+    use cosmwasm_std::{coins, Addr, Coin, Uint128};
+
+    use crate::tests::helper::FEE_DENOM;
 
     use super::MockApp;
 
     #[test]
     fn token_balance_querier() {
-        let (mut app, accounts) = MockApp::new(&[("owner", &[])]);
+        let (mut app, accounts) = MockApp::new(&[
+            ("owner", &coins(100_000_000_000, FEE_DENOM)),
+            ("receiver", &[]),
+        ]);
         let owner = &accounts[0];
+        let receiver = &accounts[1];
 
-        app.set_token_balances(
-            owner,
-            &[(&"AIRI".to_string(), &[(MOCK_CONTRACT_ADDR, 123u128)])],
-        )
-        .unwrap();
+        app.set_token_balances(owner, &[(&"AIRI".to_string(), &[(receiver, 123u128)])])
+            .unwrap();
 
         assert_eq!(
             Uint128::from(123u128),
-            app.query_token_balance(
-                app.get_token_addr("AIRI").unwrap().as_str(),
-                MOCK_CONTRACT_ADDR,
-            )
-            .unwrap()
+            app.query_token_balance(app.get_token_addr("AIRI").unwrap().as_str(), receiver,)
+                .unwrap()
         );
     }
 
     #[test]
     fn balance_querier() {
-        let (app, _) = MockApp::new(&[(
-            &MOCK_CONTRACT_ADDR.to_string(),
+        let (app, accounts) = MockApp::new(&[(
+            "account",
             &[Coin {
                 denom: "uusd".to_string(),
                 amount: Uint128::from(200u128),
@@ -1605,7 +1605,7 @@ mod tests {
         )]);
 
         assert_eq!(
-            app.query_balance(Addr::unchecked(MOCK_CONTRACT_ADDR), "uusd".to_string())
+            app.query_balance(Addr::unchecked(&accounts[0]), "uusd".to_string())
                 .unwrap(),
             Uint128::from(200u128)
         );
@@ -1613,8 +1613,8 @@ mod tests {
 
     #[test]
     fn all_balances_querier() {
-        let (app, _) = MockApp::new(&[(
-            &MOCK_CONTRACT_ADDR.to_string(),
+        let (app, accounts) = MockApp::new(&[(
+            "account",
             &[
                 Coin {
                     denom: "uusd".to_string(),
@@ -1628,7 +1628,7 @@ mod tests {
         )]);
 
         let mut balance1 = app
-            .query_all_balances(Addr::unchecked(MOCK_CONTRACT_ADDR))
+            .query_all_balances(Addr::unchecked(&accounts[0]))
             .unwrap();
         balance1.sort_by(|a, b| a.denom.cmp(&b.denom));
         let mut balance2 = vec![
@@ -1647,17 +1647,23 @@ mod tests {
 
     #[test]
     fn supply_querier() {
-        let (mut app, accounts) = MockApp::new(&[("owner", &[])]);
+        let (mut app, accounts) = MockApp::new(&[
+            ("owner", &coins(100_000_000_000, FEE_DENOM)),
+            ("addr00000", &[]),
+            ("addr00001", &[]),
+            ("addr00002", &[]),
+            ("addr00003", &[]),
+        ]);
         let owner = &accounts[0];
         app.set_token_balances(
             owner,
             &[(
                 &"LPA".to_string(),
                 &[
-                    (MOCK_CONTRACT_ADDR, 123u128),
-                    (&"addr00000".to_string(), 123u128),
-                    (&"addr00001".to_string(), 123u128),
-                    (&"addr00002".to_string(), 123u128),
+                    (&accounts[1], 123u128),
+                    (&accounts[2], 123u128),
+                    (&accounts[3], 123u128),
+                    (&accounts[4], 123u128),
                 ],
             )],
         )

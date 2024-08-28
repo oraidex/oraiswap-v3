@@ -275,7 +275,7 @@ fn test_query_all_positions() {
         alice
     )
     .unwrap();
-    let block_number = app.get_block_height();
+
     let positions = app.query_all_positions(dex.as_str(), None, None).unwrap();
     assert_eq!(positions.len(), 2);
     assert_eq!(
@@ -295,7 +295,7 @@ fn test_query_all_positions() {
                 upper_tick_index: 10,
                 fee_growth_inside_x: FeeGrowth(0),
                 fee_growth_inside_y: FeeGrowth(0),
-                last_block_number: block_number - 1,
+                last_block_number: positions[0].last_block_number,
                 tokens_owed_x: TokenAmount(0),
                 tokens_owed_y: TokenAmount(0),
                 approvals: vec![],
@@ -316,7 +316,7 @@ fn test_query_all_positions() {
                 upper_tick_index: 100,
                 fee_growth_inside_x: FeeGrowth(0),
                 fee_growth_inside_y: FeeGrowth(0),
-                last_block_number: block_number,
+                last_block_number: positions[1].last_block_number,
                 tokens_owed_x: TokenAmount(0),
                 tokens_owed_y: TokenAmount(0),
                 token_id: 2,

@@ -13,7 +13,7 @@ use crate::{
     tick_to_position,
     token_amount::TokenAmount,
     ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
-    LIQUIDITY_TICK_LIMIT, POSITION_TICK_LIMIT,
+    LIQUIDITY_TICK_LIMIT, MAX_TICKMAP_QUERY_SIZE, POSITION_TICK_LIMIT,
 };
 
 use super::{calculate_swap, route, tickmap_slice, TimeStampExt};
@@ -242,14 +242,16 @@ pub fn get_tickmap(
     let min_chunk_index = get_min_chunk(tick_spacing).max(start_chunk);
     let max_chunk_index = get_max_chunk(tick_spacing).min(end_chunk);
 
-    let tickmaps = if x_to_y {
-        tickmap_slice(
-            deps.storage,
-            (min_chunk_index..=max_chunk_index).rev(),
-            &pool_key,
-        )
-    } else {
-        tickmap_slice(deps.storage, min_chunk_index..=max_chunk_index, &pool_key)
+    let mut tickmaps = tickmap_slice(
+        deps.storage,
+        min_chunk_index,
+        max_chunk_index,
+        &pool_key,
+        MAX_TICKMAP_QUERY_SIZE,
+    );
+
+    if x_to_y {
+        tickmaps.reverse();
     };
 
     Ok(tickmaps)

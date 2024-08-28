@@ -28,6 +28,7 @@ fn test_get_tickmap() {
     approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
+    let fee_tier_1 = FeeTier::new(Percentage::from_scale(1, 2), 2).unwrap();
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -45,6 +46,18 @@ fn test_get_tickmap() {
         alice
     );
     assert!(result.is_ok());
+    add_fee_tier!(app, dex, fee_tier_1, alice).unwrap();
+    let result = create_pool!(
+        app,
+        dex,
+        token_x,
+        token_y,
+        fee_tier_1,
+        init_sqrt_price,
+        init_tick,
+        alice
+    )
+    .unwrap();
 
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
 
@@ -306,7 +319,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
 
 #[test]
 fn test_get_tickmap_more_chunks_above() {
-    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000_000, FEE_DENOM))]);
     let alice = &accounts[0];
     let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_amount = 10u128.pow(10);
@@ -371,7 +384,7 @@ fn test_get_tickmap_more_chunks_above() {
 
 #[test]
 fn test_get_tickmap_more_chunks_below() {
-    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000_000, FEE_DENOM))]);
     let alice = &accounts[0];
     let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_amount = 10u128.pow(10);
@@ -441,7 +454,7 @@ fn test_get_tickmap_more_chunks_below() {
 
 #[test]
 fn test_get_tickmap_max_chunks_returned() {
-    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000_000, FEE_DENOM))]);
     let alice = &accounts[0];
     let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_amount = 10u128.pow(10);

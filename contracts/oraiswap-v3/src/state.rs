@@ -251,9 +251,16 @@ pub fn get_all_positions(
     let from_idx = offset.unwrap_or(0);
     // maximum 100 items
     let to_idx = get_position_length(store, account_id).min(from_idx + limit.unwrap_or(MAX_LIMIT));
-    (from_idx..to_idx)
-        .map(|index| get_position(store, account_id, index))
-        .collect()
+
+    let min = Some(Bound::InclusiveRaw(position_key(account_id, from_idx)));
+    let max = Some(Bound::ExclusiveRaw(position_key(account_id, to_idx)));
+
+    let positions = POSITIONS
+        .range_raw(store, min, max, Order::Ascending)
+        .map(|item| Ok(item?.1))
+        .collect::<StdResult<Vec<_>>>()?;
+
+    Ok(positions)
 }
 
 pub fn get_all_position_keys(
@@ -278,7 +285,7 @@ pub fn get_position_length(store: &dyn Storage, account_id: &Addr) -> u32 {
 
 pub fn bitmap_key(chunk: u16, pool_key: &PoolKey) -> Vec<u8> {
     let mut db_key = chunk.to_be_bytes().to_vec();
-    db_key.append(&mut pool_key.key());
+    db_key.extend_from_slice(&pool_key.key());
     db_key
 }
 
@@ -465,9 +472,10 @@ pub fn flip_bitmap(
 mod tests {
 
     use super::*;
+    use crate::entrypoints::tickmap_slice;
     use crate::math::percentage::Percentage;
     use crate::sqrt_price::SqrtPrice;
-    use crate::{FeeTier, MAX_TICK, TICK_SEARCH_RANGE};
+    use crate::{state, FeeTier, MAX_TICK, TICK_SEARCH_RANGE};
 
     use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::Addr;
@@ -1082,5 +1090,40 @@ mod tests {
 
             assert_eq!((prev.is_some(), next.is_some()), (false, false));
         }
+    }
+
+    #[test]
+    fn test_tick_map() {
+        let mut deps = mock_dependencies();
+        let min_chunk = 0;
+        let max_chunk = 2;
+        let fee_tier = FeeTier::new(Percentage(0), 1).unwrap();
+        let pool_key_1 = PoolKey::new("x".to_string(), "y".to_string(), fee_tier).unwrap();
+        let pool_key_2 = PoolKey::new("y".to_string(), "z".to_string(), fee_tier).unwrap();
+
+        // update pool1
+        for index in min_chunk..=max_chunk {
+            state::BITMAP
+                .save(
+                    deps.as_mut().storage,
+                    &state::bitmap_key(index, &pool_key_1),
+                    &1,
+                )
+                .unwrap();
+        }
+
+        // update pool2
+        for index in min_chunk..=max_chunk {
+            state::BITMAP
+                .save(
+                    deps.as_mut().storage,
+                    &state::bitmap_key(index, &pool_key_2),
+                    &2,
+                )
+                .unwrap();
+        }
+
+        let ret = tickmap_slice(deps.as_ref().storage, min_chunk, max_chunk, &pool_key_1, 3);
+        assert_eq!(ret, [(0, 1), (1, 1), (2, 1)]);
     }
 }
