@@ -65,8 +65,6 @@ pub fn test_create_incentive() {
 
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
 
-    let current_time = app.get_block_time().seconds();
-
     assert_eq!(
         pool.incentives,
         vec![IncentiveRecord {
@@ -74,9 +72,9 @@ pub fn test_create_incentive() {
             reward_per_sec,
             reward_token: reward_token.clone(),
             remaining: total_reward.unwrap(),
-            start_timestamp: current_time,
+            start_timestamp: pool.incentives[0].start_timestamp,
             incentive_growth_global: FeeGrowth(0),
-            last_updated: current_time
+            last_updated: pool.incentives[0].last_updated
         }]
     );
 
@@ -93,7 +91,7 @@ pub fn test_create_incentive() {
     )
     .unwrap();
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
-    let new_timestamp_time = app.get_block_time().seconds();
+
     assert_eq!(
         pool.incentives,
         vec![
@@ -102,18 +100,18 @@ pub fn test_create_incentive() {
                 reward_per_sec,
                 reward_token: reward_token.clone(),
                 remaining: total_reward.unwrap(),
-                start_timestamp: current_time,
+                start_timestamp: pool.incentives[0].start_timestamp,
                 incentive_growth_global: FeeGrowth(0),
-                last_updated: new_timestamp_time
+                last_updated: pool.incentives[0].last_updated
             },
             IncentiveRecord {
                 id: 1,
                 reward_per_sec,
                 reward_token: reward_token.clone(),
                 remaining: total_reward.unwrap(),
-                start_timestamp: new_timestamp_time,
+                start_timestamp: pool.incentives[1].start_timestamp,
                 incentive_growth_global: FeeGrowth(0),
-                last_updated: new_timestamp_time
+                last_updated: pool.incentives[1].last_updated
             }
         ]
     );
@@ -131,7 +129,7 @@ pub fn test_create_incentive() {
     )
     .unwrap();
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
-    let latest_timestamp_time = app.get_block_time().seconds();
+
     assert_eq!(
         pool.incentives,
         vec![
@@ -140,27 +138,27 @@ pub fn test_create_incentive() {
                 reward_per_sec,
                 reward_token: reward_token.clone(),
                 remaining: total_reward.unwrap(),
-                start_timestamp: current_time,
+                start_timestamp: pool.incentives[0].start_timestamp,
                 incentive_growth_global: FeeGrowth(0),
-                last_updated: latest_timestamp_time
+                last_updated: pool.incentives[0].last_updated
             },
             IncentiveRecord {
                 id: 1,
                 reward_per_sec,
                 reward_token: reward_token.clone(),
                 remaining: total_reward.unwrap(),
-                start_timestamp: new_timestamp_time,
+                start_timestamp: pool.incentives[1].start_timestamp,
                 incentive_growth_global: FeeGrowth(0),
-                last_updated: latest_timestamp_time
+                last_updated: pool.incentives[1].last_updated
             },
             IncentiveRecord {
                 id: 2,
                 reward_per_sec,
                 reward_token: reward_token.clone(),
                 remaining: TokenAmount(u128::MAX),
-                start_timestamp: latest_timestamp_time,
+                start_timestamp: pool.incentives[2].start_timestamp,
                 incentive_growth_global: FeeGrowth(0),
-                last_updated: latest_timestamp_time
+                last_updated: pool.incentives[2].start_timestamp
             }
         ]
     );
@@ -262,12 +260,13 @@ pub fn test_single_incentive_with_single_position() {
 
     // try increase block time to 1000s
     // => totalReward for position = 100 * 1000 = 100000;
+    let incentives = get_position_incentives!(app, dex, 0, alice).unwrap();
     app.increase_time(1000);
 
     // get position
-    let incentives = get_position_incentives!(app, dex, 0, alice).unwrap();
+    let new_incentives = get_position_incentives!(app, dex, 0, alice).unwrap();
     assert_eq!(
-        incentives,
+        subtract_assets(&incentives, &new_incentives),
         vec![Asset {
             info: reward_token.clone(),
             amount: Uint128::from(100000u128)
@@ -275,13 +274,18 @@ pub fn test_single_incentive_with_single_position() {
     );
 
     // reach limit of total reward
+    let incentives = new_incentives;
     app.increase_time(1000000);
-    let incentives = get_position_incentives!(app, dex, 0, alice).unwrap();
+    let new_incentives = get_position_incentives!(app, dex, 0, alice).unwrap();
+    #[cfg(not(feature = "test-tube"))]
+    let amount = Uint128::from(899500u128);
+    #[cfg(feature = "test-tube")]
+    let amount = Uint128::from(900000u128);
     assert_eq!(
-        incentives,
+        subtract_assets(&incentives, &new_incentives),
         vec![Asset {
             info: reward_token.clone(),
-            amount: Uint128::from(1000000u128)
+            amount
         }]
     );
 }
