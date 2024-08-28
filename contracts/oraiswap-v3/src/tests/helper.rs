@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Binary, Coin, Event, StdResult, Timestamp};
-use cosmwasm_testing_util::{AppResponse, ContractWrapper, MockResult};
+use cosmwasm_testing_util::{ExecuteResponse, MockResult};
 
 use crate::{
     interface::{Asset, AssetInfo, PoolWithPoolKey, QuoteResult, SwapHop},
@@ -13,26 +13,44 @@ use crate::{
 };
 use derive_more::{Deref, DerefMut};
 
+pub const FEE_DENOM: &str = "orai";
+
+#[cfg(not(feature = "test-tube"))]
+pub type TestMockApp = cosmwasm_testing_util::MultiTestMockApp;
+#[cfg(feature = "test-tube")]
+pub type TestMockApp = cosmwasm_testing_util::TestTubeMockApp;
+
 #[derive(Deref, DerefMut)]
 pub struct MockApp {
     #[deref]
     #[deref_mut]
-    app: cosmwasm_testing_util::MockApp,
+    app: TestMockApp,
     dex_id: u64,
 }
 
 #[allow(dead_code)]
 impl MockApp {
-    pub fn new(init_balances: &[(&str, &[Coin])]) -> Self {
-        let mut app = cosmwasm_testing_util::MockApp::new(init_balances);
+    pub fn new(init_balances: &[(&str, &[Coin])]) -> (Self, Vec<String>) {
+        let (mut app, accounts) = TestMockApp::new(init_balances);
 
-        let dex_id = app.upload(Box::new(ContractWrapper::new_with_empty(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
-        )));
+        let dex_id;
+        #[cfg(not(feature = "test-tube"))]
+        {
+            dex_id = app.upload(Box::new(
+                cosmwasm_testing_util::ContractWrapper::new_with_empty(
+                    crate::contract::execute,
+                    crate::contract::instantiate,
+                    crate::contract::query,
+                ),
+            ));
+        }
+        #[cfg(feature = "test-tube")]
+        {
+            static CW_BYTES: &[u8] = include_bytes!("./testdata/oraiswap-v3.wasm");
+            dex_id = app.upload(CW_BYTES);
+        }
 
-        Self { app, dex_id }
+        (Self { app, dex_id }, accounts)
     }
 
     pub fn create_dex(&mut self, owner: &str, protocol_fee: Percentage) -> MockResult<Addr> {
@@ -51,7 +69,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         fee_tier: FeeTier,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -65,7 +83,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         fee_tier: FeeTier,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -83,13 +101,13 @@ impl MockApp {
         fee_tier: FeeTier,
         init_sqrt_price: SqrtPrice,
         init_tick: i32,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
             &msg::ExecuteMsg::CreatePool {
-                token_0: Addr::unchecked(token_x).to_string(),
-                token_1: Addr::unchecked(token_y).to_string(),
+                token_0: token_x.to_string(),
+                token_1: token_y.to_string(),
                 fee_tier,
                 init_sqrt_price,
                 init_tick,
@@ -103,7 +121,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         pool_key: &PoolKey,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -120,7 +138,7 @@ impl MockApp {
         dex: &str,
         pool_key: &PoolKey,
         fee_recevier: &str,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -142,7 +160,7 @@ impl MockApp {
         liquidity_delta: Liquidity,
         slippage_limit_lower: SqrtPrice,
         slippage_limit_upper: SqrtPrice,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -164,7 +182,7 @@ impl MockApp {
         dex: &str,
         index: u32,
         receiver: &str,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -181,7 +199,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         index: u32,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -198,7 +216,7 @@ impl MockApp {
         expected_amount_out: TokenAmount,
         slippage: Percentage,
         swaps: Vec<SwapHop>,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -221,7 +239,7 @@ impl MockApp {
         amount: TokenAmount,
         by_amount_in: bool,
         sqrt_price_limit: SqrtPrice,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -236,7 +254,12 @@ impl MockApp {
         )
     }
 
-    pub fn claim_fee(&mut self, sender: &str, dex: &str, index: u32) -> MockResult<AppResponse> {
+    pub fn claim_fee(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        index: u32,
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -250,7 +273,7 @@ impl MockApp {
         sender: &str,
         dex: &str,
         index: u32,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -413,7 +436,7 @@ impl MockApp {
         total_reward: Option<TokenAmount>,
         reward_per_sec: TokenAmount,
         start_timestamp: Option<u64>,
-    ) -> MockResult<AppResponse> {
+    ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
@@ -438,12 +461,6 @@ impl MockApp {
             &msg::QueryMsg::AllPosition { limit, start_after },
         )
     }
-
-    pub fn increase_block_time_by_seconds(&mut self, seconds: u64) {
-        let mut block_info = self.app.app.block_info();
-        block_info.time = Timestamp::from_seconds(block_info.time.seconds() + seconds);
-        self.app.app.set_block(block_info);
-    }
 }
 
 pub fn extract_amount(events: &[Event], key: &str) -> Option<TokenAmount> {
@@ -461,8 +478,8 @@ pub fn extract_amount(events: &[Event], key: &str) -> Option<TokenAmount> {
 
 pub mod macros {
     macro_rules! create_dex {
-        ($app:ident, $protocol_fee:expr) => {{
-            $app.create_dex("alice", $protocol_fee).unwrap()
+        ($app:ident, $protocol_fee:expr,$owner: tt) => {{
+            $app.create_dex($owner, $protocol_fee).unwrap()
         }};
     }
     pub(crate) use create_dex;
@@ -477,11 +494,11 @@ pub mod macros {
                 (token_y, token_x)
             }
         }};
-        ($app:ident, $token_x_supply:expr, $token_y_supply:expr) => {{
-            create_tokens!($app, $token_x_supply, $token_y_supply, "alice")
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr,$owner:tt) => {{
+            create_tokens!($app, $token_x_supply, $token_y_supply, $owner)
         }};
-        ($app:ident, $token_supply:expr) => {{
-            create_tokens!($app, $token_supply, $token_supply, "alice")
+        ($app:ident, $token_supply:expr,$owner:tt) => {{
+            create_tokens!($app, $token_supply, $token_supply, $owner)
         }};
     }
 
@@ -494,13 +511,13 @@ pub mod macros {
             let token_z = $app.create_token($owner, "tokenz", $token_y_supply);
             (token_x, token_y, token_z)
         }};
-        ($app:ident, $token_x_supply:expr, $token_y_supply:expr,$token_z_supply:expr) => {{
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr,$token_z_supply:expr,$owner:tt) => {{
             create_3_tokens!(
                 $app,
                 $token_x_supply,
                 $token_y_supply,
                 $token_z_supply,
-                "alice"
+                $owner
             )
         }};
     }
@@ -716,12 +733,12 @@ pub mod macros {
     pub(crate) use claim_incentives;
 
     macro_rules! init_slippage_pool_with_liquidity {
-        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{
+        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident,$owner:tt) => {{
             let fee_tier = FeeTier {
                 fee: Percentage::from_scale(6, 3),
                 tick_spacing: 10,
             };
-            add_fee_tier!($app, $dex_address, fee_tier, "alice").unwrap();
+            add_fee_tier!($app, $dex_address, fee_tier, $owner).unwrap();
 
             let init_tick = 0;
             let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -733,13 +750,13 @@ pub mod macros {
                 fee_tier,
                 init_sqrt_price,
                 init_tick,
-                "alice"
+                $owner
             )
             .unwrap();
 
             let mint_amount = 10u128.pow(10);
-            approve!($app, $token_x_address, $dex_address, mint_amount, "alice").unwrap();
-            approve!($app, $token_y_address, $dex_address, mint_amount, "alice").unwrap();
+            approve!($app, $token_x_address, $dex_address, mint_amount, $owner).unwrap();
+            approve!($app, $token_y_address, $dex_address, mint_amount, $owner).unwrap();
 
             let pool_key = PoolKey::new(
                 $token_x_address.to_string(),
@@ -770,7 +787,7 @@ pub mod macros {
                 liquidity,
                 slippage_limit_lower,
                 slippage_limit_upper,
-                "alice"
+                $owner
             )
             .unwrap();
 
@@ -791,13 +808,13 @@ pub mod macros {
     pub(crate) use init_slippage_pool_with_liquidity;
 
     macro_rules! init_basic_pool {
-        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{
+        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident,$owner:tt) => {{
             let fee_tier = FeeTier {
                 fee: Percentage::from_scale(6, 3),
                 tick_spacing: 10,
             };
 
-            add_fee_tier!($app, $dex_address, fee_tier, "alice").unwrap();
+            add_fee_tier!($app, $dex_address, fee_tier, $owner).unwrap();
 
             let init_tick = 0;
             let init_sqrt_price = crate::sqrt_price::calculate_sqrt_price(init_tick).unwrap();
@@ -809,7 +826,7 @@ pub mod macros {
                 fee_tier,
                 init_sqrt_price,
                 init_tick,
-                "alice"
+                $owner
             )
             .unwrap();
         }};
@@ -817,15 +834,15 @@ pub mod macros {
     pub(crate) use init_basic_pool;
 
     macro_rules! init_basic_position {
-        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{
+        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident,$owner:tt) => {{
             let fee_tier = FeeTier {
                 fee: Percentage::from_scale(6, 3),
                 tick_spacing: 10,
             };
 
             let mint_amount = 10u128.pow(10);
-            approve!($app, $token_x_address, $dex_address, mint_amount, "alice").unwrap();
-            approve!($app, $token_y_address, $dex_address, mint_amount, "alice").unwrap();
+            approve!($app, $token_x_address, $dex_address, mint_amount, $owner).unwrap();
+            approve!($app, $token_y_address, $dex_address, mint_amount, $owner).unwrap();
 
             let pool_key = crate::PoolKey::new(
                 $token_x_address.to_string(),
@@ -856,7 +873,7 @@ pub mod macros {
                 liquidity,
                 slippage_limit_lower,
                 slippage_limit_upper,
-                "alice"
+                $owner
             )
             .unwrap();
 
@@ -875,15 +892,15 @@ pub mod macros {
     pub(crate) use init_basic_position;
 
     macro_rules! init_cross_position {
-        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{
+        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident,$owner:tt) => {{
             let fee_tier = FeeTier {
                 fee: Percentage::from_scale(6, 3),
                 tick_spacing: 10,
             };
 
             let mint_amount = 10u128.pow(10);
-            approve!($app, $token_x_address, $dex_address, mint_amount, "alice").unwrap();
-            approve!($app, $token_y_address, $dex_address, mint_amount, "alice").unwrap();
+            approve!($app, $token_x_address, $dex_address, mint_amount, $owner).unwrap();
+            approve!($app, $token_y_address, $dex_address, mint_amount, $owner).unwrap();
 
             let pool_key = PoolKey::new(
                 $token_x_address.to_string(),
@@ -914,7 +931,7 @@ pub mod macros {
                 liquidity,
                 slippage_limit_lower,
                 slippage_limit_upper,
-                "alice"
+                $owner
             )
             .unwrap();
 
@@ -966,24 +983,25 @@ pub mod macros {
     pub(crate) use swap_exact_limit;
 
     macro_rules! init_dex_and_tokens {
-        ($app:ident, $mint_amount:expr,$protocol_fee:expr) => {{
+        ($app:ident, $mint_amount:expr,$protocol_fee:expr,$owner:tt) => {{
             use decimal::*;
-            let (token_x, token_y) = create_tokens!($app, $mint_amount, $mint_amount);
-            let dex = $app.create_dex("alice", $protocol_fee).unwrap();
+            let (token_x, token_y) = create_tokens!($app, $mint_amount, $mint_amount, $owner);
+            let dex = $app.create_dex($owner, $protocol_fee).unwrap();
             (dex, token_x, token_y)
         }};
-        ($app:ident) => {{
+        ($app:ident, $owner:tt) => {{
             init_dex_and_tokens!(
                 $app,
                 10u128.pow(10),
-                crate::percentage::Percentage::from_scale(1, 2)
+                crate::percentage::Percentage::from_scale(1, 2),
+                $owner
             )
         }};
     }
     pub(crate) use init_dex_and_tokens;
 
     macro_rules! init_basic_swap {
-        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{
+        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident,$owner:tt, $bob: tt) => {{
             let fee = Percentage::from_scale(6, 3);
             let tick_spacing = 10;
             let fee_tier = FeeTier { fee, tick_spacing };
@@ -997,10 +1015,10 @@ pub mod macros {
 
             let amount = 1000;
 
-            mint!($app, $token_x_address, "bob", amount, "alice").unwrap();
-            let amount_x = balance_of!($app, $token_x_address, "bob");
+            mint!($app, $token_x_address, $bob, amount, $owner).unwrap();
+            let amount_x = balance_of!($app, $token_x_address, $bob);
             assert_eq!(amount_x, amount);
-            approve!($app, $token_x_address, $dex_address, amount, "bob").unwrap();
+            approve!($app, $token_x_address, $dex_address, amount, $bob).unwrap();
 
             let amount_x = balance_of!($app, $token_x_address, $dex_address);
             let amount_y = balance_of!($app, $token_y_address, $dex_address);
@@ -1026,7 +1044,7 @@ pub mod macros {
                 swap_amount,
                 true,
                 slippage,
-                "bob"
+                $bob
             )
             .unwrap();
 
@@ -1042,8 +1060,8 @@ pub mod macros {
             assert_eq!(pool_after.current_tick_index, lower_tick);
             assert_ne!(pool_after.sqrt_price, pool_before.sqrt_price);
 
-            let amount_x = balance_of!($app, $token_x_address, "bob");
-            let amount_y = balance_of!($app, $token_y_address, "bob");
+            let amount_x = balance_of!($app, $token_x_address, $bob);
+            let amount_y = balance_of!($app, $token_y_address, $bob);
             assert_eq!(amount_x, 0);
             assert_eq!(amount_y, 993);
 
@@ -1082,7 +1100,7 @@ pub mod macros {
     pub(crate) use change_fee_receiver;
 
     macro_rules! init_cross_swap {
-        ($app:ident, $dex_address:ident, $token_x_address:expr, $token_y_address:expr) => {{
+        ($app:ident, $dex_address:ident, $token_x_address:expr, $token_y_address:expr,$owner:tt,$bob:tt) => {{
             let fee = Percentage::from_scale(6, 3);
             let tick_spacing = 10;
             let fee_tier = FeeTier { fee, tick_spacing };
@@ -1090,11 +1108,11 @@ pub mod macros {
             let lower_tick = -20;
 
             let amount = 1000;
-            let bob = "bob";
-            mint!($app, $token_x_address, "bob", amount, "alice").unwrap();
-            let amount_x = balance_of!($app, $token_x_address, "bob");
+
+            mint!($app, $token_x_address, $bob, amount, $owner).unwrap();
+            let amount_x = balance_of!($app, $token_x_address, $bob);
             assert_eq!(amount_x, amount);
-            approve!($app, $token_x_address, $dex_address, amount, "bob").unwrap();
+            approve!($app, $token_x_address, $dex_address, amount, $bob).unwrap();
 
             let amount_x = balance_of!($app, $token_x_address, $dex_address);
             let amount_y = balance_of!($app, $token_y_address, $dex_address);
@@ -1120,7 +1138,7 @@ pub mod macros {
                 swap_amount,
                 true,
                 slippage,
-                bob
+                $bob
             )
             .unwrap();
 
@@ -1140,8 +1158,8 @@ pub mod macros {
             assert_eq!(pool_after.current_tick_index, lower_tick);
             assert_ne!(pool_after.sqrt_price, pool_before.sqrt_price);
 
-            let amount_x = balance_of!($app, $token_x_address, "bob");
-            let amount_y = balance_of!($app, $token_y_address, "bob");
+            let amount_x = balance_of!($app, $token_x_address, $bob);
+            let amount_y = balance_of!($app, $token_y_address, $bob);
             assert_eq!(amount_x, 0);
             assert_eq!(amount_y, 990);
 
@@ -1262,7 +1280,7 @@ pub mod macros {
     pub(crate) use transfer_position;
 
     macro_rules! multiple_swap {
-        ($app:ident, $x_to_y:expr) => {{
+        ($app:ident, $x_to_y:expr,$owner:tt,$bob:tt) => {{
             use decimal::*;
             let (dex, token_x, token_y) = init_dex_and_tokens!($app);
 
@@ -1271,7 +1289,7 @@ pub mod macros {
                 tick_spacing: 1,
             };
 
-            add_fee_tier!($app, dex, fee_tier, "alice").unwrap();
+            add_fee_tier!($app, dex, fee_tier, $owner).unwrap();
 
             let init_tick = 0;
             let init_sqrt_price = crate::math::sqrt_price::calculate_sqrt_price(init_tick).unwrap();
@@ -1283,13 +1301,13 @@ pub mod macros {
                 fee_tier,
                 init_sqrt_price,
                 init_tick,
-                "alice"
+                $owner
             )
             .unwrap();
 
             let mint_amount = 10u128.pow(10);
-            approve!($app, token_x, dex, mint_amount, "alice").unwrap();
-            approve!($app, token_y, dex, mint_amount, "alice").unwrap();
+            approve!($app, token_x, dex, mint_amount, $owner).unwrap();
+            approve!($app, token_y, dex, mint_amount, $owner).unwrap();
 
             let pool_key =
                 crate::PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
@@ -1322,25 +1340,25 @@ pub mod macros {
                 liquidity_delta,
                 slippage_limit_lower,
                 slippage_limit_upper,
-                "alice"
+                $owner
             )
             .unwrap();
 
             if $x_to_y {
-                mint!($app, token_x, "bob", amount, "alice").unwrap();
-                let amount_x = balance_of!($app, token_x, "bob");
+                mint!($app, token_x, $bob, amount, $owner).unwrap();
+                let amount_x = balance_of!($app, token_x, $bob);
                 assert_eq!(amount_x, amount);
-                approve!($app, token_x, dex, amount, "bob").unwrap();
+                approve!($app, token_x, dex, amount, $bob).unwrap();
             } else {
-                mint!($app, token_y, "bob", amount, "alice").unwrap();
-                let amount_y = balance_of!($app, token_y, "bob");
+                mint!($app, token_y, $bob, amount, $owner).unwrap();
+                let amount_y = balance_of!($app, token_y, $bob);
                 assert_eq!(amount_y, amount);
-                approve!($app, token_y, dex, amount, "bob").unwrap();
+                approve!($app, token_y, dex, amount, $bob).unwrap();
             }
 
             let swap_amount = crate::token_amount::TokenAmount(10);
             for _ in 1..=10 {
-                swap_exact_limit!($app, dex, pool_key, $x_to_y, swap_amount, true, "bob");
+                swap_exact_limit!($app, dex, pool_key, $x_to_y, swap_amount, true, $bob);
             }
 
             let pool = get_pool!($app, dex, token_x, token_y, fee_tier).unwrap();
@@ -1399,8 +1417,8 @@ pub mod macros {
                 assert_eq!(dex_amount_y, 200);
             }
 
-            let user_amount_x = balance_of!($app, token_x, "bob");
-            let user_amount_y = balance_of!($app, token_y, "bob");
+            let user_amount_x = balance_of!($app, token_x, $bob);
+            let user_amount_y = balance_of!($app, token_y, $bob);
             if $x_to_y {
                 assert_eq!(user_amount_x, 0);
                 assert_eq!(user_amount_y, 80);
@@ -1413,20 +1431,20 @@ pub mod macros {
     pub(crate) use multiple_swap;
 
     macro_rules! big_deposit_and_swap {
-        ($app:ident, $x_to_y:expr) => {{
+        ($app:ident, $x_to_y:expr,$owner:tt) => {{
             let (dex, token_x, token_y) =
                 init_dex_and_tokens!($app, u128::MAX, Percentage::from_scale(1, 2));
 
             let mint_amount = 2u128.pow(75) - 1;
 
-            approve!($app, token_x, dex, u128::MAX, "alice").unwrap();
-            approve!($app, token_y, dex, u128::MAX, "alice").unwrap();
+            approve!($app, token_x, dex, u128::MAX, $owner).unwrap();
+            approve!($app, token_y, dex, u128::MAX, $owner).unwrap();
 
             let fee_tier = FeeTier {
                 fee: Percentage::from_scale(6, 3),
                 tick_spacing: 1,
             };
-            add_fee_tier!($app, dex, fee_tier, "alice").unwrap();
+            add_fee_tier!($app, dex, fee_tier, $owner).unwrap();
 
             let init_tick = 0;
             let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -1438,7 +1456,7 @@ pub mod macros {
                 fee_tier,
                 init_sqrt_price,
                 init_tick,
-                "alice"
+                $owner
             )
             .unwrap();
 
@@ -1489,12 +1507,12 @@ pub mod macros {
                 liquidity_delta,
                 slippage_limit_lower,
                 slippage_limit_upper,
-                "alice"
+                $owner
             )
             .unwrap();
 
-            let amount_x = balance_of!($app, token_x, "alice");
-            let amount_y = balance_of!($app, token_y, "alice");
+            let amount_x = balance_of!($app, token_x, $owner);
+            let amount_y = balance_of!($app, token_y, $owner);
             if $x_to_y {
                 assert_eq!(amount_x, 340282366920938463463374607431768211455);
                 assert_eq!(amount_y, 340282366920938425684442744474606501888);
@@ -1517,12 +1535,12 @@ pub mod macros {
                 TokenAmount(mint_amount),
                 true,
                 sqrt_price_limit,
-                "alice"
+                $owner
             )
             .unwrap();
 
-            let amount_x = balance_of!($app, token_x, "alice");
-            let amount_y = balance_of!($app, token_y, "alice");
+            let amount_x = balance_of!($app, token_x, $owner);
+            let amount_y = balance_of!($app, token_y, $owner);
             if $x_to_y {
                 assert_eq!(amount_x, 340282366920938425684442744474606501888);
                 assert_ne!(amount_y, 0);
@@ -1557,10 +1575,11 @@ mod tests {
 
     #[test]
     fn token_balance_querier() {
-        let mut app = MockApp::new(&[]);
+        let (mut app, accounts) = MockApp::new(&[("owner", &[])]);
+        let owner = &accounts[0];
 
         app.set_token_balances(
-            "owner",
+            owner,
             &[(&"AIRI".to_string(), &[(MOCK_CONTRACT_ADDR, 123u128)])],
         )
         .unwrap();
@@ -1577,7 +1596,7 @@ mod tests {
 
     #[test]
     fn balance_querier() {
-        let app = MockApp::new(&[(
+        let (app, _) = MockApp::new(&[(
             &MOCK_CONTRACT_ADDR.to_string(),
             &[Coin {
                 denom: "uusd".to_string(),
@@ -1594,7 +1613,7 @@ mod tests {
 
     #[test]
     fn all_balances_querier() {
-        let app = MockApp::new(&[(
+        let (app, _) = MockApp::new(&[(
             &MOCK_CONTRACT_ADDR.to_string(),
             &[
                 Coin {
@@ -1628,9 +1647,10 @@ mod tests {
 
     #[test]
     fn supply_querier() {
-        let mut app = MockApp::new(&[]);
+        let (mut app, accounts) = MockApp::new(&[("owner", &[])]);
+        let owner = &accounts[0];
         app.set_token_balances(
-            "owner",
+            owner,
             &[(
                 &"LPA".to_string(),
                 &[

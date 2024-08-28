@@ -45,7 +45,7 @@ pub fn test_create_incentive() {
     let total_reward = Some(TokenAmount(1000000000));
     let reward_per_sec = TokenAmount(100);
     let start_timestamp: Option<u64> = None;
-    let current_time = app.app.block_info().time.seconds();
+    let current_time = app.get_block_time().seconds();
     create_incentive!(
         app,
         dex,
@@ -73,7 +73,7 @@ pub fn test_create_incentive() {
     );
 
     // create other incentives
-    let new_timestamp_time = app.app.block_info().time.seconds();
+    let new_timestamp_time = app.get_block_time().seconds();
     create_incentive!(
         app,
         dex,
@@ -111,7 +111,7 @@ pub fn test_create_incentive() {
     );
 
     // create incentive with no total reward -> fallback to max:u128
-    let latest_timestamp_time = app.app.block_info().time.seconds();
+    let latest_timestamp_time = app.get_block_time().seconds();
     create_incentive!(
         app,
         dex,
@@ -1119,7 +1119,7 @@ pub fn test_claim_incentive_with_single_position() {
     )
     .unwrap();
 
-    let timestamp_init = app.app.block_info().time.seconds();
+    let timestamp_init = app.get_block_time().seconds();
     create_incentive!(
         app,
         dex,
@@ -1147,7 +1147,7 @@ pub fn test_claim_incentive_with_single_position() {
         let position_state = get_position!(app, dex, 0, "alice").unwrap();
         assert_eq!(position_state.incentives[0].pending_rewards, TokenAmount(0));
     }
-    let timestamp_after = app.app.block_info().time.seconds();
+    let timestamp_after = app.get_block_time().seconds();
     let total_emit = (timestamp_after - timestamp_init) as u128 * reward_per_sec.0;
 
     let after_dex_balance = balance_of!(app, token_z, dex);
@@ -1204,7 +1204,7 @@ pub fn test_claim_incentive_with_multi_position() {
     // create position in range
     approve!(app, token_x, dex, initial_amount, "alice").unwrap();
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
-    let timestamp_init = app.app.block_info().time.seconds();
+    let timestamp_init = app.get_block_time().seconds();
     create_incentive!(
         app,
         dex,
@@ -1258,7 +1258,7 @@ pub fn test_claim_incentive_with_multi_position() {
         }
     }
 
-    let timestamp_after = app.app.block_info().time.seconds();
+    let timestamp_after = app.get_block_time().seconds();
     let total_emit = (timestamp_after - timestamp_init) as u128 * reward_per_sec.0;
 
     let after_dex_balance = balance_of!(app, token_z, dex);
@@ -1356,7 +1356,7 @@ pub fn test_update_incentive_with_tick_move_left_to_right() {
     .unwrap();
 
     // Both positions do not have any incentives due to being out of range
-    app.increase_block_time_by_seconds(1000);
+    app.increase_time(1000);
     let incentive = get_position_incentives!(app, dex, 0, "alice").unwrap();
     assert_eq!(incentive, vec![]);
     let incentive = get_position_incentives!(app, dex, 1, "alice").unwrap();
@@ -1381,7 +1381,7 @@ pub fn test_update_incentive_with_tick_move_left_to_right() {
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     assert_eq!(pool.current_tick_index, 11);
     // The first position has an incentive, but the second one does not have any.
-    app.increase_block_time_by_seconds(1000);
+    app.increase_time(1000);
     let incentive = get_position_incentives!(app, dex, 0, "alice").unwrap();
     assert_eq!(
         incentive,
@@ -1413,7 +1413,7 @@ pub fn test_update_incentive_with_tick_move_left_to_right() {
     assert_eq!(pool.current_tick_index, 35);
     // the second position have incentive,
     claim_incentives!(app, dex, 0, "alice").unwrap();
-    app.increase_block_time_by_seconds(1000);
+    app.increase_time(1000);
     let incentive = get_position_incentives!(app, dex, 0, "alice").unwrap();
     assert_eq!(incentive, vec![]);
     let incentive = get_position_incentives!(app, dex, 1, "alice").unwrap();
@@ -1509,7 +1509,7 @@ pub fn test_update_incentive_with_tick_move_right_to_left() {
     .unwrap();
 
     // Both positions do not have any incentives due to being out of range
-    app.increase_block_time_by_seconds(1000);
+    app.increase_time(1000);
     let incentive = get_position_incentives!(app, dex, 0, "alice").unwrap();
     assert_eq!(incentive, vec![]);
     let incentive = get_position_incentives!(app, dex, 1, "alice").unwrap();
@@ -1534,7 +1534,7 @@ pub fn test_update_incentive_with_tick_move_right_to_left() {
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     assert_eq!(pool.current_tick_index, -12);
     // The first position has an incentive, but the second one does not have any.
-    app.increase_block_time_by_seconds(1000);
+    app.increase_time(1000);
     let incentive = get_position_incentives!(app, dex, 0, "alice").unwrap();
     assert_eq!(
         incentive,
@@ -1566,7 +1566,7 @@ pub fn test_update_incentive_with_tick_move_right_to_left() {
     assert_eq!(pool.current_tick_index, -36);
     // the second position have incentive,
     claim_incentives!(app, dex, 0, "alice").unwrap();
-    app.increase_block_time_by_seconds(1000);
+    app.increase_time(1000);
     let incentive = get_position_incentives!(app, dex, 0, "alice").unwrap();
     assert_eq!(incentive, vec![]);
     let incentive = get_position_incentives!(app, dex, 1, "alice").unwrap();

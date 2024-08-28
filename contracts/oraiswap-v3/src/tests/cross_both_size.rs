@@ -1,3 +1,4 @@
+use cosmwasm_std::coins;
 use decimal::{Decimal, Factories};
 
 use crate::{
@@ -5,28 +6,35 @@ use crate::{
     liquidity::Liquidity,
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp},
+    tests::helper::{macros::*, MockApp, FEE_DENOM},
     token_amount::TokenAmount,
-    FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+    ContractError, FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
 };
 
 #[test]
 fn test_cross_both_side() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
     let mint_token = 10u128.pow(5);
-    let mut app = MockApp::new(&[]);
+
     let (dex, token_x, token_y) =
-        init_dex_and_tokens!(app, mint_token, Percentage::from_scale(1, 2));
+        init_dex_and_tokens!(app, mint_token, Percentage::from_scale(1, 2), alice);
 
-    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier.clone()).unwrap();
+    let pool_key =
+        PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier.clone()).unwrap();
 
-    app.add_fee_tier("alice", dex.as_str(), fee_tier.clone())
+    app.add_fee_tier(alice, dex.as_str(), fee_tier.clone())
         .unwrap();
 
     app.create_pool(
-        "alice",
+        alice,
         dex.as_str(),
         token_x.as_str(),
         token_y.as_str(),
@@ -41,14 +49,14 @@ fn test_cross_both_side() {
 
     let mint_amount = 10u128.pow(5);
 
-    app.mint_token("alice", "bob", token_x.as_str(), mint_amount)
+    app.mint_token(alice, bob, token_x.as_str(), mint_amount)
         .unwrap();
-    app.mint_token("alice", "alice", token_y.as_str(), mint_amount)
+    app.mint_token(alice, alice, token_y.as_str(), mint_amount)
         .unwrap();
 
-    app.approve_token("tokenx", "alice", dex.as_str(), mint_amount)
+    app.approve_token("tokenx", alice, dex.as_str(), mint_amount)
         .unwrap();
-    app.approve_token("tokeny", "alice", dex.as_str(), mint_amount)
+    app.approve_token("tokeny", alice, dex.as_str(), mint_amount)
         .unwrap();
 
     let liquidity_delta = Liquidity::from_integer(20006000);
@@ -58,7 +66,7 @@ fn test_cross_both_side() {
         .unwrap();
 
     app.create_position(
-        "alice",
+        alice,
         dex.as_str(),
         &pool_key,
         lower_tick_index,
@@ -70,7 +78,7 @@ fn test_cross_both_side() {
     .unwrap();
 
     app.create_position(
-        "alice",
+        alice,
         dex.as_str(),
         &pool_key,
         -20,
@@ -97,14 +105,14 @@ fn test_cross_both_side() {
         + min_amount_to_cross_from_tick_price.get()
         + crossing_amount_by_amount_out.get();
 
-    app.mint_token("alice", "alice", token_x.as_str(), mint_amount)
+    app.mint_token(alice, alice, token_x.as_str(), mint_amount)
         .unwrap();
-    app.mint_token("alice", "alice", token_y.as_str(), mint_amount)
+    app.mint_token(alice, alice, token_y.as_str(), mint_amount)
         .unwrap();
 
-    app.approve_token("tokenx", "alice", dex.as_str(), mint_amount)
+    app.approve_token("tokenx", alice, dex.as_str(), mint_amount)
         .unwrap();
-    app.approve_token("tokeny", "alice", dex.as_str(), mint_amount)
+    app.approve_token("tokeny", alice, dex.as_str(), mint_amount)
         .unwrap();
 
     let pool_before = app
@@ -114,7 +122,7 @@ fn test_cross_both_side() {
     let limit_sqrt_price = SqrtPrice::new(MIN_SQRT_PRICE);
 
     app.swap(
-        "alice",
+        alice,
         dex.as_str(),
         &pool_key,
         true,
@@ -136,7 +144,7 @@ fn test_cross_both_side() {
     assert_eq!(pool.sqrt_price, expected_price);
 
     app.swap(
-        "alice",
+        alice,
         dex.as_str(),
         &pool_key,
         true,
@@ -147,7 +155,7 @@ fn test_cross_both_side() {
     .unwrap();
 
     app.swap(
-        "alice",
+        alice,
         dex.as_str(),
         &pool_key,
         false,
@@ -160,20 +168,20 @@ fn test_cross_both_side() {
     let massive_x = 10u128.pow(19);
     let massive_y = 10u128.pow(19);
 
-    app.mint_token("alice", "alice", token_x.as_str(), massive_x)
+    app.mint_token(alice, alice, token_x.as_str(), massive_x)
         .unwrap();
-    app.mint_token("alice", "alice", token_y.as_str(), massive_y)
+    app.mint_token(alice, alice, token_y.as_str(), massive_y)
         .unwrap();
 
-    app.approve_token("tokenx", "alice", dex.as_str(), massive_x)
+    app.approve_token("tokenx", alice, dex.as_str(), massive_x)
         .unwrap();
-    app.approve_token("tokeny", "alice", dex.as_str(), massive_y)
+    app.approve_token("tokeny", alice, dex.as_str(), massive_y)
         .unwrap();
 
     let massive_liquidity_delta = Liquidity::from_integer(19996000399699881985603u128);
 
     app.create_position(
-        "alice",
+        alice,
         dex.as_str(),
         &pool_key,
         -20,
@@ -185,7 +193,7 @@ fn test_cross_both_side() {
     .unwrap();
 
     app.swap(
-        "alice",
+        alice,
         dex.as_str(),
         &pool_key,
         true,
@@ -196,7 +204,7 @@ fn test_cross_both_side() {
     .unwrap();
 
     app.swap(
-        "alice",
+        alice,
         dex.as_str(),
         &pool_key,
         false,
@@ -253,16 +261,16 @@ fn test_cross_both_side() {
 
 #[test]
 fn test_cross_both_side_not_cross_case() {
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
-    let alice = "alice";
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
     let initial_mint = 10u128.pow(10);
 
-    let mut app = MockApp::new(&[]);
-
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
-    let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint);
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
+    let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint, alice);
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
@@ -375,7 +383,11 @@ fn test_cross_both_side_not_cross_case() {
         true,
         slippage,
         alice
-    );
+    )
+    .unwrap_err();
 
-    assert!(result.is_err());
+    assert!(result
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::NoGainSwap.to_string()));
 }

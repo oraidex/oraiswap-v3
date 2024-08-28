@@ -1,22 +1,24 @@
 use crate::math::types::percentage::Percentage;
 use crate::msg::QueryMsg;
-use crate::tests::helper::{macros::*, MockApp};
+use crate::tests::helper::{macros::*, MockApp, FEE_DENOM};
 use crate::ContractError;
 use crate::FeeTier;
+use cosmwasm_std::coins;
 use decimal::Decimal;
 
 #[test]
 fn test_add_multiple_fee_tiers() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::new(0), alice);
 
     let first_fee_tier = FeeTier::new(Percentage::new(1), 1).unwrap();
     let second_fee_tier = FeeTier::new(Percentage::new(1), 2).unwrap();
     let third_fee_tier = FeeTier::new(Percentage::new(1), 4).unwrap();
 
-    add_fee_tier!(app, dex, first_fee_tier, "alice").unwrap();
-    add_fee_tier!(app, dex, second_fee_tier, "alice").unwrap();
-    add_fee_tier!(app, dex, third_fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, first_fee_tier, alice).unwrap();
+    add_fee_tier!(app, dex, second_fee_tier, alice).unwrap();
+    add_fee_tier!(app, dex, third_fee_tier, alice).unwrap();
 
     let fee_tiers: Vec<FeeTier> = app.query(dex.clone(), &QueryMsg::FeeTiers {}).unwrap();
     assert!(fee_tiers.contains(&first_fee_tier));
@@ -27,75 +29,84 @@ fn test_add_multiple_fee_tiers() {
 
 #[test]
 fn test_add_fee_tier_not_admin() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let dex = create_dex!(app, Percentage::new(0), alice);
 
     let fee_tier = FeeTier::new(Percentage::new(1), 1).unwrap();
-    let error = add_fee_tier!(app, dex, fee_tier, "bob").unwrap_err();
+    let error = add_fee_tier!(app, dex, fee_tier, bob).unwrap_err();
 
-    assert_eq!(
-        error.root_cause().to_string(),
-        ContractError::Unauthorized {}.to_string()
-    );
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::Unauthorized {}.to_string()));
 }
 
 #[test]
 fn test_add_fee_tier_zero_fee() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::new(0), alice);
 
     let fee_tier = FeeTier::new(Percentage::new(0), 10).unwrap();
-    let result = add_fee_tier!(app, dex, fee_tier, "alice");
+    let result = add_fee_tier!(app, dex, fee_tier, alice);
     assert!(result.is_ok());
 }
 
 #[test]
 fn test_add_fee_tier_tick_spacing_zero() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::new(0), alice);
 
     let fee_tier = FeeTier {
         fee: Percentage::new(1),
         tick_spacing: 0,
     };
-    let error = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
+    let error = add_fee_tier!(app, dex, fee_tier, alice).unwrap_err();
 
-    assert_eq!(
-        error.root_cause().to_string(),
-        ContractError::InvalidTickSpacing {}.to_string()
-    );
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::InvalidTickSpacing {}.to_string()));
 }
 
 #[test]
 fn test_add_fee_tier_over_upper_bound_tick_spacing() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::new(0), alice);
 
     let fee_tier = FeeTier {
         fee: Percentage::new(1),
         tick_spacing: 101,
     };
-    let error = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
+    let error = add_fee_tier!(app, dex, fee_tier, alice).unwrap_err();
 
-    assert_eq!(
-        error.root_cause().to_string(),
-        ContractError::InvalidTickSpacing {}.to_string()
-    );
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::InvalidTickSpacing {}.to_string()));
 }
 
 #[test]
 fn test_add_fee_tier_fee_above_limit() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::new(0), alice);
 
     let fee_tier = FeeTier {
         fee: Percentage::new(1000000000000),
         tick_spacing: 10,
     };
-    let error = add_fee_tier!(app, dex, fee_tier, "alice").unwrap_err();
+    let error = add_fee_tier!(app, dex, fee_tier, alice).unwrap_err();
 
-    assert_eq!(
-        error.root_cause().to_string(),
-        ContractError::InvalidFee {}.to_string()
-    );
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::InvalidFee {}.to_string()));
 }

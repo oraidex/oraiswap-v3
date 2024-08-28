@@ -16,6 +16,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 # use library feature to disable all instantiate/execute/query exports
 library = []
+test-tube = []
 
 [dependencies]
 cosmwasm-std = { workspace = true }
@@ -31,4 +32,4 @@ derive_more = { workspace = true }
 
 [dev-dependencies]
 cw20-base = { workspace = true, features = ["library"] }
-cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-util.git", rev = "1b9c412" }
+cosmwasm-testing-util = { workspace = true }
