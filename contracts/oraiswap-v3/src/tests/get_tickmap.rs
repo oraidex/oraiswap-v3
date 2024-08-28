@@ -1,9 +1,11 @@
+use cosmwasm_std::coins;
 use cosmwasm_std::Addr;
 use decimal::{Decimal, Factories};
 
 use crate::get_max_chunk;
 use crate::sqrt_price::get_max_tick;
 use crate::sqrt_price::get_min_tick;
+use crate::tests::helper::FEE_DENOM;
 use crate::{
     liquidity::Liquidity,
     msg,
@@ -13,29 +15,24 @@ use crate::{
     FeeTier, PoolKey,
 };
 
-fn _to_binary(v: (u16, u64)) {
-    println!(
-        "Chunk Index = {:?} Value = {:?}, Binary = {:b}",
-        v.0, v.1, v.1
-    );
-}
-
 #[test]
 fn test_get_tickmap() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
-    let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    let dex = create_dex!(app, Percentage::new(0), alice);
+    let initial_amount = 10u128.pow(10);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
+
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let result = create_pool!(
         app,
@@ -45,7 +42,7 @@ fn test_get_tickmap() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     );
     assert!(result.is_ok());
 
@@ -62,7 +59,7 @@ fn test_get_tickmap() {
         liquidity_delta,
         pool.sqrt_price,
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -88,20 +85,21 @@ fn test_get_tickmap() {
 
 #[test]
 fn test_get_tickmap_tick_spacing_over_one() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 10).unwrap();
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let result = create_pool!(
         app,
@@ -111,7 +109,7 @@ fn test_get_tickmap_tick_spacing_over_one() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     );
     assert!(result.is_ok());
 
@@ -128,7 +126,7 @@ fn test_get_tickmap_tick_spacing_over_one() {
         liquidity_delta,
         pool.sqrt_price,
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -141,7 +139,7 @@ fn test_get_tickmap_tick_spacing_over_one() {
         liquidity_delta,
         pool.sqrt_price,
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -169,20 +167,21 @@ fn test_get_tickmap_tick_spacing_over_one() {
 
 #[test]
 fn test_get_tickmap_edge_ticks_intialized() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let result = create_pool!(
         app,
@@ -192,7 +191,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     );
     assert!(result.is_ok());
 
@@ -209,7 +208,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
         liquidity_delta,
         pool.sqrt_price,
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -222,7 +221,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
         liquidity_delta,
         pool.sqrt_price,
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -307,20 +306,21 @@ fn test_get_tickmap_edge_ticks_intialized() {
 
 #[test]
 fn test_get_tickmap_more_chunks_above() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let result = create_pool!(
         app,
@@ -330,7 +330,7 @@ fn test_get_tickmap_more_chunks_above() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     );
     assert!(result.is_ok());
 
@@ -348,7 +348,7 @@ fn test_get_tickmap_more_chunks_above() {
             liquidity_delta,
             pool.sqrt_price,
             SqrtPrice::max_instance(),
-            "alice"
+            alice
         )
         .unwrap();
     }
@@ -371,20 +371,21 @@ fn test_get_tickmap_more_chunks_above() {
 
 #[test]
 fn test_get_tickmap_more_chunks_below() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let result = create_pool!(
         app,
@@ -394,7 +395,7 @@ fn test_get_tickmap_more_chunks_below() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     );
     assert!(result.is_ok());
 
@@ -412,7 +413,7 @@ fn test_get_tickmap_more_chunks_below() {
             liquidity_delta,
             pool.sqrt_price,
             SqrtPrice::max_instance(),
-            "alice"
+            alice
         )
         .unwrap();
     }
@@ -440,20 +441,21 @@ fn test_get_tickmap_more_chunks_below() {
 
 #[test]
 fn test_get_tickmap_max_chunks_returned() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = -200_000;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let result = create_pool!(
         app,
@@ -463,7 +465,7 @@ fn test_get_tickmap_max_chunks_returned() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     );
     assert!(result.is_ok());
 
@@ -481,7 +483,7 @@ fn test_get_tickmap_max_chunks_returned() {
             liquidity_delta,
             pool.sqrt_price,
             SqrtPrice::max_instance(),
-            "alice"
+            alice
         )
         .unwrap();
     }
