@@ -38,6 +38,7 @@
                                                         ~~
 
                                                         ```
+````
 
 ## build wasm sdk
 
@@ -74,4 +75,4 @@ for (const file of rustFiles) {
 
   writeFileSync(file, fileContent);
 }
-````
+```
