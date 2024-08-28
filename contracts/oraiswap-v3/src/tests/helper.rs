@@ -523,10 +523,13 @@ pub mod macros {
 
     macro_rules! create_3_tokens {
         ($app:ident, $token_x_supply:expr, $token_y_supply:expr,$token_z_supply:expr, $owner: tt) => {{
-            let token_x = $app.create_token($owner, "tokenx", $token_x_supply);
-            let token_y = $app.create_token($owner, "tokeny", $token_y_supply);
-            let token_z = $app.create_token($owner, "tokenz", $token_y_supply);
-            (token_x, token_y, token_z)
+            let mut tokens = [
+                $app.create_token($owner, "tokenx", $token_x_supply),
+                $app.create_token($owner, "tokeny", $token_y_supply),
+                $app.create_token($owner, "tokenz", $token_y_supply),
+            ];
+            tokens.sort();
+            (tokens[0].clone(), tokens[1].clone(), tokens[2].clone())
         }};
         ($app:ident, $token_x_supply:expr, $token_y_supply:expr,$token_z_supply:expr,$owner:tt) => {{
             create_3_tokens!(
