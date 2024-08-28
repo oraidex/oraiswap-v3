@@ -1,6 +1,6 @@
 # ORAI SWAP - Uniswap V3 in CosmWasm
 
-````rust
+```rust
 
   ░░
 ░░░░              ░░░░░░
@@ -37,8 +37,8 @@
                                                         \~\
                                                         ~~
 
-                                                        ```
-````
+
+```
 
 ## build wasm sdk
 
