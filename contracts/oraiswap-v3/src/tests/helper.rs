@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, Coin, Event, StdResult, Timestamp};
+use cosmwasm_std::{Addr, Binary, Coin, Event, StdResult};
 use cosmwasm_testing_util::{ExecuteResponse, MockResult};
 
 use crate::{
@@ -474,6 +474,23 @@ pub fn extract_amount(events: &[Event], key: &str) -> Option<TokenAmount> {
         }
     }
     None
+}
+
+pub fn subtract_assets(old_assets: &[Asset], new_assets: &[Asset]) -> Vec<Asset> {
+    let mut assets = vec![];
+    for asset in new_assets {
+        let amount = asset.amount
+            - old_assets
+                .iter()
+                .find(|a| a.info.eq(&asset.info))
+                .map(|a| a.amount)
+                .unwrap_or_default();
+        assets.push(Asset {
+            info: asset.info.clone(),
+            amount,
+        })
+    }
+    assets
 }
 
 pub mod macros {
@@ -1282,7 +1299,7 @@ pub mod macros {
     macro_rules! multiple_swap {
         ($app:ident, $x_to_y:expr,$owner:tt,$bob:tt) => {{
             use decimal::*;
-            let (dex, token_x, token_y) = init_dex_and_tokens!($app);
+            let (dex, token_x, token_y) = init_dex_and_tokens!($app, $owner);
 
             let fee_tier = crate::FeeTier {
                 fee: crate::percentage::Percentage::from_scale(1, 3),
@@ -1433,7 +1450,7 @@ pub mod macros {
     macro_rules! big_deposit_and_swap {
         ($app:ident, $x_to_y:expr,$owner:tt) => {{
             let (dex, token_x, token_y) =
-                init_dex_and_tokens!($app, u128::MAX, Percentage::from_scale(1, 2));
+                init_dex_and_tokens!($app, u128::MAX, Percentage::from_scale(1, 2), $owner);
 
             let mint_amount = 2u128.pow(75) - 1;
 

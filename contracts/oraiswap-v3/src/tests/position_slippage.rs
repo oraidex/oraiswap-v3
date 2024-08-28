@@ -1,20 +1,22 @@
+use cosmwasm_std::coins;
 use decimal::*;
 
 use crate::{
     liquidity::Liquidity,
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp},
+    tests::helper::{macros::*, MockApp, FEE_DENOM},
     ContractError, FeeTier, PoolKey,
 };
 
 #[test]
 fn test_position_slippage_zero_slippage_and_inside_range() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
 
-    let (token_x, token_y) = create_tokens!(app, 10u128.pow(23));
-    let pool_key = init_slippage_pool_with_liquidity!(app, dex, token_x, token_y);
+    let (token_x, token_y) = create_tokens!(app, 10u128.pow(23), alice);
+    let pool_key = init_slippage_pool_with_liquidity!(app, dex, token_x, token_y, alice);
 
     let pool = get_pool!(app, dex, token_x, token_y, pool_key.fee_tier).unwrap();
 
@@ -32,7 +34,7 @@ fn test_position_slippage_zero_slippage_and_inside_range() {
             liquidity_delta,
             known_price,
             known_price,
-            "alice"
+            alice
         )
         .unwrap();
     }
@@ -53,7 +55,7 @@ fn test_position_slippage_zero_slippage_and_inside_range() {
             liquidity_delta,
             limit_lower,
             limit_upper,
-            "alice"
+            alice
         )
         .unwrap();
     }
@@ -61,10 +63,11 @@ fn test_position_slippage_zero_slippage_and_inside_range() {
 
 #[test]
 fn test_position_slippage_below_range() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
-    let (token_x, token_y) = create_tokens!(app, 10u128.pow(23));
-    let pool_key = init_slippage_pool_with_liquidity!(app, dex, token_x, token_y);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
+    let (token_x, token_y) = create_tokens!(app, 10u128.pow(23), alice);
+    let pool_key = init_slippage_pool_with_liquidity!(app, dex, token_x, token_y, alice);
 
     get_pool!(app, dex, token_x, token_y, pool_key.fee_tier).unwrap();
 
@@ -81,21 +84,23 @@ fn test_position_slippage_below_range() {
         liquidity_delta,
         limit_lower,
         limit_upper,
-        "alice"
+        alice
     )
     .unwrap_err();
-    assert_eq!(
-        error.root_cause().to_string(),
-        ContractError::PriceLimitReached {}.to_string()
-    );
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::PriceLimitReached {}.to_string()));
 }
 
 #[test]
 fn test_position_slippage_above_range() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
-    let (token_x, token_y) = create_tokens!(app, 10u128.pow(23));
-    let pool_key = init_slippage_pool_with_liquidity!(app, dex, token_x, token_y);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
+    let (token_x, token_y) = create_tokens!(app, 10u128.pow(23), alice);
+    let pool_key = init_slippage_pool_with_liquidity!(app, dex, token_x, token_y, alice);
 
     get_pool!(app, dex, token_x, token_y, pool_key.fee_tier).unwrap();
 
@@ -112,11 +117,11 @@ fn test_position_slippage_above_range() {
         liquidity_delta,
         limit_lower,
         limit_upper,
-        "alice"
+        alice
     )
     .unwrap_err();
-    assert_eq!(
-        error.root_cause().to_string(),
-        ContractError::PriceLimitReached {}.to_string()
-    );
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::PriceLimitReached {}.to_string()));
 }

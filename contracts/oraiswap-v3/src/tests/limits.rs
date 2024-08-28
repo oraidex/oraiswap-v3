@@ -1,3 +1,4 @@
+use cosmwasm_std::coins;
 use decimal::*;
 
 use crate::{
@@ -6,37 +7,41 @@ use crate::{
     logic::{get_liquidity_by_x, get_liquidity_by_y},
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, get_max_tick, SqrtPrice},
-    tests::helper::{macros::*, MockApp},
+    tests::helper::{macros::*, MockApp, FEE_DENOM},
     token_amount::TokenAmount,
     FeeTier, PoolKey, MAX_SQRT_PRICE, MAX_TICK, MIN_SQRT_PRICE,
 };
 
 #[test]
 fn test_limits_big_deposit_x_and_swap_y() {
-    let mut app = MockApp::new(&[]);
-    big_deposit_and_swap!(app, true);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+
+    big_deposit_and_swap!(app, true, alice);
 }
 
 #[test]
 fn test_limits_big_deposit_y_and_swap_x() {
-    let mut app = MockApp::new(&[]);
-    big_deposit_and_swap!(app, false);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+    big_deposit_and_swap!(app, false, alice);
 }
 
 #[test]
 fn test_limits_big_deposit_both_tokens() {
-    let mut app = MockApp::new(&[]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
     let (dex, token_x, token_y) =
-        init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(1, 2));
+        init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(1, 2), alice);
 
     let mint_amount = 2u128.pow(75) - 1;
 
-    approve!(app, token_x, dex, u128::MAX, "alice").unwrap();
-    approve!(app, token_y, dex, u128::MAX, "alice").unwrap();
+    approve!(app, token_x, dex, u128::MAX, alice).unwrap();
+    approve!(app, token_y, dex, u128::MAX, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -48,7 +53,7 @@ fn test_limits_big_deposit_both_tokens() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -84,12 +89,12 @@ fn test_limits_big_deposit_both_tokens() {
         liquidity_delta,
         slippage_limit_lower,
         slippage_limit_upper,
-        "alice"
+        alice
     )
     .unwrap();
 
-    let user_amount_x = balance_of!(app, token_x, "alice");
-    let user_amount_y = balance_of!(app, token_y, "alice");
+    let user_amount_x = balance_of!(app, token_x, alice);
+    let user_amount_y = balance_of!(app, token_y, alice);
     assert_eq!(user_amount_x, u128::MAX - mint_amount);
     assert_eq!(user_amount_y, u128::MAX - y.get());
 
@@ -101,17 +106,18 @@ fn test_limits_big_deposit_both_tokens() {
 
 #[test]
 fn test_deposit_limits_at_upper_limit() {
-    let mut app = MockApp::new(&[]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
     let (dex, token_x, token_y) =
-        init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(1, 2));
+        init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(1, 2), alice);
 
     let mint_amount = 2u128.pow(105) - 1;
 
-    approve!(app, token_x, dex, u128::MAX, "alice").unwrap();
-    approve!(app, token_y, dex, u128::MAX, "alice").unwrap();
+    approve!(app, token_x, dex, u128::MAX, alice).unwrap();
+    approve!(app, token_y, dex, u128::MAX, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 1).unwrap();
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = get_max_tick(1);
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -123,7 +129,7 @@ fn test_deposit_limits_at_upper_limit() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -155,24 +161,25 @@ fn test_deposit_limits_at_upper_limit() {
         liquidity_delta,
         slippage_limit_lower,
         slippage_limit_upper,
-        "alice"
+        alice
     )
     .unwrap();
 }
 
 #[test]
 fn test_limits_big_deposit_and_swaps() {
-    let mut app = MockApp::new(&[]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
     let (dex, token_x, token_y) =
-        init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(1, 2));
+        init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(1, 2), alice);
 
     let mint_amount = 2u128.pow(76) - 1;
 
-    approve!(app, token_x, dex, u128::MAX, "alice").unwrap();
-    approve!(app, token_y, dex, u128::MAX, "alice").unwrap();
+    approve!(app, token_x, dex, u128::MAX, alice).unwrap();
+    approve!(app, token_y, dex, u128::MAX, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 1).unwrap();
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -184,7 +191,7 @@ fn test_limits_big_deposit_and_swaps() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -223,12 +230,12 @@ fn test_limits_big_deposit_and_swaps() {
         liquidity_delta,
         slippage_limit_lower,
         slippage_limit_upper,
-        "alice"
+        alice
     )
     .unwrap();
 
-    let user_amount_x = balance_of!(app, token_x, "alice");
-    let user_amount_y = balance_of!(app, token_y, "alice");
+    let user_amount_x = balance_of!(app, token_x, alice);
+    let user_amount_y = balance_of!(app, token_y, alice);
     assert_eq!(user_amount_x, u128::MAX - pos_amount);
     assert_eq!(user_amount_y, u128::MAX - y.get());
 
@@ -254,7 +261,7 @@ fn test_limits_big_deposit_and_swaps() {
             swap_amount,
             true,
             sqrt_price_limit,
-            "alice"
+            alice
         )
         .unwrap();
     }
@@ -262,15 +269,16 @@ fn test_limits_big_deposit_and_swaps() {
 
 #[test]
 fn test_limits_full_range_with_max_liquidity() {
-    let mut app = MockApp::new(&[]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
     let (dex, token_x, token_y) =
-        init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(1, 2));
+        init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(1, 2), alice);
 
-    approve!(app, token_x, dex, u128::MAX, "alice").unwrap();
-    approve!(app, token_y, dex, u128::MAX, "alice").unwrap();
+    approve!(app, token_x, dex, u128::MAX, alice).unwrap();
+    approve!(app, token_y, dex, u128::MAX, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 1).unwrap();
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = get_max_tick(1);
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -282,7 +290,7 @@ fn test_limits_full_range_with_max_liquidity() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -303,7 +311,7 @@ fn test_limits_full_range_with_max_liquidity() {
         liquidity_delta,
         slippage_limit_lower,
         slippage_limit_upper,
-        "alice"
+        alice
     )
     .unwrap();
 

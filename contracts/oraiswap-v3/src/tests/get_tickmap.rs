@@ -28,7 +28,6 @@ fn test_get_tickmap() {
     approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
-    let fee_tier_1 = FeeTier::new(Percentage::from_scale(1, 2), 2).unwrap();
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -46,21 +45,8 @@ fn test_get_tickmap() {
         alice
     );
     assert!(result.is_ok());
-    add_fee_tier!(app, dex, fee_tier_1, alice).unwrap();
-    let result = create_pool!(
-        app,
-        dex,
-        token_x,
-        token_y,
-        fee_tier_1,
-        init_sqrt_price,
-        init_tick,
-        alice
-    )
-    .unwrap();
 
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
-
     let liquidity_delta = Liquidity::new(1000);
 
     create_position!(

@@ -1,28 +1,34 @@
+use cosmwasm_std::coins;
 use decimal::*;
 
 use crate::{
     percentage::Percentage,
-    tests::helper::{macros::*, MockApp},
+    tests::helper::{macros::*, MockApp, FEE_DENOM},
     token_amount::TokenAmount,
     ContractError, FeeTier, PoolKey,
 };
 
 #[test]
 fn test_protocol_fee() {
-    let mut app = MockApp::new(&[("alice", &[])]);
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
 
-    let (dex, token_x, token_y) = init_dex_and_tokens!(app);
-    init_basic_pool!(app, dex, token_x, token_y);
-    init_basic_position!(app, dex, token_x, token_y);
-    init_basic_swap!(app, dex, token_x, token_y);
+    let (dex, token_x, token_y) = init_dex_and_tokens!(app, alice);
+    init_basic_pool!(app, dex, token_x, token_y, alice);
+    init_basic_position!(app, dex, token_x, token_y, alice);
+    init_basic_swap!(app, dex, token_x, token_y, alice, bob);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
-    withdraw_protocol_fee!(app, dex, pool_key, "alice").unwrap();
+    withdraw_protocol_fee!(app, dex, pool_key, alice).unwrap();
 
-    let amount_x = balance_of!(app, token_x, "alice");
-    let amount_y = balance_of!(app, token_y, "alice");
+    let amount_x = balance_of!(app, token_x, alice);
+    let amount_y = balance_of!(app, token_y, alice);
     assert_eq!(amount_x, 9999999501);
     assert_eq!(amount_y, 9999999000);
 
@@ -44,11 +50,16 @@ fn test_protocol_fee() {
 
 #[test]
 fn test_protocol_fee_not_admin() {
-    let mut app = MockApp::new(&[("alice", &[])]);
-    let (dex, token_x, token_y) = init_dex_and_tokens!(app);
-    init_basic_pool!(app, dex, token_x, token_y);
-    init_basic_position!(app, dex, token_x, token_y);
-    init_basic_swap!(app, dex, token_x, token_y);
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let (dex, token_x, token_y) = init_dex_and_tokens!(app, alice);
+    init_basic_pool!(app, dex, token_x, token_y, alice);
+    init_basic_position!(app, dex, token_x, token_y, alice);
+    init_basic_swap!(app, dex, token_x, token_y, alice, bob);
 
     let pool_key = PoolKey::new(
         token_x.to_string(),
@@ -60,31 +71,36 @@ fn test_protocol_fee_not_admin() {
     )
     .unwrap();
 
-    let error = withdraw_protocol_fee!(app, dex, pool_key, "bob").unwrap_err();
-    assert_eq!(
-        error.root_cause().to_string(),
-        ContractError::Unauthorized {}.to_string()
-    );
+    let error = withdraw_protocol_fee!(app, dex, pool_key, bob).unwrap_err();
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::Unauthorized {}.to_string()));
 }
 
 #[test]
 fn test_withdraw_fee_not_deployer() {
-    let mut app = MockApp::new(&[("alice", &[])]);
-    let (dex, token_x, token_y) = init_dex_and_tokens!(app);
-    init_basic_pool!(app, dex, token_x, token_y);
-    init_basic_position!(app, dex, token_x, token_y);
-    init_basic_swap!(app, dex, token_x, token_y);
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let (dex, token_x, token_y) = init_dex_and_tokens!(app, alice);
+    init_basic_pool!(app, dex, token_x, token_y, alice);
+    init_basic_position!(app, dex, token_x, token_y, alice);
+    init_basic_swap!(app, dex, token_x, token_y, alice, bob);
 
-    let user_address = "bob";
+    let user_address = bob;
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
-    change_fee_receiver!(app, dex, pool_key, user_address, "alice").unwrap();
+    change_fee_receiver!(app, dex, pool_key, user_address, alice).unwrap();
 
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
-    assert_eq!(pool.fee_receiver, user_address);
+    assert_eq!(pool.fee_receiver.as_str(), user_address);
 
-    withdraw_protocol_fee!(app, dex, pool_key, "bob").unwrap();
+    withdraw_protocol_fee!(app, dex, pool_key, bob).unwrap();
 
     let amount_x = balance_of!(app, token_x, user_address);
     let amount_y = balance_of!(app, token_y, user_address);
