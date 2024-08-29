@@ -19,6 +19,7 @@ pub fn test_create_incentive() {
         ("alice", &coins(100_000_000_000, FEE_DENOM)),
         ("bob", &coins(100_000_000_000, FEE_DENOM)),
     ]);
+
     let alice = &accounts[0];
     let bob = &accounts[1];
     let dex = create_dex!(app, Percentage::new(0), alice);
@@ -277,15 +278,11 @@ pub fn test_single_incentive_with_single_position() {
     let incentives = new_incentives;
     app.increase_time(1000000);
     let new_incentives = get_position_incentives!(app, dex, 0, alice).unwrap();
-    #[cfg(not(feature = "test-tube"))]
-    let amount = Uint128::from(899500u128);
-    #[cfg(feature = "test-tube")]
-    let amount = Uint128::from(900000u128);
     assert_eq!(
         subtract_assets(&incentives, &new_incentives),
         vec![Asset {
             info: reward_token.clone(),
-            amount
+            amount: 900000u128.into(),
         }]
     );
 }
@@ -416,16 +413,12 @@ pub fn test_multi_incentives_with_single_position() {
     let incentives = new_incentives;
     app.increase_time(1000000);
     let new_incentives = get_position_incentives!(app, dex, 0, alice).unwrap();
-    #[cfg(not(feature = "test-tube"))]
-    let amount = Uint128::from(899500u128);
-    #[cfg(feature = "test-tube")]
-    let amount = Uint128::from(900000u128);
 
     assert_eq!(
         subtract_assets(&incentives, &new_incentives),
         vec![Asset {
             info: reward_token.clone(),
-            amount
+            amount: 900000u128.into(),
         }]
     );
 
@@ -563,47 +556,31 @@ pub fn test_multi_incentives_with_multi_positions() {
     app.increase_time(1000);
 
     let new_incentives = get_position_incentives!(app, dex, 0, alice).unwrap();
-    #[cfg(not(feature = "test-tube"))]
-    let amount = 0u128;
-    #[cfg(feature = "test-tube")]
-    let amount = 333u128;
     assert_eq!(
         subtract_assets(&incentives, &new_incentives),
         vec![
             Asset {
                 info: reward_token.clone(),
-                amount: Uint128::from(33500u128 + amount)
+                amount: Uint128::from(33833u128)
             },
             Asset {
                 info: reward_token_2.clone(),
-                amount: Uint128::from(67000u128 + 2 * amount)
+                amount: Uint128::from(67666u128)
             }
         ]
     );
     let new_incentives_2 = get_position_incentives!(app, dex, 1, alice).unwrap();
-    let amount1;
-    let amount2;
-    #[cfg(not(feature = "test-tube"))]
-    {
-        amount1 = 0u128;
-        amount2 = 0u128;
-    }
-    #[cfg(feature = "test-tube")]
-    {
-        amount1 = 168u128;
-        amount2 = 334u128;
-    }
 
     assert_eq!(
         subtract_assets(&new_incentives_2, &incentives_2),
         vec![
             Asset {
                 info: reward_token.clone(),
-                amount: Uint128::from(33666u128 + amount1)
+                amount: Uint128::from(33834u128)
             },
             Asset {
                 info: reward_token_2.clone(),
-                amount: Uint128::from(67333u128 + amount2)
+                amount: Uint128::from(67667u128)
             }
         ]
     );
@@ -1416,15 +1393,11 @@ pub fn test_update_incentive_with_tick_move_left_to_right() {
     let incentive = get_position_incentives!(app, dex, 0, alice).unwrap();
     assert_eq!(incentive, vec![]);
     let incentive = get_position_incentives!(app, dex, 1, alice).unwrap();
-    #[cfg(not(feature = "test-tube"))]
-    let amount = Uint128::from(101000u128);
-    #[cfg(feature = "test-tube")]
-    let amount = Uint128::from(100500u128);
     assert_eq!(
         incentive,
         vec![Asset {
             info: reward_token.clone(),
-            amount
+            amount: Uint128::from(100500u128)
         }]
     );
 }
