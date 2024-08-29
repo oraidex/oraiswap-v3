@@ -1124,6 +1124,6 @@ mod tests {
         }
 
         let ret = tickmap_slice(deps.as_ref().storage, min_chunk, max_chunk, &pool_key_1, 3);
-        assert_eq!(ret, [(0, 1), (1, 1), (2, 1)]);
+        assert_eq!(ret, [(0, 1u64.into()), (1, 1u64.into()), (2, 1u64.into())]);
     }
 }

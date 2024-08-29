@@ -1,5 +1,4 @@
 use cosmwasm_std::coins;
-use cosmwasm_std::Addr;
 use decimal::{Decimal, Factories};
 
 use crate::get_max_chunk;
@@ -8,7 +7,6 @@ use crate::sqrt_price::get_min_tick;
 use crate::tests::helper::FEE_DENOM;
 use crate::{
     liquidity::Liquidity,
-    msg,
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp},

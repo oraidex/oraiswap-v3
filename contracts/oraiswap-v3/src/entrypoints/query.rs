@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, Deps, Env, Order, StdResult};
+use cosmwasm_std::{Addr, Binary, Deps, Env, Order, StdResult, Uint64};
 use cw_storage_plus::Bound;
 
 use crate::{
@@ -234,7 +234,7 @@ pub fn get_tickmap(
     lower_tick_index: i32,
     upper_tick_index: i32,
     x_to_y: bool,
-) -> Result<Vec<(u16, u64)>, ContractError> {
+) -> Result<Vec<(u16, Uint64)>, ContractError> {
     let tick_spacing = pool_key.fee_tier.tick_spacing;
     let (start_chunk, _) = tick_to_position(lower_tick_index, tick_spacing);
     let (end_chunk, _) = tick_to_position(upper_tick_index, tick_spacing);

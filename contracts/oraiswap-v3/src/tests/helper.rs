@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, Coin, Event, StdResult};
+use cosmwasm_std::{Addr, Binary, Coin, Event, StdResult, Uint64};
 use cosmwasm_testing_util::{ExecuteResponse, MockResult};
 
 use crate::{
@@ -460,6 +460,27 @@ impl MockApp {
             Addr::unchecked(dex),
             &msg::QueryMsg::AllPosition { limit, start_after },
         )
+    }
+
+    pub fn query_tickmaps(
+        &self,
+        dex: &str,
+        pool_key: &PoolKey,
+        lower_tick: i32,
+        upper_tick: i32,
+        x_to_y: bool,
+    ) -> StdResult<Vec<(u16, u64)>> {
+        let tickmaps: Vec<(u16, Uint64)> = self.query(
+            Addr::unchecked(dex),
+            &msg::QueryMsg::TickMap {
+                pool_key: pool_key.clone(),
+                lower_tick_index: lower_tick,
+                upper_tick_index: upper_tick,
+                x_to_y,
+            },
+        )?;
+
+        Ok(tickmaps.into_iter().map(|(k, v)| (k, v.u64())).collect())
     }
 }
 
@@ -1215,15 +1236,13 @@ pub mod macros {
     pub(crate) use get_liquidity_ticks_amount;
 
     macro_rules! get_tickmap {
-        ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick_index:expr, $upper_tick_index:expr , $x_to_y:expr) => {{
-            $app.query(
-                Addr::unchecked($dex_address.as_str()),
-                &msg::QueryMsg::TickMap {
-                    pool_key: $pool_key.clone(),
-                    lower_tick_index: $lower_tick_index,
-                    upper_tick_index: $upper_tick_index,
-                    x_to_y: $x_to_y,
-                },
+        ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick_index:expr, $upper_tick_index:expr, $x_to_y:expr) => {{
+            $app.query_tickmaps(
+                $dex_address.as_str(),
+                &$pool_key,
+                $lower_tick_index,
+                $upper_tick_index,
+                $x_to_y,
             )
         }};
     }

@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Binary};
+use cosmwasm_std::{Addr, Binary, Uint64};
 use cw20::Expiration;
 
 use crate::interface::{
@@ -211,7 +211,7 @@ pub enum QueryMsg {
     #[returns(u32)]
     UserPositionAmount { owner: Addr },
 
-    #[returns(Vec<(u16, u64)>)]
+    #[returns(Vec<(u16, Uint64)>)]
     TickMap {
         pool_key: PoolKey,
         lower_tick_index: i32,

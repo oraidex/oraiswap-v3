@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    Addr, Api, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Storage, Timestamp,
+    Addr, Api, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Storage, Timestamp, Uint64,
 };
 
 use cw20::Expiration;
@@ -315,7 +315,7 @@ pub fn tickmap_slice(
     max_chunk: u16,
     pool_key: &PoolKey,
     limit: usize,
-) -> Vec<(u16, u64)> {
+) -> Vec<(u16, Uint64)> {
     let pool_key = pool_key.key();
     let mut min_key = min_chunk.to_be_bytes().to_vec();
     let mut max_key = max_chunk.to_be_bytes().to_vec();
@@ -328,7 +328,7 @@ pub fn tickmap_slice(
         .filter_map(|item| {
             if let Ok((k, v)) = item {
                 if pool_key.eq(&k[2..]) {
-                    return Some((u16::from_be_bytes([k[0], k[1]]), v));
+                    return Some((u16::from_be_bytes([k[0], k[1]]), v.into()));
                 }
             }
             None
