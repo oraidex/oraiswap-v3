@@ -46,8 +46,7 @@ impl MockApp {
         }
         #[cfg(feature = "test-tube")]
         {
-            static CW_BYTES: &[u8] = include_bytes!("./testdata/oraiswap-v3.wasm");
-            dex_id = app.upload(CW_BYTES);
+            dex_id = app.upload(include_bytes!("./testdata/oraiswap-v3.wasm"));
         }
 
         (Self { app, dex_id }, accounts)
