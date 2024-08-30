@@ -33,7 +33,7 @@ cw-storage-plus = { version = "1.0.1" }
 derive_more = "0.99.17"
 decimal-core = { path = "./packages/decimal-core" }
 decimal = { path = "./packages/decimal" }
-cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-util.git", rev = "3f7a3f2" }
+cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-util.git", rev = "5647be1" }
 
 [profile.release]
 opt-level = 3
