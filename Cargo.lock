@@ -3873,6 +3873,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "zapper"
+version = "0.2.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cosmwasm-testing-util",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "decimal",
+ "derive_more",
+ "thiserror",
+]
+
+[[package]]
 name = "zeroize"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
