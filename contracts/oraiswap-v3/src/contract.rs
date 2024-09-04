@@ -1,10 +1,10 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 
-use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::CONFIG;
 use crate::{entrypoints::*, Config};
+use oraiswap_v3_common::error::ContractError;
 
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
@@ -25,6 +25,7 @@ pub fn instantiate(
         fee_tiers: vec![],
         admin: info.sender,
         protocol_fee: msg.protocol_fee,
+        incentives_fund_manager: msg.incentives_fund_manager,
     };
     CONFIG.save(deps.storage, &config)?;
 
@@ -193,6 +194,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Admin {} => to_json_binary(&query_admin(deps)?),
         QueryMsg::ProtocolFee {} => to_json_binary(&get_protocol_fee(deps)?),
+        QueryMsg::IncentivesFundManager {} => to_json_binary(&get_incentives_fund_manager(deps)?),
         QueryMsg::Position { owner_id, index } => {
             to_json_binary(&get_position(deps, owner_id, index)?)
         }

@@ -2,7 +2,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Uint128;
 use decimal::*;
 
-use crate::ContractError;
+use oraiswap_v3_common::error::ContractError;
 
 use super::sqrt_price::SqrtPrice;
 

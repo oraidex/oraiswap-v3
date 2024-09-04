@@ -2,7 +2,7 @@ use decimal::*;
 
 use crate::math::consts::*;
 use crate::math::types::sqrt_price::SqrtPrice;
-use crate::ContractError;
+use oraiswap_v3_common::error::ContractError;
 
 const LOG2_SCALE: u8 = 32;
 const LOG2_DOUBLE_SCALE: u8 = 64;

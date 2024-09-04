@@ -1,9 +1,10 @@
 use core::fmt;
 
-use crate::{ContractError, FeeTier};
+use crate::FeeTier;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_storage::to_length_prefixed_nested;
 use cw_storage_plus::KeyDeserialize;
+use oraiswap_v3_common::error::ContractError;
 
 #[cw_serde]
 #[derive(Default, Eq)]

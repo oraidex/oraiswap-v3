@@ -4,13 +4,17 @@ use decimal::*;
 use crate::{
     fee_growth::FeeGrowth,
     incentive::{IncentiveRecord, PositionIncentives},
-    interface::{Asset, AssetInfo},
     liquidity::Liquidity,
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, subtract_assets, MockApp, FEE_DENOM},
     token_amount::TokenAmount,
-    ContractError, FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+    FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+};
+
+use oraiswap_v3_common::{
+    asset::{Asset, AssetInfo},
+    error::ContractError,
 };
 
 #[test]
@@ -600,7 +604,9 @@ pub fn test_incentive_with_position_cross_out_of_range() {
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y, token_z) =
         create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
-    mint!(app, token_z, dex_raw, initial_amount, alice).unwrap();
+    let incentives_addr = app.get_incentives_fund_manager(dex_raw).unwrap();
+    let incentives_addr_raw = &incentives_addr.to_string();
+    mint!(app, token_z, incentives_addr_raw, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
 
@@ -789,19 +795,18 @@ pub fn test_incentive_with_position_cross_out_of_range() {
     );
 
     // try claim incentives
-    let before_dex_balance = balance_of!(app, token_z, dex);
+    let before_incentive_balance = balance_of!(app, token_z, incentives_addr);
     let before_user_balance = balance_of!(app, token_z, alice);
 
     claim_incentives!(app, dex, 0, alice).unwrap();
     claim_incentives!(app, dex, 1, alice).unwrap();
 
-    let after_dex_balance = balance_of!(app, token_z, dex);
+    let after_incentive_balance = balance_of!(app, token_z, incentives_addr);
     let after_user_balance = balance_of!(app, token_z, alice);
-    assert!(before_dex_balance.gt(&after_dex_balance));
+    assert!(before_incentive_balance.gt(&after_incentive_balance));
     assert!(before_user_balance.lt(&after_user_balance));
-    assert!(
-        (before_user_balance + before_dex_balance).eq(&(after_user_balance + after_dex_balance))
-    );
+    assert!((before_user_balance + before_incentive_balance)
+        .eq(&(after_user_balance + after_incentive_balance)));
 }
 
 #[test]
@@ -816,7 +821,9 @@ pub fn test_remove_position() {
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y, token_z) =
         create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
-    mint!(app, token_z, dex_raw, initial_amount, alice).unwrap();
+    let incentives_addr = app.get_incentives_fund_manager(dex_raw).unwrap();
+    let incentives_addr_raw = &incentives_addr.to_string();
+    mint!(app, token_z, incentives_addr_raw, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
 
@@ -877,20 +884,19 @@ pub fn test_remove_position() {
     // increase block time
     app.increase_time(1000);
 
-    let before_dex_balance = balance_of!(app, token_z, dex);
+    let before_incentive_balance = balance_of!(app, token_z, incentives_addr);
     let before_user_balance = balance_of!(app, token_z, alice);
 
     // try remove position
     remove_position!(app, dex, 0, alice).unwrap();
 
-    let after_dex_balance = balance_of!(app, token_z, dex);
+    let after_incentive_balance = balance_of!(app, token_z, incentives_addr);
     let after_user_balance = balance_of!(app, token_z, alice);
 
-    assert!(before_dex_balance.gt(&after_dex_balance));
+    assert!(before_incentive_balance.gt(&after_incentive_balance));
     assert!(before_user_balance.lt(&after_user_balance));
-    assert!(
-        (before_user_balance + before_dex_balance).eq(&(after_user_balance + after_dex_balance))
-    );
+    assert!((before_user_balance + before_incentive_balance)
+        .eq(&(after_user_balance + after_incentive_balance)));
 }
 
 #[test]
@@ -908,7 +914,11 @@ pub fn incentive_stress_test() {
     let initial_amount = 10u128.pow(20);
     let (token_x, token_y, token_z) =
         create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
-    mint!(app, token_z, dex_raw, initial_amount, alice).unwrap();
+
+    let incentives_addr = app.get_incentives_fund_manager(dex_raw).unwrap();
+    let incentives_addr_raw = &incentives_addr.to_string();
+    mint!(app, token_z, incentives_addr_raw, initial_amount, alice).unwrap();
+
     approve!(app, token_x, dex, initial_amount, alice).unwrap();
     approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
@@ -1016,7 +1026,7 @@ pub fn incentive_stress_test() {
         .unwrap();
     }
 
-    let before_dex_balance = balance_of!(app, token_z, dex);
+    let before_incentive_balance = balance_of!(app, token_z, incentives_addr);
     let before_user_balance = balance_of!(app, token_z, alice);
 
     // claim all incentives
@@ -1025,20 +1035,19 @@ pub fn incentive_stress_test() {
         remove_position!(app, dex, 0, alice).unwrap();
     }
 
-    let after_dex_balance = balance_of!(app, token_z, dex);
+    let after_incentive_balance = balance_of!(app, token_z, incentives_addr);
     let after_user_balance = balance_of!(app, token_z, alice);
 
-    assert!(before_dex_balance.gt(&after_dex_balance));
+    assert!(before_incentive_balance.gt(&after_incentive_balance));
     assert!(before_user_balance.lt(&after_user_balance));
-    assert!(
-        (before_user_balance + before_dex_balance).eq(&(after_user_balance + after_dex_balance))
-    );
+    assert!((before_user_balance + before_incentive_balance)
+        .eq(&(after_user_balance + after_incentive_balance)));
 }
 
 #[test]
 pub fn test_claim_incentive_with_single_position() {
     let protocol_fee = Percentage::from_scale(6, 3);
-    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000_000, FEE_DENOM))]);
     let alice = &accounts[0];
 
     let dex = create_dex!(app, Percentage::new(0), alice);
@@ -1047,7 +1056,10 @@ pub fn test_claim_incentive_with_single_position() {
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y, token_z) =
         create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
-    mint!(app, token_z, dex_raw, initial_amount, alice).unwrap();
+
+    let incentives_addr = app.get_incentives_fund_manager(dex_raw).unwrap();
+    let incentives_addr_raw = &incentives_addr.to_string();
+    mint!(app, token_z, incentives_addr_raw, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
 
@@ -1106,7 +1118,7 @@ pub fn test_claim_incentive_with_single_position() {
     )
     .unwrap();
 
-    let before_dex_balance = balance_of!(app, token_z, dex);
+    let before_incentive_balance = balance_of!(app, token_z, incentives_addr);
     let before_user_balance = balance_of!(app, token_z, alice);
 
     // increase block time
@@ -1121,14 +1133,13 @@ pub fn test_claim_incentive_with_single_position() {
     let timestamp_after = app.get_block_time().seconds();
     let total_emit = (timestamp_after - timestamp_init) as u128 * reward_per_sec.0;
 
-    let after_dex_balance = balance_of!(app, token_z, dex);
+    let after_incentive_balance = balance_of!(app, token_z, incentives_addr);
     let after_user_balance = balance_of!(app, token_z, alice);
 
-    assert!(before_dex_balance.gt(&after_dex_balance));
+    assert!(before_incentive_balance.gt(&after_incentive_balance));
     assert!(before_user_balance.lt(&after_user_balance));
-    assert!(
-        (before_user_balance + before_dex_balance).eq(&(after_user_balance + after_dex_balance))
-    );
+    assert!((before_user_balance + before_incentive_balance)
+        .eq(&(after_user_balance + after_incentive_balance)));
     // total claimed of user must be less than or equal total emit
     assert!((after_user_balance - before_user_balance).le(&total_emit));
 }
@@ -1145,7 +1156,9 @@ pub fn test_claim_incentive_with_multi_position() {
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y, token_z) =
         create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
-    mint!(app, token_z, dex_raw, initial_amount, alice).unwrap();
+    let incentives_addr = app.get_incentives_fund_manager(dex_raw).unwrap();
+    let incentives_addr_raw = &incentives_addr.to_string();
+    mint!(app, token_z, incentives_addr_raw, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
 
@@ -1214,7 +1227,7 @@ pub fn test_claim_incentive_with_multi_position() {
         .unwrap();
     }
 
-    let before_dex_balance = balance_of!(app, token_z, dex);
+    let before_incentive_balance = balance_of!(app, token_z, incentives_addr);
     let before_user_balance = balance_of!(app, token_z, alice);
 
     // increase block time
@@ -1231,14 +1244,13 @@ pub fn test_claim_incentive_with_multi_position() {
     let timestamp_after = app.get_block_time().seconds();
     let total_emit = (timestamp_after - timestamp_init) as u128 * reward_per_sec.0;
 
-    let after_dex_balance = balance_of!(app, token_z, dex);
+    let after_incentive_balance = balance_of!(app, token_z, incentives_addr);
     let after_user_balance = balance_of!(app, token_z, alice);
 
-    assert!(before_dex_balance.gt(&after_dex_balance));
+    assert!(before_incentive_balance.gt(&after_incentive_balance));
     assert!(before_user_balance.lt(&after_user_balance));
-    assert!(
-        (before_user_balance + before_dex_balance).eq(&(after_user_balance + after_dex_balance))
-    );
+    assert!((before_user_balance + before_incentive_balance)
+        .eq(&(after_user_balance + after_incentive_balance)));
     // total claimed of user must be less than or equal total emit
     assert!((after_user_balance - before_user_balance).le(&total_emit));
 }
@@ -1258,7 +1270,9 @@ pub fn test_update_incentive_with_tick_move_left_to_right() {
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y, token_z) =
         create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
-    mint!(app, token_z, dex_raw, initial_amount, alice).unwrap();
+    let incentives_addr = app.get_incentives_fund_manager(dex_raw).unwrap();
+    let incentives_addr_raw = &incentives_addr.to_string();
+    mint!(app, token_z, incentives_addr_raw, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
 
@@ -1417,7 +1431,9 @@ pub fn test_update_incentive_with_tick_move_right_to_left() {
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y, token_z) =
         create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
-    mint!(app, token_z, dex_raw, initial_amount, alice).unwrap();
+    let incentives_addr = app.get_incentives_fund_manager(dex_raw).unwrap();
+    let incentives_addr_raw = &incentives_addr.to_string();
+    mint!(app, token_z, incentives_addr_raw, initial_amount, alice).unwrap();
 
     let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
 

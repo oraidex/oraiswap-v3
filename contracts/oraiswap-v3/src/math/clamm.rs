@@ -3,8 +3,7 @@ use decimal::*;
 
 use crate::math::consts::*;
 use crate::math::types::{liquidity::*, percentage::*, sqrt_price::*, token_amount::*};
-use crate::ContractError;
-
+use oraiswap_v3_common::error::ContractError;
 pub const CASTING_INTEGER_TO_U128_ERROR: &str = "integer overflow when casting to u128";
 
 #[cw_serde]

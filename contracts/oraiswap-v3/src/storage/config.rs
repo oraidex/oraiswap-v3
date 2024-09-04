@@ -8,4 +8,5 @@ pub struct Config {
     pub admin: Addr,
     pub fee_tiers: Vec<FeeTier>,
     pub protocol_fee: Percentage,
+    pub incentives_fund_manager: Addr,
 }

@@ -2,8 +2,8 @@ use crate::msg::{ExecuteMsg, QueryMsg};
 use crate::percentage::Percentage;
 use crate::tests::helper::MockApp;
 use crate::tests::helper::{macros::*, FEE_DENOM};
-use crate::ContractError;
 use cosmwasm_std::{coins, Addr};
+use oraiswap_v3_common::error::ContractError;
 use decimal::Decimal;
 
 #[test]

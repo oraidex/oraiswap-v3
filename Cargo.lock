@@ -1639,6 +1639,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "incentives-fund-manager"
+version = "0.2.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "oraiswap-v3-common",
+ "thiserror",
+]
+
+[[package]]
 name = "indenter"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1974,6 +1988,19 @@ dependencies = [
  "cw20-base",
  "decimal",
  "derive_more",
+ "incentives-fund-manager",
+ "oraiswap-v3-common",
+ "thiserror",
+]
+
+[[package]]
+name = "oraiswap-v3-common"
+version = "0.2.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw20",
  "thiserror",
 ]
 
