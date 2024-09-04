@@ -724,8 +724,8 @@ pub fn remove_position(
     asset_0.transfer(&mut msgs, &info)?;
     asset_1.transfer(&mut msgs, &info)?;
     // claim incentives
+    let config = CONFIG.load(deps.storage)?;
     for asset in incentives.clone() {
-        let config = CONFIG.load(deps.storage)?;
         msgs.push(
             wasm_execute(
                 config.incentives_fund_manager.clone(),
