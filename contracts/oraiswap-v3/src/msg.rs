@@ -2,10 +2,11 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Uint64};
 use cw20::Expiration;
+use oraiswap_v3_common::asset::{Asset, AssetInfo};
 
 use crate::interface::{
-    AllNftInfoResponse, ApprovedForAllResponse, Asset, AssetInfo, NftInfoResponse,
-    NumTokensResponse, OwnerOfResponse, PoolWithPoolKey, PositionTick, QuoteResult, TokensResponse,
+    AllNftInfoResponse, ApprovedForAllResponse, NftInfoResponse, NumTokensResponse,
+    OwnerOfResponse, PoolWithPoolKey, PositionTick, QuoteResult, TokensResponse,
 };
 #[allow(unused_imports)]
 use crate::{
@@ -17,6 +18,7 @@ use crate::{
 #[cw_serde]
 pub struct InstantiateMsg {
     pub protocol_fee: Percentage,
+    pub incentives_fund_manager: Addr,
 }
 
 #[cw_serde]
@@ -163,6 +165,9 @@ pub enum QueryMsg {
 
     #[returns(Percentage)]
     ProtocolFee {},
+
+    #[returns(Addr)]
+    IncentivesFundManager {},
 
     #[returns(Position)]
     Position { owner_id: Addr, index: u32 },

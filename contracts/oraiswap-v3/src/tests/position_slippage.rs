@@ -6,8 +6,9 @@ use crate::{
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp, FEE_DENOM},
-    ContractError, FeeTier, PoolKey,
+    FeeTier, PoolKey,
 };
+use oraiswap_v3_common::error::ContractError;
 
 #[test]
 fn test_position_slippage_zero_slippage_and_inside_range() {

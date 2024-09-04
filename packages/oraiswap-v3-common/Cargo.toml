@@ -1,0 +1,18 @@
+[package]
+name = "oraiswap-v3-common"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cosmwasm-std = { workspace = true }
+cosmwasm-schema = { workspace = true }
+cosmwasm-storage = { workspace = true }
+
+cw20 = { workspace = true }
+thiserror = { workspace = true }

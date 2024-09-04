@@ -1,8 +1,8 @@
 use cosmwasm_std::coins;
 use decimal::{Decimal, Factories};
+use oraiswap_v3_common::asset::AssetInfo;
 
 use crate::{
-    interface::AssetInfo,
     liquidity::Liquidity,
     percentage::Percentage,
     sqrt_price::{self, calculate_sqrt_price, SqrtPrice},
@@ -85,6 +85,35 @@ fn claim_both_fee_and_incentives() {
     let (token_a, token_b) = create_tokens!(app, initial_amount, initial_amount, alice);
     mint!(app, token_a, dex_raw, initial_amount, alice).unwrap();
     mint!(app, token_b, dex_raw, initial_amount, alice).unwrap();
+
+    let incentives_fund_manager = app.get_incentives_fund_manager(dex_raw).unwrap();
+    let incentives_fund_manager_raw = &incentives_fund_manager.to_string();
+
+    // mint token for incentive contract
+    mint!(
+        app,
+        token_a,
+        incentives_fund_manager_raw,
+        initial_amount,
+        alice
+    )
+    .unwrap();
+    mint!(
+        app,
+        token_b,
+        incentives_fund_manager_raw,
+        initial_amount,
+        alice
+    )
+    .unwrap();
+    mint!(
+        app,
+        token_z,
+        incentives_fund_manager_raw,
+        initial_amount,
+        alice
+    )
+    .unwrap();
 
     let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
 
@@ -172,7 +201,7 @@ fn claim_both_fee_and_incentives() {
     .unwrap();
 
     let before_dex_balance_token_x = balance_of!(app, token_x, dex);
-    let before_dex_balance_token_z = balance_of!(app, token_z, dex);
+    let before_incentive_balance_token_z = balance_of!(app, token_z, incentives_fund_manager);
     let before_user_balance_token_x = balance_of!(app, token_x, alice);
     let before_user_balance_token_z = balance_of!(app, token_z, alice);
 
@@ -201,15 +230,17 @@ fn claim_both_fee_and_incentives() {
     let total_emit = (timestamp_after - timestamp_init) as u128 * reward_per_sec.0;
 
     let after_dex_balance_token_x = balance_of!(app, token_x, dex);
-    let after_dex_balance_token_z = balance_of!(app, token_z, dex);
+    let after_incentive_balance_token_z = balance_of!(app, token_z, incentives_fund_manager);
     let after_user_balance_token_x = balance_of!(app, token_x, alice);
     let after_user_balance_token_z = balance_of!(app, token_z, alice);
 
     // incentive assert
-    assert!(before_dex_balance_token_z.gt(&after_dex_balance_token_z));
+    assert!(before_incentive_balance_token_z.gt(&after_incentive_balance_token_z));
     assert!(before_user_balance_token_z.lt(&after_user_balance_token_z));
-    assert!((before_user_balance_token_z + before_dex_balance_token_z)
-        .eq(&(after_user_balance_token_z + after_dex_balance_token_z)));
+    assert!(
+        (before_user_balance_token_z + before_incentive_balance_token_z)
+            .eq(&(after_user_balance_token_z + after_incentive_balance_token_z))
+    );
     assert!((after_user_balance_token_z - before_user_balance_token_z).le(&total_emit));
 
     // fee claimed assert

@@ -1,5 +1,6 @@
 use cosmwasm_std::coins;
 use decimal::{Decimal, Factories};
+use oraiswap_v3_common::error::ContractError;
 
 use crate::{
     fee_growth::FeeGrowth,
@@ -8,7 +9,7 @@ use crate::{
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp, FEE_DENOM},
     token_amount::TokenAmount,
-    ContractError, FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+    FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
 };
 
 #[test]

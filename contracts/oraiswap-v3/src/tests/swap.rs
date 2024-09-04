@@ -8,8 +8,9 @@ use crate::{
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, FEE_DENOM},
     token_amount::TokenAmount,
-    ContractError, FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+    FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
 };
+use oraiswap_v3_common::error::ContractError;
 
 use super::helper::MockApp;
 

@@ -1,8 +1,11 @@
 use cosmwasm_std::{Addr, Binary, Coin, Event, StdResult, Uint64};
 use cosmwasm_testing_util::{ExecuteResponse, MockResult};
 
+use cosmwasm_testing_util::ContractWrapper;
+use oraiswap_v3_common::asset::{Asset, AssetInfo};
+
 use crate::{
-    interface::{Asset, AssetInfo, PoolWithPoolKey, QuoteResult, SwapHop},
+    interface::{PoolWithPoolKey, QuoteResult, SwapHop},
     liquidity::Liquidity,
     msg::{self},
     percentage::Percentage,
@@ -26,6 +29,7 @@ pub struct MockApp {
     #[deref_mut]
     app: TestMockApp,
     dex_id: u64,
+    incentives_id: u64,
 }
 
 #[allow(dead_code)]
@@ -34,6 +38,7 @@ impl MockApp {
         let (mut app, accounts) = TestMockApp::new(init_balances);
 
         let dex_id;
+        let incentives_id;
         #[cfg(not(feature = "test-tube"))]
         {
             dex_id = app.upload(Box::new(
@@ -43,23 +48,73 @@ impl MockApp {
                     crate::contract::query,
                 ),
             ));
+            incentives_id = app.upload(Box::new(ContractWrapper::new_with_empty(
+                incentives_fund_manager::contract::execute,
+                incentives_fund_manager::contract::instantiate,
+                incentives_fund_manager::contract::query,
+            )));
         }
         #[cfg(feature = "test-tube")]
         {
             dex_id = app.upload(include_bytes!("./testdata/oraiswap-v3.wasm"));
+            incentives_id = app.upload(include_bytes!("./testdata/incentives-fund-manager.wasm"));
         }
 
-        (Self { app, dex_id }, accounts)
+        (
+            Self {
+                app,
+                dex_id,
+                incentives_id,
+            },
+            accounts,
+        )
     }
 
     pub fn create_dex(&mut self, owner: &str, protocol_fee: Percentage) -> MockResult<Addr> {
+        // create incentive_contract
+        let incentive_id = self.incentives_id;
+
+        let incentive_addr = self.instantiate(
+            incentive_id,
+            Addr::unchecked(owner),
+            &oraiswap_v3_common::incentives_fund_manager::InstantiateMsg {
+                owner: None,
+                oraiswap_v3: Addr::unchecked("oraiswap_v3"),
+            },
+            &[],
+            "incentives_fund_mamnager",
+        )?;
+
         let code_id = self.dex_id;
-        self.instantiate(
+        let dex_addr = self.instantiate(
             code_id,
             Addr::unchecked(owner),
-            &msg::InstantiateMsg { protocol_fee },
+            &msg::InstantiateMsg {
+                protocol_fee,
+                incentives_fund_manager: incentive_addr.clone(),
+            },
             &[],
             "oraiswap_v3",
+        )?;
+
+        // update config for incentive_contract
+        self.execute(
+            Addr::unchecked(owner),
+            incentive_addr.clone(),
+            &oraiswap_v3_common::incentives_fund_manager::ExecuteMsg::UpdateConfig {
+                owner: None,
+                oraiswap_v3: Some(dex_addr.clone()),
+            },
+            &[],
+        )?;
+
+        Ok(dex_addr)
+    }
+
+    pub fn get_incentives_fund_manager(&mut self, dex: &str) -> StdResult<Addr> {
+        self.query(
+            Addr::unchecked(dex),
+            &msg::QueryMsg::IncentivesFundManager {},
         )
     }
 
@@ -514,6 +569,7 @@ pub fn subtract_assets(old_assets: &[Asset], new_assets: &[Asset]) -> Vec<Asset>
 }
 
 pub mod macros {
+
     macro_rules! create_dex {
         ($app:ident, $protocol_fee:expr,$owner: tt) => {{
             $app.create_dex($owner, $protocol_fee).unwrap()

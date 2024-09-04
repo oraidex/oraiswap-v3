@@ -1,19 +1,23 @@
-use crate::error::ContractError;
 use crate::fee_growth::FeeGrowth;
 use crate::incentive::IncentiveRecord;
-use crate::interface::{Asset, AssetInfo, CalculateSwapResult, Cw721ReceiveMsg, SwapHop};
+use crate::interface::{CalculateSwapResult, Cw721ReceiveMsg, SwapHop};
 use crate::liquidity::Liquidity;
 use crate::percentage::Percentage;
 use crate::sqrt_price::SqrtPrice;
 use crate::state::{self, CONFIG, POOLS};
 use crate::token_amount::TokenAmount;
 use crate::{calculate_min_amount_out, check_tick, FeeTier, Pool, PoolKey, Position};
+use oraiswap_v3_common::asset::{Asset, AssetInfo};
+use oraiswap_v3_common::error::ContractError;
+use oraiswap_v3_common::incentives_fund_manager;
 
 use super::{
     check_can_send, create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal,
     transfer_nft, update_approvals, TimeStampExt,
 };
-use cosmwasm_std::{attr, Addr, Attribute, Binary, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{
+    attr, wasm_execute, Addr, Attribute, Binary, DepsMut, Env, MessageInfo, Response,
+};
 use cw20::Expiration;
 use decimal::Decimal;
 
@@ -540,6 +544,7 @@ pub fn claim_incentives(
     index: u32,
 ) -> Result<Response, ContractError> {
     let mut position = state::get_position(deps.storage, &info.sender, index)?;
+    let config = CONFIG.load(deps.storage)?;
 
     let lower_tick = state::get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
     let upper_tick = state::get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
@@ -558,7 +563,15 @@ pub fn claim_incentives(
 
     let mut msgs = vec![];
     for asset in incentives.clone() {
-        asset.transfer(&mut msgs, &info)?;
+        msgs.push(wasm_execute(
+            config.incentives_fund_manager.clone(),
+            &incentives_fund_manager::ExecuteMsg::SendFund {
+                asset,
+                receiver: info.sender.clone(),
+            },
+            vec![],
+        )?);
+        // asset.transfer(&mut msgs, &info)?;
     }
 
     let mut event_attributes: Vec<Attribute> = vec![];
@@ -710,8 +723,21 @@ pub fn remove_position(
     let mut msgs = vec![];
     asset_0.transfer(&mut msgs, &info)?;
     asset_1.transfer(&mut msgs, &info)?;
-    for asset in incentives {
-        asset.transfer(&mut msgs, &info)?;
+    // claim incentives
+    let config = CONFIG.load(deps.storage)?;
+    for asset in incentives.clone() {
+        msgs.push(
+            wasm_execute(
+                config.incentives_fund_manager.clone(),
+                &incentives_fund_manager::ExecuteMsg::SendFund {
+                    asset,
+                    receiver: info.sender.clone(),
+                },
+                vec![],
+            )?
+            .into(),
+        );
+        // asset.transfer(&mut msgs, &info)?;
     }
 
     event_attributes.append(&mut vec![

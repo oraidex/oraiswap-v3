@@ -1,12 +1,13 @@
 use cosmwasm_std::{coins, Addr};
 use decimal::{Decimal, Factories};
+use oraiswap_v3_common::error::ContractError;
 
 use crate::{
     msg::{ExecuteMsg, QueryMsg},
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp, FEE_DENOM},
-    ContractError, FeeTier, Pool,
+    FeeTier, Pool,
 };
 
 #[test]

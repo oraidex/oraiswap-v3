@@ -1,6 +1,5 @@
 use crate::tests::helper::{extract_amount, FEE_DENOM};
 use crate::token_amount::TokenAmount;
-use crate::ContractError;
 use crate::{
     percentage::Percentage,
     sqrt_price::calculate_sqrt_price,
@@ -9,6 +8,7 @@ use crate::{
 };
 use cosmwasm_std::{coins, Addr};
 use decimal::{Decimal, Factories};
+use oraiswap_v3_common::error::ContractError;
 
 #[test]
 fn test_interaction_with_pool_on_removed_fee_tier() {

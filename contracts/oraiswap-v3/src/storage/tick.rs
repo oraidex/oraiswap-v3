@@ -6,10 +6,10 @@ use crate::{
         liquidity::Liquidity,
         sqrt_price::{calculate_sqrt_price, SqrtPrice},
     },
-    ContractError,
 };
 use cosmwasm_schema::cw_serde;
 use decimal::*;
+use oraiswap_v3_common::error::ContractError;
 
 #[cw_serde]
 #[derive(Eq, Default)]
