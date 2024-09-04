@@ -1,4 +1,4 @@
-use cosmwasm_std::Timestamp;
+use cosmwasm_std::coins;
 use decimal::{Decimal, Factories};
 use oraiswap_v3_common::asset::AssetInfo;
 
@@ -6,30 +6,35 @@ use crate::{
     liquidity::Liquidity,
     percentage::Percentage,
     sqrt_price::{self, calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp},
+    tests::helper::{macros::*, MockApp, FEE_DENOM},
     token_amount::TokenAmount,
     FeeTier, PoolKey,
 };
 
 #[test]
 fn test_claim() {
-    let mut app = MockApp::new(&[]);
-    let (dex, token_x, token_y) = init_dex_and_tokens!(app);
-    init_basic_pool!(app, dex, token_x, token_y);
-    init_basic_position!(app, dex, token_x, token_y);
-    init_basic_swap!(app, dex, token_x, token_y);
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let (dex, token_x, token_y) = init_dex_and_tokens!(app, alice);
+    init_basic_pool!(app, dex, token_x, token_y, alice);
+    init_basic_position!(app, dex, token_x, token_y, alice);
+    init_basic_swap!(app, dex, token_x, token_y, alice, bob);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
 
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
-    let user_amount_before_claim = balance_of!(app, token_x, "alice");
+    let user_amount_before_claim = balance_of!(app, token_x, alice);
     let dex_amount_before_claim = balance_of!(app, token_x, dex);
 
-    claim_fee!(app, dex, 0, "alice").unwrap();
+    claim_fee!(app, dex, 0, alice).unwrap();
 
-    let user_amount_after_claim = balance_of!(app, token_x, "alice");
+    let user_amount_after_claim = balance_of!(app, token_x, alice);
     let dex_amount_after_claim = balance_of!(app, token_x, dex);
-    let position = get_position!(app, dex, 0, "alice").unwrap();
+    let position = get_position!(app, dex, 0, alice).unwrap();
     let expected_tokens_claimed = 5;
 
     assert_eq!(
@@ -46,30 +51,40 @@ fn test_claim() {
 
 #[test]
 fn test_claim_not_owner() {
-    let mut app = MockApp::new(&[]);
-    let (dex, token_x, token_y) = init_dex_and_tokens!(app);
-    init_basic_pool!(app, dex, token_x, token_y);
-    init_basic_position!(app, dex, token_x, token_y);
-    init_basic_swap!(app, dex, token_x, token_y);
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let (dex, token_x, token_y) = init_dex_and_tokens!(app, alice);
+    init_basic_pool!(app, dex, token_x, token_y, alice);
+    init_basic_position!(app, dex, token_x, token_y, alice);
+    init_basic_swap!(app, dex, token_x, token_y, alice, bob);
 
-    let error = claim_fee!(app, dex, 0, "bob").unwrap_err();
+    let error = claim_fee!(app, dex, 0, bob).unwrap_err();
     assert!(error.root_cause().to_string().contains("not found"));
 }
 
 #[test]
 fn claim_both_fee_and_incentives() {
     let protocol_fee = Percentage::from_scale(6, 3);
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let dex = create_dex!(app, Percentage::new(0), alice);
     let dex_raw = &dex.to_string();
 
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y, token_z) =
-        create_3_tokens!(app, initial_amount, initial_amount, initial_amount);
-    mint!(app, token_z, dex_raw, initial_amount, "alice").unwrap();
-    let (token_a, token_b) = create_tokens!(app, initial_amount, initial_amount);
-    mint!(app, token_a, dex_raw, initial_amount, "alice").unwrap();
-    mint!(app, token_b, dex_raw, initial_amount, "alice").unwrap();
+        create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
+    mint!(app, token_z, dex_raw, initial_amount, alice).unwrap();
+    let (token_a, token_b) = create_tokens!(app, initial_amount, initial_amount, alice);
+    mint!(app, token_a, dex_raw, initial_amount, alice).unwrap();
+    mint!(app, token_b, dex_raw, initial_amount, alice).unwrap();
 
     let incentives_fund_manager = app.get_incentives_fund_manager(dex_raw).unwrap();
     let incentives_fund_manager_raw = &incentives_fund_manager.to_string();
@@ -80,7 +95,7 @@ fn claim_both_fee_and_incentives() {
         token_a,
         incentives_fund_manager_raw,
         initial_amount,
-        "alice"
+        alice
     )
     .unwrap();
     mint!(
@@ -88,7 +103,7 @@ fn claim_both_fee_and_incentives() {
         token_b,
         incentives_fund_manager_raw,
         initial_amount,
-        "alice"
+        alice
     )
     .unwrap();
     mint!(
@@ -96,13 +111,13 @@ fn claim_both_fee_and_incentives() {
         token_z,
         incentives_fund_manager_raw,
         initial_amount,
-        "alice"
+        alice
     )
     .unwrap();
 
     let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -114,7 +129,7 @@ fn claim_both_fee_and_incentives() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -135,8 +150,8 @@ fn claim_both_fee_and_incentives() {
     let liquidity = Liquidity::from_integer(1000000);
 
     // create position in range -20 - 20
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
     create_position!(
         app,
         dex,
@@ -146,11 +161,11 @@ fn claim_both_fee_and_incentives() {
         liquidity,
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
-    let timestamp_init = app.app.block_info().time.seconds();
+    let timestamp_init = app.get_block_time().seconds();
     create_incentive!(
         app,
         dex,
@@ -159,7 +174,7 @@ fn claim_both_fee_and_incentives() {
         total_reward,
         reward_per_sec,
         start_timestamp,
-        "alice"
+        alice
     )
     .unwrap();
     create_incentive!(
@@ -170,7 +185,7 @@ fn claim_both_fee_and_incentives() {
         total_reward,
         reward_per_sec,
         start_timestamp,
-        "alice"
+        alice
     )
     .unwrap();
     create_incentive!(
@@ -181,18 +196,18 @@ fn claim_both_fee_and_incentives() {
         total_reward,
         reward_per_sec,
         start_timestamp,
-        "alice"
+        alice
     )
     .unwrap();
 
     let before_dex_balance_token_x = balance_of!(app, token_x, dex);
     let before_incentive_balance_token_z = balance_of!(app, token_z, incentives_fund_manager);
-    let before_user_balance_token_x = balance_of!(app, token_x, "alice");
-    let before_user_balance_token_z = balance_of!(app, token_z, "alice");
+    let before_user_balance_token_x = balance_of!(app, token_x, alice);
+    let before_user_balance_token_z = balance_of!(app, token_z, alice);
 
     // swap to increase fee growth
-    mint!(app, token_x, "bob", initial_amount, "alice").unwrap();
-    approve!(app, token_x, dex, initial_amount, "bob").unwrap();
+    mint!(app, token_x, bob, initial_amount, alice).unwrap();
+    approve!(app, token_x, dex, initial_amount, bob).unwrap();
     swap!(
         app,
         dex,
@@ -201,26 +216,23 @@ fn claim_both_fee_and_incentives() {
         TokenAmount(1000),
         true,
         sqrt_price::get_min_sqrt_price(fee_tier.tick_spacing),
-        "bob"
+        bob
     )
     .unwrap();
 
     // increase time to have incentives
-    let mut block_info = app.app.block_info();
-    let current_timestamp = block_info.time.seconds();
-    block_info.time = Timestamp::from_seconds(current_timestamp + 1000);
-    app.app.set_block(block_info.clone());
+    app.increase_time(1000);
 
     // claim both
-    claim_fee!(app, dex, 0, "alice").unwrap();
+    claim_fee!(app, dex, 0, alice).unwrap();
 
-    let timestamp_after = app.app.block_info().time.seconds();
+    let timestamp_after = app.get_block_time().seconds();
     let total_emit = (timestamp_after - timestamp_init) as u128 * reward_per_sec.0;
 
     let after_dex_balance_token_x = balance_of!(app, token_x, dex);
     let after_incentive_balance_token_z = balance_of!(app, token_z, incentives_fund_manager);
-    let after_user_balance_token_x = balance_of!(app, token_x, "alice");
-    let after_user_balance_token_z = balance_of!(app, token_z, "alice");
+    let after_user_balance_token_x = balance_of!(app, token_x, alice);
+    let after_user_balance_token_z = balance_of!(app, token_z, alice);
 
     // incentive assert
     assert!(before_incentive_balance_token_z.gt(&after_incentive_balance_token_z));
@@ -232,7 +244,7 @@ fn claim_both_fee_and_incentives() {
     assert!((after_user_balance_token_z - before_user_balance_token_z).le(&total_emit));
 
     // fee claimed assert
-    let position = get_position!(app, dex, 0, "alice").unwrap();
+    let position = get_position!(app, dex, 0, alice).unwrap();
     let fee_tokens_claimed = 6;
     let receive_x_for_dex = 994;
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();

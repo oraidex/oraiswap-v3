@@ -1,3 +1,4 @@
+use cosmwasm_std::coins;
 use decimal::*;
 
 use crate::{
@@ -11,15 +12,19 @@ use crate::{
 };
 use oraiswap_v3_common::error::ContractError;
 
+use super::helper::FEE_DENOM;
+
 #[test]
 fn test_create_position() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
-    let (token_x, token_y) = create_tokens!(app, 500, 500);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+
+    let dex = create_dex!(app, Percentage::new(0), alice);
+    let (token_x, token_y) = create_tokens!(app, 500, 500, alice);
 
     let fee_tier = FeeTier::new(Percentage::new(0), 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -31,12 +36,12 @@ fn test_create_position() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, 500, "alice").unwrap();
-    approve!(app, token_y, dex, 500, "alice").unwrap();
+    approve!(app, token_x, dex, 500, alice).unwrap();
+    approve!(app, token_y, dex, 500, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
@@ -49,20 +54,22 @@ fn test_create_position() {
         Liquidity::new(10),
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 }
 
 #[test]
 fn test_position_same_upper_and_lower_tick() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
-    let (token_x, token_y) = create_tokens!(app, 500, 500);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+
+    let dex = create_dex!(app, Percentage::new(0), alice);
+    let (token_x, token_y) = create_tokens!(app, 500, 500, alice);
 
     let fee_tier = FeeTier::new(Percentage::new(0), 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 10;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -74,12 +81,12 @@ fn test_position_same_upper_and_lower_tick() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, 500, "alice").unwrap();
-    approve!(app, token_y, dex, 500, "alice").unwrap();
+    approve!(app, token_x, dex, 500, alice).unwrap();
+    approve!(app, token_y, dex, 500, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
@@ -92,18 +99,24 @@ fn test_position_same_upper_and_lower_tick() {
         Liquidity::new(10),
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap_err();
 
-    assert_eq!(
-        error.root_cause().to_string(),
-        ContractError::InvalidTickIndex {}.to_string()
-    );
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::InvalidTickIndex {}.to_string()));
 }
 
 #[test]
 fn test_remove_position() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
 
     let init_tick = 0;
@@ -112,14 +125,13 @@ fn test_remove_position() {
 
     let initial_mint = 10u128.pow(10);
 
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
 
-    let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint);
+    let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint, alice);
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     create_pool!(
         app,
@@ -129,7 +141,7 @@ fn test_remove_position() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -137,8 +149,8 @@ fn test_remove_position() {
     let upper_tick_index = 10;
     let liquidity_delta = Liquidity::from_integer(1_000_000);
 
-    approve!(app, token_x, dex, initial_mint, "alice").unwrap();
-    approve!(app, token_y, dex, initial_mint, "alice").unwrap();
+    approve!(app, token_x, dex, initial_mint, alice).unwrap();
+    approve!(app, token_y, dex, initial_mint, alice).unwrap();
 
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
 
@@ -151,7 +163,7 @@ fn test_remove_position() {
         liquidity_delta,
         pool_state.sqrt_price,
         pool_state.sqrt_price,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -164,8 +176,8 @@ fn test_remove_position() {
         let incorrect_lower_tick_index = lower_tick_index - 50;
         let incorrect_upper_tick_index = upper_tick_index + 50;
 
-        approve!(app, token_x, dex, liquidity_delta.0, "alice").unwrap();
-        approve!(app, token_y, dex, liquidity_delta.0, "alice").unwrap();
+        approve!(app, token_x, dex, liquidity_delta.0, alice).unwrap();
+        approve!(app, token_y, dex, liquidity_delta.0, alice).unwrap();
 
         create_position!(
             app,
@@ -176,28 +188,28 @@ fn test_remove_position() {
             liquidity_delta,
             pool_state.sqrt_price,
             pool_state.sqrt_price,
-            "alice"
+            alice
         )
         .unwrap();
 
-        let position_state = get_position!(app, dex, 1, "alice").unwrap();
+        let position_state = get_position!(app, dex, 1, alice).unwrap();
         // Check position
         assert!(position_state.lower_tick_index == incorrect_lower_tick_index);
         assert!(position_state.upper_tick_index == incorrect_upper_tick_index);
     }
 
     let amount = 1000;
-    mint!(app, token_x, "bob", amount, "alice").unwrap();
-    let amount_x = balance_of!(app, token_x, "bob");
+    mint!(app, token_x, bob, amount, alice).unwrap();
+    let amount_x = balance_of!(app, token_x, bob);
     assert_eq!(amount_x, amount);
 
-    approve!(app, token_x, dex, amount, "bob").unwrap();
+    approve!(app, token_x, dex, amount, bob).unwrap();
 
     let pool_state_before = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
 
     let swap_amount = TokenAmount::new(amount);
     let slippage = SqrtPrice::new(MIN_SQRT_PRICE);
-    swap!(app, dex, pool_key, true, swap_amount, true, slippage, "bob").unwrap();
+    swap!(app, dex, pool_key, true, swap_amount, true, slippage, bob).unwrap();
 
     let pool_state_after = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     assert_eq!(
@@ -215,8 +227,8 @@ fn test_remove_position() {
     assert_eq!(pool_state_after.current_tick_index, -10);
     assert_ne!(pool_state_after.sqrt_price, pool_state_before.sqrt_price);
 
-    let amount_x = balance_of!(app, token_x, "bob");
-    let amount_y = balance_of!(app, token_y, "bob");
+    let amount_x = balance_of!(app, token_x, bob);
+    let amount_y = balance_of!(app, token_y, bob);
     assert_eq!(amount_x, 0);
     assert_eq!(amount_y, 993);
 
@@ -225,7 +237,7 @@ fn test_remove_position() {
     let dex_y_before_remove = balance_of!(app, token_y, dex);
 
     // Remove position
-    remove_position!(app, dex, remove_position_index, "alice").unwrap();
+    remove_position!(app, dex, remove_position_index, alice).unwrap();
 
     // Load states
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
@@ -261,21 +273,23 @@ fn test_remove_position() {
 
 #[test]
 fn test_position_within_current_tick() {
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+
     let max_tick_test = 177_450; // for tickSpacing 4
     let min_tick_test = -max_tick_test;
 
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_balance = 100_000_000;
 
-    let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);
+    let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance, alice);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(2, 4), 4).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     create_pool!(
         app,
@@ -285,12 +299,12 @@ fn test_position_within_current_tick() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_balance, "alice").unwrap();
-    approve!(app, token_y, dex, initial_balance, "alice").unwrap();
+    approve!(app, token_x, dex, initial_balance, alice).unwrap();
+    approve!(app, token_y, dex, initial_balance, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let lower_tick_index = min_tick_test + 10;
@@ -309,17 +323,17 @@ fn test_position_within_current_tick() {
         liquidity_delta,
         pool_state.sqrt_price,
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
     // Load states
-    let position_state = get_position!(app, dex, 0, "alice").unwrap();
+    let position_state = get_position!(app, dex, 0, alice).unwrap();
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     let lower_tick = get_tick!(app, dex, pool_key, lower_tick_index).unwrap();
     let upper_tick = get_tick!(app, dex, pool_key, upper_tick_index).unwrap();
-    let alice_x = balance_of!(app, token_x, "alice");
-    let alice_y = balance_of!(app, token_y, "alice");
+    let alice_x = balance_of!(app, token_x, alice);
+    let alice_y = balance_of!(app, token_y, alice);
     let dex_x = balance_of!(app, token_x, dex);
     let dex_y = balance_of!(app, token_y, dex);
 
@@ -358,17 +372,20 @@ fn test_position_within_current_tick() {
 
 #[test]
 fn test_position_below_current_tick() {
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+
+    let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_balance = 10_000_000_000;
 
-    let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);
+    let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance, alice);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(2, 4), 4).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     create_pool!(
         app,
@@ -378,12 +395,12 @@ fn test_position_below_current_tick() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_balance, "alice").unwrap();
-    approve!(app, token_y, dex, initial_balance, "alice").unwrap();
+    approve!(app, token_x, dex, initial_balance, alice).unwrap();
+    approve!(app, token_y, dex, initial_balance, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let lower_tick_index = -46080;
@@ -402,17 +419,17 @@ fn test_position_below_current_tick() {
         liquidity_delta,
         pool_state_before.sqrt_price,
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
     // Load states
-    let position_state = get_position!(app, dex, 0, "alice").unwrap();
+    let position_state = get_position!(app, dex, 0, alice).unwrap();
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     let lower_tick = get_tick!(app, dex, pool_key, lower_tick_index).unwrap();
     let upper_tick = get_tick!(app, dex, pool_key, upper_tick_index).unwrap();
-    let alice_x = balance_of!(app, token_x, "alice");
-    let alice_y = balance_of!(app, token_y, "alice");
+    let alice_x = balance_of!(app, token_x, alice);
+    let alice_y = balance_of!(app, token_y, alice);
     let dex_x = balance_of!(app, token_x, dex);
     let dex_y = balance_of!(app, token_y, dex);
 
@@ -452,18 +469,20 @@ fn test_position_below_current_tick() {
 
 #[test]
 fn test_position_above_current_tick() {
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_balance = 10_000_000_000;
 
-    let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);
+    let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance, alice);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(2, 4), 4).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     create_pool!(
         app,
@@ -473,12 +492,12 @@ fn test_position_above_current_tick() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_balance, "alice").unwrap();
-    approve!(app, token_y, dex, initial_balance, "alice").unwrap();
+    approve!(app, token_x, dex, initial_balance, alice).unwrap();
+    approve!(app, token_y, dex, initial_balance, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let lower_tick_index = -22980;
@@ -496,17 +515,17 @@ fn test_position_above_current_tick() {
         liquidity_delta,
         pool_state.sqrt_price,
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
     // Load states
-    let position_state = get_position!(app, dex, 0, "alice").unwrap();
+    let position_state = get_position!(app, dex, 0, alice).unwrap();
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     let lower_tick = get_tick!(app, dex, pool_key, lower_tick_index).unwrap();
     let upper_tick = get_tick!(app, dex, pool_key, upper_tick_index).unwrap();
-    let alice_x = balance_of!(app, token_x, "alice");
-    let alice_y = balance_of!(app, token_y, "alice");
+    let alice_x = balance_of!(app, token_x, alice);
+    let alice_y = balance_of!(app, token_y, alice);
     let dex_x = balance_of!(app, token_x, dex);
     let dex_y = balance_of!(app, token_y, dex);
 

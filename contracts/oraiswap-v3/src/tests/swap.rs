@@ -1,3 +1,4 @@
+use cosmwasm_std::coins;
 use decimal::{Decimal, Factories};
 
 use crate::{
@@ -5,7 +6,7 @@ use crate::{
     liquidity::Liquidity,
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::macros::*,
+    tests::helper::{macros::*, FEE_DENOM},
     token_amount::TokenAmount,
     FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
 };
@@ -15,17 +16,23 @@ use super::helper::MockApp;
 
 #[test]
 fn test_swap_x_to_y() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
     let protocol_fee = Percentage::from_scale(6, 3);
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, protocol_fee);
+
+    let dex = create_dex!(app, protocol_fee, alice);
 
     let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
     create_pool!(
         app,
@@ -35,12 +42,12 @@ fn test_swap_x_to_y() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
@@ -59,7 +66,7 @@ fn test_swap_x_to_y() {
         liquidity_delta,
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -72,7 +79,7 @@ fn test_swap_x_to_y() {
         liquidity_delta,
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -82,8 +89,8 @@ fn test_swap_x_to_y() {
     let amount = 1000;
     let swap_amount = TokenAmount(amount);
 
-    mint!(app, token_x, "bob", amount, "alice").unwrap();
-    approve!(app, token_x, dex, amount, "bob").unwrap();
+    mint!(app, token_x, bob, amount, alice).unwrap();
+    approve!(app, token_x, dex, amount, bob).unwrap();
 
     let slippage = SqrtPrice::new(MIN_SQRT_PRICE);
     let target_sqrt_price = quote!(app, dex, pool_key, true, swap_amount, true, slippage)
@@ -101,7 +108,7 @@ fn test_swap_x_to_y() {
         swap_amount,
         true,
         target_sqrt_price,
-        "bob"
+        bob
     )
     .unwrap();
 
@@ -113,8 +120,8 @@ fn test_swap_x_to_y() {
     let lower_tick_bit = is_tick_initialized!(app, dex, pool_key, lower_tick_index);
     let middle_tick_bit = is_tick_initialized!(app, dex, pool_key, middle_tick_index);
     let upper_tick_bit = is_tick_initialized!(app, dex, pool_key, upper_tick_index);
-    let bob_x = balance_of!(app, token_x, "bob");
-    let bob_y = balance_of!(app, token_y, "bob");
+    let bob_x = balance_of!(app, token_x, bob);
+    let bob_y = balance_of!(app, token_y, bob);
     let dex_x = balance_of!(app, token_x, dex);
     let dex_y = balance_of!(app, token_y, dex);
     let delta_dex_y = before_dex_y - dex_y;
@@ -154,14 +161,20 @@ fn test_swap_x_to_y() {
 
 #[test]
 fn test_swap_y_to_x() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
     let protocol_fee = Percentage::from_scale(6, 3);
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, protocol_fee);
+
+    let dex = create_dex!(app, protocol_fee, alice);
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
     let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -174,12 +187,12 @@ fn test_swap_y_to_x() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
@@ -198,7 +211,7 @@ fn test_swap_y_to_x() {
         liquidity_delta,
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -211,7 +224,7 @@ fn test_swap_y_to_x() {
         liquidity_delta,
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -221,8 +234,8 @@ fn test_swap_y_to_x() {
     let amount = 1000;
     let swap_amount = TokenAmount(amount);
 
-    mint!(app, token_y, "bob", amount, "alice").unwrap();
-    approve!(app, token_y, dex, amount, "bob").unwrap();
+    mint!(app, token_y, bob, amount, alice).unwrap();
+    approve!(app, token_y, dex, amount, bob).unwrap();
 
     let target_sqrt_price = SqrtPrice::new(MAX_SQRT_PRICE);
 
@@ -249,7 +262,7 @@ fn test_swap_y_to_x() {
         swap_amount,
         true,
         target_sqrt_price,
-        "bob"
+        bob
     )
     .unwrap();
 
@@ -261,8 +274,8 @@ fn test_swap_y_to_x() {
     let lower_tick_bit = is_tick_initialized!(app, dex, pool_key, lower_tick_index);
     let middle_tick_bit = is_tick_initialized!(app, dex, pool_key, middle_tick_index);
     let upper_tick_bit = is_tick_initialized!(app, dex, pool_key, upper_tick_index);
-    let bob_x = balance_of!(app, token_x, "bob");
-    let bob_y = balance_of!(app, token_y, "bob");
+    let bob_x = balance_of!(app, token_x, bob);
+    let bob_y = balance_of!(app, token_y, bob);
     let dex_x = balance_of!(app, token_x, dex);
     let dex_y = balance_of!(app, token_y, dex);
     let delta_dex_x = before_dex_x - dex_x;
@@ -302,16 +315,22 @@ fn test_swap_y_to_x() {
 
 #[test]
 fn test_swap_not_enough_liquidity_token_x() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
     let protocol_fee: Percentage = Percentage::from_scale(6, 3);
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, protocol_fee);
+
+    let dex = create_dex!(app, protocol_fee, alice);
 
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
     let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -323,12 +342,12 @@ fn test_swap_not_enough_liquidity_token_x() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
@@ -347,7 +366,7 @@ fn test_swap_not_enough_liquidity_token_x() {
         liquidity_delta,
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -360,7 +379,7 @@ fn test_swap_not_enough_liquidity_token_x() {
         liquidity_delta,
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -369,8 +388,8 @@ fn test_swap_not_enough_liquidity_token_x() {
 
     let amount = 1000;
     let swap_amount = TokenAmount(amount);
-    mint!(app, token_x, "bob", amount, "alice").unwrap();
-    approve!(app, token_x, dex, amount, "bob").unwrap();
+    mint!(app, token_x, bob, amount, alice).unwrap();
+    approve!(app, token_x, dex, amount, bob).unwrap();
 
     let target_sqrt_price = SqrtPrice::new(MIN_SQRT_PRICE);
 
@@ -382,27 +401,33 @@ fn test_swap_not_enough_liquidity_token_x() {
         swap_amount,
         true,
         target_sqrt_price,
-        "bob"
+        bob
     )
     .unwrap_err();
 
-    assert_eq!(
-        error.root_cause().to_string(),
-        ContractError::TickLimitReached {}.to_string()
-    );
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::TickLimitReached {}.to_string()));
 }
 
 #[test]
 fn test_swap_not_enough_liquidity_token_y() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
     let protocol_fee = Percentage::from_scale(6, 3);
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, protocol_fee);
+
+    let dex = create_dex!(app, protocol_fee, alice);
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
     let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -414,12 +439,12 @@ fn test_swap_not_enough_liquidity_token_y() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
@@ -438,7 +463,7 @@ fn test_swap_not_enough_liquidity_token_y() {
         liquidity_delta,
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -451,7 +476,7 @@ fn test_swap_not_enough_liquidity_token_y() {
         liquidity_delta,
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -461,24 +486,14 @@ fn test_swap_not_enough_liquidity_token_y() {
     let amount = 1000;
     let swap_amount = TokenAmount(amount);
 
-    mint!(app, token_y, "bob", amount, "alice").unwrap();
-    approve!(app, token_y, dex, amount, "bob").unwrap();
+    mint!(app, token_y, bob, amount, alice).unwrap();
+    approve!(app, token_y, dex, amount, bob).unwrap();
 
     let slippage = SqrtPrice::new(MAX_SQRT_PRICE);
 
-    let error = swap!(
-        app,
-        dex,
-        pool_key,
-        false,
-        swap_amount,
-        true,
-        slippage,
-        "bob"
-    )
-    .unwrap_err();
-    assert_eq!(
-        error.root_cause().to_string(),
-        ContractError::TickLimitReached {}.to_string()
-    );
+    let error = swap!(app, dex, pool_key, false, swap_amount, true, slippage, bob).unwrap_err();
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::TickLimitReached {}.to_string()));
 }

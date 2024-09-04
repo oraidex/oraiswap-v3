@@ -1,6 +1,9 @@
-use cosmwasm_std::{Addr, Api, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Storage, Timestamp};
+use cosmwasm_std::{
+    Addr, Api, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Storage, Timestamp, Uint64,
+};
 
 use cw20::Expiration;
+use cw_storage_plus::Bound;
 use decimal::{CheckedOps, Decimal};
 
 use crate::{
@@ -9,8 +12,7 @@ use crate::{
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
     state::{self},
     token_amount::TokenAmount,
-    PoolKey, Position, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MAX_TICKMAP_QUERY_SIZE,
-    MIN_SQRT_PRICE,
+    PoolKey, Position, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
 };
 use oraiswap_v3_common::{
     asset::{Asset, AssetInfo},
@@ -313,20 +315,30 @@ pub fn route(
 
 pub fn tickmap_slice(
     store: &dyn Storage,
-    range: impl Iterator<Item = u16>,
+    min_chunk: u16,
+    max_chunk: u16,
     pool_key: &PoolKey,
-) -> Vec<(u16, u64)> {
-    let mut tickmap_slice: Vec<(u16, u64)> = vec![];
-
-    for chunk_index in range {
-        if let Ok(chunk) = state::get_bitmap_item(store, chunk_index, pool_key) {
-            tickmap_slice.push((chunk_index, chunk));
-
-            if tickmap_slice.len() == MAX_TICKMAP_QUERY_SIZE {
-                return tickmap_slice;
+    limit: usize,
+) -> Vec<(u16, Uint64)> {
+    let pool_key = pool_key.key();
+    let mut min_key = min_chunk.to_be_bytes().to_vec();
+    let mut max_key = max_chunk.to_be_bytes().to_vec();
+    min_key.extend_from_slice(&pool_key);
+    max_key.extend_from_slice(&pool_key);
+    let min = Some(Bound::InclusiveRaw(min_key));
+    let max = Some(Bound::InclusiveRaw(max_key));
+    let tickmap_slice = state::BITMAP
+        .range_raw(store, min, max, Order::Ascending)
+        .filter_map(|item| {
+            if let Ok((k, v)) = item {
+                if pool_key.eq(&k[2..]) {
+                    return Some((u16::from_be_bytes([k[0], k[1]]), v.into()));
+                }
             }
-        }
-    }
+            None
+        })
+        .take(limit)
+        .collect();
 
     tickmap_slice
 }

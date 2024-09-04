@@ -1,3 +1,4 @@
+use cosmwasm_std::coins;
 use decimal::*;
 
 use crate::{
@@ -5,21 +6,26 @@ use crate::{
     liquidity::Liquidity,
     percentage::Percentage,
     sqrt_price::SqrtPrice,
-    tests::helper::{macros::*, MockApp},
+    tests::helper::{macros::*, MockApp, FEE_DENOM},
     token_amount::TokenAmount,
     FeeTier, PoolKey, MIN_SQRT_PRICE,
 };
 
 #[test]
 fn max_tick_cross() {
-    let mut app = MockApp::new(&[("alice", &[])]);
-    let (dex, token_x, token_y) = init_dex_and_tokens!(app);
-    init_basic_pool!(app, dex, token_x, token_y);
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let (dex, token_x, token_y) = init_dex_and_tokens!(app, alice);
+    init_basic_pool!(app, dex, token_x, token_y, alice);
 
     let mint_amount = u128::MAX;
 
-    approve!(app, token_x, dex, mint_amount, "alice").unwrap();
-    approve!(app, token_y, dex, mint_amount, "alice").unwrap();
+    approve!(app, token_x, dex, mint_amount, alice).unwrap();
+    approve!(app, token_y, dex, mint_amount, alice).unwrap();
 
     let liquidity = Liquidity::from_integer(10000000);
 
@@ -42,7 +48,7 @@ fn max_tick_cross() {
             liquidity,
             slippage_limit_lower,
             slippage_limit_upper,
-            "alice"
+            alice
         )
         .unwrap();
     }
@@ -52,10 +58,10 @@ fn max_tick_cross() {
 
     let amount = 760_000;
 
-    mint!(app, token_x, "bob", amount, "alice").unwrap();
-    let amount_x = balance_of!(app, token_x, "bob");
+    mint!(app, token_x, bob, amount, alice).unwrap();
+    let amount_x = balance_of!(app, token_x, bob);
     assert_eq!(amount_x, amount);
-    approve!(app, token_x, dex, amount, "bob").unwrap();
+    approve!(app, token_x, dex, amount, bob).unwrap();
 
     let pool_before = get_pool!(app, dex, token_x, token_y, pool_key.fee_tier).unwrap();
 
@@ -70,7 +76,7 @@ fn max_tick_cross() {
     assert_eq!(crosses_after_quote, 0);
     assert_eq!(quote_result.ticks.len() - 1, 145);
 
-    swap!(app, dex, pool_key, true, swap_amount, true, slippage, "bob").unwrap();
+    swap!(app, dex, pool_key, true, swap_amount, true, slippage, bob).unwrap();
 
     let pool_after = get_pool!(app, dex, token_x, token_y, pool_key.fee_tier).unwrap();
 

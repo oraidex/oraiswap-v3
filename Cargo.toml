@@ -33,6 +33,7 @@ cw-storage-plus = { version = "1.0.1" }
 derive_more = "0.99.17"
 decimal-core = { path = "./packages/decimal-core" }
 decimal = { path = "./packages/decimal" }
+cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-util.git", rev = "143348c" }
 oraiswap-v3-common = { path = "./packages/oraiswap-v3-common" }
 incentives-fund-manager = { path = "./contracts/incentives-fund-manager" }
 

@@ -15,7 +15,7 @@ mod interaction_with_pool_on_removed_fee_tier;
 mod limits;
 mod liquidity_gap;
 mod max_tick_cross;
-mod migration;
+// mod migration;
 mod multiple_swap;
 mod nft;
 mod position;

@@ -1,4 +1,4 @@
-use cosmwasm_std::{attr, Addr, Attribute};
+use cosmwasm_std::{attr, coins, Addr, Attribute};
 use decimal::*;
 
 use crate::{
@@ -14,15 +14,19 @@ use crate::{
 };
 use oraiswap_v3_common::error::ContractError;
 
+use super::helper::FEE_DENOM;
+
 #[test]
 fn test_mint_nft() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
-    let (token_x, token_y) = create_tokens!(app, 500, 500);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+
+    let dex = create_dex!(app, Percentage::new(0), alice);
+    let (token_x, token_y) = create_tokens!(app, 500, 500, alice);
 
     let fee_tier = FeeTier::new(Percentage::new(0), 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 10;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -34,17 +38,17 @@ fn test_mint_nft() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, 500, "alice").unwrap();
-    approve!(app, token_y, dex, 500, "alice").unwrap();
+    approve!(app, token_x, dex, 500, alice).unwrap();
+    approve!(app, token_y, dex, 500, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     app.execute(
-        Addr::unchecked("alice"),
+        Addr::unchecked(alice),
         dex.clone(),
         &msg::ExecuteMsg::Mint {
             extension: msg::NftExtensionMsg {
@@ -63,13 +67,15 @@ fn test_mint_nft() {
 
 #[test]
 fn test_query_nft() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
-    let (token_x, token_y) = create_tokens!(app, 500, 500);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+
+    let dex = create_dex!(app, Percentage::new(0), alice);
+    let (token_x, token_y) = create_tokens!(app, 500, 500, alice);
 
     let fee_tier = FeeTier::new(Percentage::new(0), 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 10;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -81,17 +87,17 @@ fn test_query_nft() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, 500, "alice").unwrap();
-    approve!(app, token_y, dex, 500, "alice").unwrap();
+    approve!(app, token_x, dex, 500, alice).unwrap();
+    approve!(app, token_y, dex, 500, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     app.execute(
-        Addr::unchecked("alice"),
+        Addr::unchecked(alice),
         dex.clone(),
         &msg::ExecuteMsg::Mint {
             extension: msg::NftExtensionMsg {
@@ -119,7 +125,7 @@ fn test_query_nft() {
         .query(
             dex.clone(),
             &msg::QueryMsg::Tokens {
-                owner: Addr::unchecked("alice"),
+                owner: Addr::unchecked(alice),
                 start_after: None,
                 limit: None,
             },
@@ -130,6 +136,12 @@ fn test_query_nft() {
 
 #[test]
 fn test_burn_nft() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
 
     let init_tick = 0;
@@ -137,14 +149,13 @@ fn test_burn_nft() {
 
     let initial_mint = 10u128.pow(10);
 
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
 
-    let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint);
+    let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint, alice);
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     create_pool!(
         app,
@@ -154,7 +165,7 @@ fn test_burn_nft() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -162,13 +173,13 @@ fn test_burn_nft() {
     let upper_tick_index = 10;
     let liquidity_delta = Liquidity::from_integer(1_000_000);
 
-    approve!(app, token_x, dex, initial_mint, "alice").unwrap();
-    approve!(app, token_y, dex, initial_mint, "alice").unwrap();
+    approve!(app, token_x, dex, initial_mint, alice).unwrap();
+    approve!(app, token_y, dex, initial_mint, alice).unwrap();
 
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
 
     app.execute(
-        Addr::unchecked("alice"),
+        Addr::unchecked(alice),
         dex.clone(),
         &msg::ExecuteMsg::Mint {
             extension: msg::NftExtensionMsg {
@@ -193,11 +204,11 @@ fn test_burn_nft() {
     let incorrect_lower_tick_index = lower_tick_index - 50;
     let incorrect_upper_tick_index = upper_tick_index + 50;
 
-    approve!(app, token_x, dex, liquidity_delta.0, "alice").unwrap();
-    approve!(app, token_y, dex, liquidity_delta.0, "alice").unwrap();
+    approve!(app, token_x, dex, liquidity_delta.0, alice).unwrap();
+    approve!(app, token_y, dex, liquidity_delta.0, alice).unwrap();
 
     app.execute(
-        Addr::unchecked("alice"),
+        Addr::unchecked(alice),
         dex.clone(),
         &msg::ExecuteMsg::Mint {
             extension: msg::NftExtensionMsg {
@@ -225,17 +236,17 @@ fn test_burn_nft() {
     assert!(position_state.upper_tick_index == incorrect_upper_tick_index);
 
     let amount = 1000;
-    mint!(app, token_x, "bob", amount, "alice").unwrap();
-    let amount_x = balance_of!(app, token_x, "bob");
+    mint!(app, token_x, bob, amount, alice).unwrap();
+    let amount_x = balance_of!(app, token_x, bob);
     assert_eq!(amount_x, amount);
 
-    approve!(app, token_x, dex, amount, "bob").unwrap();
+    approve!(app, token_x, dex, amount, bob).unwrap();
 
     let pool_state_before = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
 
     let swap_amount = TokenAmount::new(amount);
     let slippage = SqrtPrice::new(MIN_SQRT_PRICE);
-    swap!(app, dex, pool_key, true, swap_amount, true, slippage, "bob").unwrap();
+    swap!(app, dex, pool_key, true, swap_amount, true, slippage, bob).unwrap();
 
     let pool_state_after = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     assert_eq!(
@@ -253,8 +264,8 @@ fn test_burn_nft() {
     assert_eq!(pool_state_after.current_tick_index, -10);
     assert_ne!(pool_state_after.sqrt_price, pool_state_before.sqrt_price);
 
-    let amount_x = balance_of!(app, token_x, "bob");
-    let amount_y = balance_of!(app, token_y, "bob");
+    let amount_x = balance_of!(app, token_x, bob);
+    let amount_y = balance_of!(app, token_y, bob);
     assert_eq!(amount_x, 0);
     assert_eq!(amount_y, 993);
 
@@ -263,7 +274,7 @@ fn test_burn_nft() {
     let dex_y_before_remove = balance_of!(app, token_y, dex);
 
     // Remove position
-    let sender = Addr::unchecked("alice");
+    let sender = Addr::unchecked(alice);
     let token_id = 1;
     app.execute(
         sender,
@@ -306,18 +317,24 @@ fn test_burn_nft() {
 
 #[test]
 fn test_transfer_nft() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_balance = 10u128.pow(10);
 
-    let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);
+    let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance, alice);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(2, 4), 3).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     create_pool!(
         app,
@@ -327,12 +344,12 @@ fn test_transfer_nft() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_balance, "alice").unwrap();
-    approve!(app, token_y, dex, initial_balance, "alice").unwrap();
+    approve!(app, token_x, dex, initial_balance, alice).unwrap();
+    approve!(app, token_y, dex, initial_balance, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let tick_indexes = [-9780, -42, 0, 9, 276, 32343, -50001];
@@ -340,7 +357,7 @@ fn test_transfer_nft() {
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     {
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::Mint {
                 extension: msg::NftExtensionMsg {
@@ -360,7 +377,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("alice"),
+                    owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
                 },
@@ -373,7 +390,7 @@ fn test_transfer_nft() {
     // Open  additional positions
     {
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::Mint {
                 extension: msg::NftExtensionMsg {
@@ -389,7 +406,7 @@ fn test_transfer_nft() {
         )
         .unwrap();
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::Mint {
                 extension: msg::NftExtensionMsg {
@@ -405,7 +422,7 @@ fn test_transfer_nft() {
         )
         .unwrap();
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::Mint {
                 extension: msg::NftExtensionMsg {
@@ -430,7 +447,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("alice"),
+                    owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
                 },
@@ -442,7 +459,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("bob"),
+                    owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
                 },
@@ -452,7 +469,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("alice"),
+                    owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
             )
@@ -478,16 +495,16 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("alice"),
+                    owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
             )
             .unwrap();
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::TransferNft {
-                recipient: Addr::unchecked("bob"),
+                recipient: Addr::unchecked(bob),
                 token_id,
             },
             &[],
@@ -498,7 +515,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("bob"),
+                    owner_id: Addr::unchecked(bob),
                     index: transferred_index,
                 },
             )
@@ -514,7 +531,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("alice"),
+                    owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
                 },
@@ -526,7 +543,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("bob"),
+                    owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
                 },
@@ -537,7 +554,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("alice"),
+                    owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
             )
@@ -567,7 +584,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("alice"),
+                    owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
                 },
@@ -579,7 +596,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("bob"),
+                    owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
                 },
@@ -601,16 +618,16 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("alice"),
+                    owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
             )
             .unwrap();
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::TransferNft {
-                recipient: Addr::unchecked("bob"),
+                recipient: Addr::unchecked(bob),
                 token_id,
             },
             &[],
@@ -623,7 +640,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("alice"),
+                    owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
                 },
@@ -635,7 +652,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("bob"),
+                    owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
                 },
@@ -645,7 +662,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("alice"),
+                    owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
             )
@@ -670,7 +687,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("alice"),
+                    owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
                 },
@@ -681,7 +698,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("alice"),
+                    owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
             )
@@ -696,16 +713,16 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("alice"),
+                    owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
             )
             .unwrap();
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::TransferNft {
-                recipient: Addr::unchecked("bob"),
+                recipient: Addr::unchecked(bob),
                 token_id,
             },
             &[],
@@ -717,7 +734,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("bob"),
+                    owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
                 },
@@ -728,7 +745,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("bob"),
+                    owner_id: Addr::unchecked(bob),
                     index: recipient_position_index,
                 },
             )
@@ -751,7 +768,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("bob"),
+                    owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
                 },
@@ -761,7 +778,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("alice"),
+                    owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
             )
@@ -776,16 +793,16 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("alice"),
+                    owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
             )
             .unwrap();
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::TransferNft {
-                recipient: Addr::unchecked("bob"),
+                recipient: Addr::unchecked(bob),
                 token_id,
             },
             &[],
@@ -798,7 +815,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("bob"),
+                    owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
                 },
@@ -809,7 +826,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("bob"),
+                    owner_id: Addr::unchecked(bob),
                     index: recipient_position_index,
                 },
             )
@@ -825,7 +842,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("alice"),
+                    owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
                 },
@@ -848,7 +865,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("alice"),
+                    owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
                 },
@@ -860,7 +877,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("bob"),
+                    owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
                 },
@@ -870,7 +887,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("bob"),
+                    owner_id: Addr::unchecked(bob),
                     index: transferred_index,
                 },
             )
@@ -896,16 +913,16 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("bob"),
+                    owner_id: Addr::unchecked(bob),
                     index: transferred_index,
                 },
             )
             .unwrap();
         app.execute(
-            Addr::unchecked("bob"),
+            Addr::unchecked(bob),
             dex.clone(),
             &msg::ExecuteMsg::TransferNft {
-                recipient: Addr::unchecked("alice"),
+                recipient: Addr::unchecked(alice),
                 token_id,
             },
             &[],
@@ -918,7 +935,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("alice"),
+                    owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
                 },
@@ -930,7 +947,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("bob"),
+                    owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
                 },
@@ -940,7 +957,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("bob"),
+                    owner_id: Addr::unchecked(bob),
                     index: transferred_index,
                 },
             )
@@ -955,7 +972,7 @@ fn test_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("alice"),
+                    owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
             )
@@ -979,18 +996,23 @@ fn test_transfer_nft() {
 
 #[test]
 fn test_only_owner_can_transfer_nft() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
+    let dex = create_dex!(app, Percentage::new(0), alice);
     let initial_balance = 10u128.pow(10);
 
-    let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);
+    let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance, alice);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(2, 4), 3).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     create_pool!(
         app,
@@ -1000,12 +1022,12 @@ fn test_only_owner_can_transfer_nft() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_balance, "alice").unwrap();
-    approve!(app, token_y, dex, initial_balance, "alice").unwrap();
+    approve!(app, token_x, dex, initial_balance, alice).unwrap();
+    approve!(app, token_y, dex, initial_balance, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let tick_indexes = [-9780, -42, 0, 9, 276, 32343, -50001];
@@ -1013,7 +1035,7 @@ fn test_only_owner_can_transfer_nft() {
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     {
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::Mint {
                 extension: msg::NftExtensionMsg {
@@ -1033,7 +1055,7 @@ fn test_only_owner_can_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Tokens {
-                    owner: Addr::unchecked("alice"),
+                    owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
                 },
@@ -1046,7 +1068,7 @@ fn test_only_owner_can_transfer_nft() {
     // Open  additional positions
     {
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::Mint {
                 extension: msg::NftExtensionMsg {
@@ -1062,7 +1084,7 @@ fn test_only_owner_can_transfer_nft() {
         )
         .unwrap();
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::Mint {
                 extension: msg::NftExtensionMsg {
@@ -1078,7 +1100,7 @@ fn test_only_owner_can_transfer_nft() {
         )
         .unwrap();
         app.execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::Mint {
                 extension: msg::NftExtensionMsg {
@@ -1101,7 +1123,7 @@ fn test_only_owner_can_transfer_nft() {
             .query(
                 dex.clone(),
                 &msg::QueryMsg::Position {
-                    owner_id: Addr::unchecked("alice"),
+                    owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
             )
@@ -1109,31 +1131,39 @@ fn test_only_owner_can_transfer_nft() {
 
         let error = app
             .execute(
-                Addr::unchecked("bob"),
+                Addr::unchecked(bob),
                 dex.clone(),
                 &msg::ExecuteMsg::TransferNft {
-                    recipient: Addr::unchecked("alice"),
+                    recipient: Addr::unchecked(alice),
                     token_id,
                 },
                 &[],
             )
             .unwrap_err();
-        assert_eq!(
-            error.root_cause().to_string(),
-            ContractError::Unauthorized {}.to_string()
-        );
+        assert!(error
+            .root_cause()
+            .to_string()
+            .contains(&ContractError::Unauthorized {}.to_string()));
     }
 }
 
 #[test]
 fn test_approving_revoking() {
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, Percentage::new(0));
-    let (token_x, token_y) = create_tokens!(app, 500, 500);
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("random", &coins(100_000_000_000, FEE_DENOM)),
+        ("person", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let random = &accounts[1];
+    let person = &accounts[2];
+
+    let dex = create_dex!(app, Percentage::new(0), alice);
+    let (token_x, token_y) = create_tokens!(app, 500, 500, alice);
 
     let fee_tier = FeeTier::new(Percentage::new(0), 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 10;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -1145,17 +1175,17 @@ fn test_approving_revoking() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, 500, "alice").unwrap();
-    approve!(app, token_y, dex, 500, "alice").unwrap();
+    approve!(app, token_x, dex, 500, alice).unwrap();
+    approve!(app, token_y, dex, 500, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     app.execute(
-        Addr::unchecked("alice"),
+        Addr::unchecked(alice),
         dex.clone(),
         &msg::ExecuteMsg::Mint {
             extension: msg::NftExtensionMsg {
@@ -1175,7 +1205,7 @@ fn test_approving_revoking() {
         .query(
             dex.clone(),
             &msg::QueryMsg::Position {
-                owner_id: Addr::unchecked("alice"),
+                owner_id: Addr::unchecked(alice),
                 index: 0,
             },
         )
@@ -1184,10 +1214,10 @@ fn test_approving_revoking() {
     // Give random transferring power
     let res = app
         .execute(
-            Addr::unchecked("alice"),
+            Addr::unchecked(alice),
             dex.clone(),
             &msg::ExecuteMsg::Approve {
-                spender: Addr::unchecked("random"),
+                spender: Addr::unchecked(random),
                 token_id: token_id.clone(),
                 expires: None,
             },
@@ -1205,17 +1235,17 @@ fn test_approving_revoking() {
             },
             attr("action", "approve"),
             attr("token_id", token_id.to_string()),
-            attr("sender", "alice"),
-            attr("spender", "random"),
+            attr("sender", alice),
+            attr("spender", random),
         ]
     );
 
     // random can now transfer
     app.execute(
-        Addr::unchecked("random"),
+        Addr::unchecked(random),
         dex.clone(),
         &msg::ExecuteMsg::TransferNft {
-            recipient: Addr::unchecked("person"),
+            recipient: Addr::unchecked(person),
             token_id: token_id.clone(),
         },
         &[],
@@ -1235,17 +1265,17 @@ fn test_approving_revoking() {
     assert_eq!(
         res,
         OwnerOfResponse {
-            owner: Addr::unchecked("person"),
+            owner: Addr::unchecked(person),
             approvals: vec![],
         }
     );
 
     // Approve, revoke, and check for empty, to test revoke
     app.execute(
-        Addr::unchecked("person"),
+        Addr::unchecked(person),
         dex.clone(),
         &msg::ExecuteMsg::Approve {
-            spender: Addr::unchecked("random"),
+            spender: Addr::unchecked(random),
             token_id: token_id.clone(),
             expires: None,
         },
@@ -1254,10 +1284,10 @@ fn test_approving_revoking() {
     .unwrap();
 
     app.execute(
-        Addr::unchecked("person"),
+        Addr::unchecked(person),
         dex.clone(),
         &msg::ExecuteMsg::Revoke {
-            spender: Addr::unchecked("random"),
+            spender: Addr::unchecked(random),
             token_id: token_id.clone(),
         },
         &[],
@@ -1277,7 +1307,7 @@ fn test_approving_revoking() {
     assert_eq!(
         res,
         OwnerOfResponse {
-            owner: Addr::unchecked("person"),
+            owner: Addr::unchecked(person),
             approvals: vec![],
         }
     );

@@ -1,3 +1,4 @@
+use cosmwasm_std::coins;
 use decimal::{Decimal, Factories};
 
 use crate::{
@@ -5,7 +6,7 @@ use crate::{
     liquidity::Liquidity,
     percentage::Percentage,
     sqrt_price::SqrtPrice,
-    tests::helper::{macros::*, MockApp},
+    tests::helper::{macros::*, MockApp, FEE_DENOM},
     token_amount::TokenAmount,
     FeeTier, PoolKey, MIN_SQRT_PRICE,
 };
@@ -13,15 +14,27 @@ use crate::{
 #[test]
 fn test_cross() {
     let initial_mint = 10u128.pow(10);
-    let mut app = MockApp::new(&[]);
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
 
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
-    let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint);
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
+    let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint, alice);
 
-    init_basic_pool!(app, dex, token_x, token_y);
-    init_basic_position!(app, dex, token_x, token_y);
-    init_cross_position!(app, dex, token_x, token_y);
-    init_cross_swap!(app, dex, token_x.to_string(), token_y.to_string());
+    init_basic_pool!(app, dex, token_x, token_y, alice);
+    init_basic_position!(app, dex, token_x, token_y, alice);
+    init_cross_position!(app, dex, token_x, token_y, alice);
+    init_cross_swap!(
+        app,
+        dex,
+        token_x.to_string(),
+        token_y.to_string(),
+        alice,
+        bob
+    );
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();

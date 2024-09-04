@@ -1,3 +1,4 @@
+use cosmwasm_std::coins;
 use decimal::*;
 
 use crate::{
@@ -5,33 +6,39 @@ use crate::{
     liquidity::Liquidity,
     percentage::Percentage,
     sqrt_price::calculate_sqrt_price,
-    tests::helper::{macros::*, MockApp},
+    tests::helper::{macros::*, MockApp, FEE_DENOM},
     token_amount::TokenAmount,
     FeeTier, PoolKey,
 };
 
 #[test]
 fn swap_route() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
     let protocol_fee = Percentage::from_scale(6, 3);
     let initial_amount = 10u128.pow(10);
-    let mut app = MockApp::new(&[]);
-    let dex = create_dex!(app, protocol_fee);
+
+    let dex = create_dex!(app, protocol_fee, alice);
 
     let (token_x, token_y, token_z) =
-        create_3_tokens!(app, initial_amount, initial_amount, initial_amount);
+        create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_z, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
+    approve!(app, token_z, dex, initial_amount, alice).unwrap();
 
     let amount = 1000;
-    mint!(app, token_x, "bob", amount, "alice").unwrap();
-    approve!(app, token_x, dex, amount, "bob").unwrap();
-    approve!(app, token_y, dex, initial_amount, "bob").unwrap();
+    mint!(app, token_x, bob, amount, alice).unwrap();
+    approve!(app, token_x, dex, amount, bob).unwrap();
+    approve!(app, token_y, dex, initial_amount, bob).unwrap();
 
     let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -43,7 +50,7 @@ fn swap_route() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -55,7 +62,7 @@ fn swap_route() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -76,7 +83,7 @@ fn swap_route() {
         liquidity_delta,
         slippage_limit_lower,
         slippage_limit_upper,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -92,7 +99,7 @@ fn swap_route() {
         liquidity_delta,
         slippage_limit_lower,
         slippage_limit_upper,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -118,13 +125,13 @@ fn swap_route() {
         expected_token_amount,
         slippage,
         swaps.clone(),
-        "bob"
+        bob
     )
     .unwrap();
 
-    let bob_amount_x = balance_of!(app, token_x, "bob");
-    let bob_amount_y = balance_of!(app, token_y, "bob");
-    let bob_amount_z = balance_of!(app, token_z, "bob");
+    let bob_amount_x = balance_of!(app, token_x, bob);
+    let bob_amount_y = balance_of!(app, token_y, bob);
+    let bob_amount_z = balance_of!(app, token_z, bob);
 
     assert_eq!(bob_amount_x, 0);
     assert_eq!(bob_amount_y, 0);
@@ -138,16 +145,16 @@ fn swap_route() {
     assert_eq!(pool_2_after.fee_protocol_token_x, TokenAmount(1));
     assert_eq!(pool_2_after.fee_protocol_token_y, TokenAmount(0));
 
-    let alice_amount_x_before = balance_of!(app, token_x, "alice");
-    let alice_amount_y_before = balance_of!(app, token_y, "alice");
-    let alice_amount_z_before = balance_of!(app, token_z, "alice");
+    let alice_amount_x_before = balance_of!(app, token_x, alice);
+    let alice_amount_y_before = balance_of!(app, token_y, alice);
+    let alice_amount_z_before = balance_of!(app, token_z, alice);
 
-    claim_fee!(app, dex, 0, "alice").unwrap();
-    claim_fee!(app, dex, 1, "alice").unwrap();
+    claim_fee!(app, dex, 0, alice).unwrap();
+    claim_fee!(app, dex, 1, alice).unwrap();
 
-    let alice_amount_x_after = balance_of!(app, token_x, "alice");
-    let alice_amount_y_after = balance_of!(app, token_y, "alice");
-    let alice_amount_z_after = balance_of!(app, token_z, "alice");
+    let alice_amount_x_after = balance_of!(app, token_x, alice);
+    let alice_amount_y_after = balance_of!(app, token_y, alice);
+    let alice_amount_z_after = balance_of!(app, token_z, alice);
 
     assert_eq!(alice_amount_x_after - alice_amount_x_before, 4);
     assert_eq!(alice_amount_y_after - alice_amount_y_before, 4);

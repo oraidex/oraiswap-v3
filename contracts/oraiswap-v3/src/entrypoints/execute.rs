@@ -723,8 +723,21 @@ pub fn remove_position(
     let mut msgs = vec![];
     asset_0.transfer(&mut msgs, &info)?;
     asset_1.transfer(&mut msgs, &info)?;
-    for asset in incentives {
-        asset.transfer(&mut msgs, &info)?;
+    // claim incentives
+    for asset in incentives.clone() {
+        let config = CONFIG.load(deps.storage)?;
+        msgs.push(
+            wasm_execute(
+                config.incentives_fund_manager.clone(),
+                &incentives_fund_manager::ExecuteMsg::SendFund {
+                    asset,
+                    receiver: info.sender.clone(),
+                },
+                vec![],
+            )?
+            .into(),
+        );
+        // asset.transfer(&mut msgs, &info)?;
     }
 
     event_attributes.append(&mut vec![

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, Deps, Env, Order, StdResult};
+use cosmwasm_std::{Addr, Binary, Deps, Env, Order, StdResult, Uint64};
 use cw_storage_plus::Bound;
 
 use crate::{
@@ -12,8 +12,8 @@ use crate::{
     state::{self, CONFIG, MAX_LIMIT, POSITIONS},
     tick_to_position,
     token_amount::TokenAmount,
-    FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
-    LIQUIDITY_TICK_LIMIT, POSITION_TICK_LIMIT,
+     FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
+    LIQUIDITY_TICK_LIMIT, MAX_TICKMAP_QUERY_SIZE, POSITION_TICK_LIMIT
 };
 use oraiswap_v3_common::{asset::Asset, error::ContractError};
 
@@ -241,7 +241,7 @@ pub fn get_tickmap(
     lower_tick_index: i32,
     upper_tick_index: i32,
     x_to_y: bool,
-) -> Result<Vec<(u16, u64)>, ContractError> {
+) -> Result<Vec<(u16, Uint64)>, ContractError> {
     let tick_spacing = pool_key.fee_tier.tick_spacing;
     let (start_chunk, _) = tick_to_position(lower_tick_index, tick_spacing);
     let (end_chunk, _) = tick_to_position(upper_tick_index, tick_spacing);
@@ -249,14 +249,16 @@ pub fn get_tickmap(
     let min_chunk_index = get_min_chunk(tick_spacing).max(start_chunk);
     let max_chunk_index = get_max_chunk(tick_spacing).min(end_chunk);
 
-    let tickmaps = if x_to_y {
-        tickmap_slice(
-            deps.storage,
-            (min_chunk_index..=max_chunk_index).rev(),
-            &pool_key,
-        )
-    } else {
-        tickmap_slice(deps.storage, min_chunk_index..=max_chunk_index, &pool_key)
+    let mut tickmaps = tickmap_slice(
+        deps.storage,
+        min_chunk_index,
+        max_chunk_index,
+        &pool_key,
+        MAX_TICKMAP_QUERY_SIZE,
+    );
+
+    if x_to_y {
+        tickmaps.reverse();
     };
 
     Ok(tickmaps)

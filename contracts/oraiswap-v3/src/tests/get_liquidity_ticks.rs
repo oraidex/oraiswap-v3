@@ -1,4 +1,4 @@
-use cosmwasm_std::Addr;
+use cosmwasm_std::{coins, Addr};
 use decimal::{Decimal, Factories};
 
 use crate::{
@@ -7,22 +7,23 @@ use crate::{
     percentage::Percentage,
     position_to_tick,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp},
+    tests::helper::{macros::*, MockApp, FEE_DENOM},
     FeeTier, LiquidityTick, PoolKey, CHUNK_SIZE, LIQUIDITY_TICK_LIMIT,
 };
 
 #[test]
 fn test_get_liquidity_ticks() {
-    let mut app = MockApp::new(&[]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
 
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
 
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(1, 2), 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -34,12 +35,12 @@ fn test_get_liquidity_ticks() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, 500, "alice").unwrap();
-    approve!(app, token_y, dex, 500, "alice").unwrap();
+    approve!(app, token_x, dex, 500, alice).unwrap();
+    approve!(app, token_y, dex, 500, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     create_position!(
@@ -51,7 +52,7 @@ fn test_get_liquidity_ticks() {
         Liquidity::new(10),
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -87,18 +88,19 @@ fn test_get_liquidity_ticks() {
 
 #[test]
 fn test_get_liquidity_ticks_different_tick_spacings() {
-    let mut app = MockApp::new(&[]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
 
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
 
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
     let fee_tier_1 = FeeTier::new(Percentage::from_scale(1, 2), 2).unwrap();
     let fee_tier_2 = FeeTier::new(Percentage::from_scale(1, 2), 10).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier_1, "alice").unwrap();
-    add_fee_tier!(app, dex, fee_tier_2, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier_1, alice).unwrap();
+    add_fee_tier!(app, dex, fee_tier_2, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -110,7 +112,7 @@ fn test_get_liquidity_ticks_different_tick_spacings() {
         fee_tier_1,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -124,12 +126,12 @@ fn test_get_liquidity_ticks_different_tick_spacings() {
         fee_tier_2,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let pool_key_1 = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier_1).unwrap();
     create_position!(
@@ -141,7 +143,7 @@ fn test_get_liquidity_ticks_different_tick_spacings() {
         Liquidity::new(10),
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -155,7 +157,7 @@ fn test_get_liquidity_ticks_different_tick_spacings() {
         Liquidity::new(10),
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
@@ -181,16 +183,17 @@ fn test_get_liquidity_ticks_different_tick_spacings() {
 
 #[test]
 fn test_get_liquidity_ticks_limit() {
-    let mut app = MockApp::new(&[]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
 
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
 
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(1, 2), 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -202,12 +205,12 @@ fn test_get_liquidity_ticks_limit() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
@@ -225,7 +228,7 @@ fn test_get_liquidity_ticks_limit() {
             Liquidity::new(10),
             SqrtPrice::new(0),
             SqrtPrice::max_instance(),
-            "alice"
+            alice
         )
         .unwrap();
     }
@@ -246,16 +249,17 @@ fn test_get_liquidity_ticks_limit() {
 
 #[test]
 fn test_get_liquidity_ticks_limit_with_spread() {
-    let mut app = MockApp::new(&[]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
 
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
 
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(1, 2), 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -267,12 +271,12 @@ fn test_get_liquidity_ticks_limit_with_spread() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
-    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let spread = CHUNK_SIZE as usize;
@@ -291,7 +295,7 @@ fn test_get_liquidity_ticks_limit_with_spread() {
             Liquidity::new(10),
             SqrtPrice::new(0),
             SqrtPrice::max_instance(),
-            "alice"
+            alice
         )
         .unwrap();
     }
@@ -312,16 +316,17 @@ fn test_get_liquidity_ticks_limit_with_spread() {
 
 #[test]
 fn test_get_liquidity_ticks_with_offset() {
-    let mut app = MockApp::new(&[]);
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
 
-    let dex = create_dex!(app, Percentage::from_scale(1, 2));
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
 
     let initial_amount = 10u128.pow(10);
-    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(1, 2), 1).unwrap();
 
-    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -333,12 +338,12 @@ fn test_get_liquidity_ticks_with_offset() {
         fee_tier,
         init_sqrt_price,
         init_tick,
-        "alice"
+        alice
     )
     .unwrap();
 
-    approve!(app, token_x, dex, 500, "alice").unwrap();
-    approve!(app, token_y, dex, 500, "alice").unwrap();
+    approve!(app, token_x, dex, 500, alice).unwrap();
+    approve!(app, token_y, dex, 500, alice).unwrap();
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     create_position!(
@@ -350,7 +355,7 @@ fn test_get_liquidity_ticks_with_offset() {
         Liquidity::new(10),
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
-        "alice"
+        alice
     )
     .unwrap();
 
