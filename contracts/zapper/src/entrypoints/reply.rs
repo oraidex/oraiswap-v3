@@ -1,7 +1,7 @@
 use std::vec;
 
 use cosmwasm_std::{
-    to_json_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, Response, SubMsg, WasmMsg,
+    coins, to_json_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, Response, SubMsg, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 use oraiswap_v3_common::{
@@ -14,7 +14,8 @@ use oraiswap_v3_common::{
 
 use crate::{
     contract::ADD_LIQUIDITY_REPLY_ID,
-    state::{CONFIG, PENDING_POSITION, RECEIVER, SNAP_BALANCE},
+    msgs::mixed_router,
+    state::{CONFIG, PENDING_POSITION, RECEIVER, SNAP_BALANCE, SNAP_INCENTIVE, ZAP_OUT_ROUTES},
     ContractError, PairBalance,
 };
 
@@ -24,8 +25,8 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
 
     // 5. Recheck the balance of tokenX and tokenY in this contract
     let snap_balance = SNAP_BALANCE.load(deps.storage)?;
-    let token_x = snap_balance.tokenX;
-    let token_y = snap_balance.tokenY;
+    let token_x = snap_balance.token_x;
+    let token_y = snap_balance.token_y;
 
     // 6. Minus with the previous balance of tokenX and tokenY snap in state
     let x_amount_after = token_x.info.balance(&deps.querier, &env.contract.address)?;
@@ -132,11 +133,11 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
     SNAP_BALANCE.save(
         deps.storage,
         &PairBalance {
-            tokenX: Asset {
+            token_x: Asset {
                 info: token_x.info,
                 amount: x_amount_after - x_amount,
             },
-            tokenY: Asset {
+            token_y: Asset {
                 info: token_y.info,
                 amount: y_amount_after - y_amount,
             },
@@ -151,8 +152,8 @@ pub fn add_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError>
 
     // 8. Refund unused tokenX and tokenY to user
     let snap_balance = SNAP_BALANCE.load(deps.storage)?;
-    let token_x = snap_balance.tokenX;
-    let token_y = snap_balance.tokenY;
+    let token_x = snap_balance.token_x;
+    let token_y = snap_balance.token_y;
 
     let x_amount_after = token_x.info.balance(&deps.querier, &env.contract.address)?;
     let y_amount_after = token_y.info.balance(&deps.querier, &env.contract.address)?;
@@ -236,11 +237,131 @@ pub fn add_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError>
 }
 
 pub fn zap_out_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
-    // 4. Recheck the balance of tokenX and tokenY in this contract
+    let mut msgs: Vec<CosmosMsg> = vec![];
+    let receiver = RECEIVER.load(deps.storage)?;
+    let zap_out_routes = ZAP_OUT_ROUTES.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
-    // 5. Minus with the previous balance of tokenX and tokenY snap in state
+    // 4. Recheck the balance of tokenX and tokenY in this contract
+    let snap_balance = SNAP_BALANCE.load(deps.storage)?;
+    let token_x = snap_balance.token_x;
+    let token_y = snap_balance.token_y;
+
+    let x_amount_after = token_x.info.balance(&deps.querier, &env.contract.address)?;
+    let y_amount_after = token_y.info.balance(&deps.querier, &env.contract.address)?;
+    // amount to refund
+    let x_amount = x_amount_after - token_x.amount;
+    let y_amount = y_amount_after - token_y.amount;
+
+    let incentive_balance = SNAP_INCENTIVE.load(deps.storage)?;
+    for incentive in incentive_balance.incentives.iter() {
+        let after_balance = incentive
+            .info
+            .balance(&deps.querier, &env.contract.address)?;
+        let amount = after_balance - incentive.amount;
+        if amount > 0u128.into() {
+            match incentive.info.clone() {
+                AssetInfo::NativeToken { denom } => {
+                    msgs.push(CosmosMsg::Bank(BankMsg::Send {
+                        to_address: receiver.to_string(),
+                        amount: vec![Coin {
+                            denom,
+                            amount: amount.into(),
+                        }],
+                    }));
+                }
+                AssetInfo::Token { contract_addr } => {
+                    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                        contract_addr: contract_addr.to_string(),
+                        msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
+                            recipient: receiver.to_string(),
+                            amount: amount.into(),
+                        })
+                        .unwrap(),
+                        funds: vec![],
+                    }));
+                }
+            }
+        }
+    }
+
+    if x_amount > 0u128.into()
+        && zap_out_routes.operation_from_x.is_some()
+        && zap_out_routes.operation_from_x.as_ref().unwrap().len() > 0
+    {
+        match token_x.info.clone() {
+            AssetInfo::NativeToken { denom } => {
+                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: config.mixed_router.to_string(),
+                    msg: to_json_binary(&mixed_router::ExecuteMsg::ExecuteSwapOperations {
+                        operations: zap_out_routes.operation_from_x.clone().unwrap(),
+                        minimum_receive: zap_out_routes.minimum_receive_x,
+                        to: Some(receiver.clone()),
+                        affiliates: None,
+                    })
+                    .unwrap(),
+                    funds: coins(x_amount.u128(), denom),
+                }));
+            }
+            AssetInfo::Token { contract_addr } => {
+                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: contract_addr.to_string(),
+                    msg: to_json_binary(&Cw20ExecuteMsg::Send {
+                        contract: config.mixed_router.to_string(),
+                        amount: x_amount.into(),
+                        msg: to_json_binary(&mixed_router::ExecuteMsg::ExecuteSwapOperations {
+                            operations: zap_out_routes.operation_from_x.clone().unwrap(),
+                            minimum_receive: zap_out_routes.minimum_receive_x,
+                            to: Some(receiver.clone()),
+                            affiliates: None,
+                        })?,
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }));
+            }
+        }
+    }
+
+    if y_amount > 0u128.into()
+        && zap_out_routes.operation_from_y.is_some()
+        && zap_out_routes.operation_from_y.as_ref().unwrap().len() > 0
+    {
+        match token_y.info.clone() {
+            AssetInfo::NativeToken { denom } => {
+                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: config.mixed_router.to_string(),
+                    msg: to_json_binary(&mixed_router::ExecuteMsg::ExecuteSwapOperations {
+                        operations: zap_out_routes.operation_from_y.unwrap(),
+                        minimum_receive: zap_out_routes.minimum_receive_y,
+                        to: Some(receiver.clone()),
+                        affiliates: None,
+                    })
+                    .unwrap(),
+                    funds: coins(y_amount.u128(), denom),
+                }));
+            }
+            AssetInfo::Token { contract_addr } => {
+                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: contract_addr.to_string(),
+                    msg: to_json_binary(&Cw20ExecuteMsg::Send {
+                        contract: config.mixed_router.to_string(),
+                        amount: y_amount.into(),
+                        msg: to_json_binary(&mixed_router::ExecuteMsg::ExecuteSwapOperations {
+                            operations: zap_out_routes.operation_from_y.unwrap(),
+                            minimum_receive: zap_out_routes.minimum_receive_y,
+                            to: Some(receiver.clone()),
+                            affiliates: None,
+                        })?,
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }));
+            }
+        }
+    }
 
     // 6. Send the amounts of tokenX and tokenY to user
 
-    Ok(Response::new())
+    Ok(Response::new().add_messages(msgs))
 }

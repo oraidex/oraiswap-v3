@@ -5,16 +5,19 @@ use cosmwasm_std::{
 use cw20::Cw20ExecuteMsg;
 use oraiswap_v3_common::{
     asset::{Asset, AssetInfo},
-    oraiswap_v3_msg::QueryMsg,
-    storage::PoolKey,
+    oraiswap_v3_msg::{ExecuteMsg, QueryMsg},
+    storage::{PoolKey, Position},
 };
 
 use crate::{
-    contract::ZAP_IN_LIQUIDITY_REPLY_ID,
+    contract::{ZAP_IN_LIQUIDITY_REPLY_ID, ZAP_OUT_LIQUIDITY_REPLY_ID},
     entrypoints::utils::get_pool_v3_asset_info,
     msgs::{mixed_router, SwapOperation},
-    state::{CONFIG, PENDING_POSITION, RECEIVER, SNAP_BALANCE},
-    Config, ContractError, PairBalance, PendingPosition,
+    state::{
+        CONFIG, PENDING_POSITION, RECEIVER, SNAP_BALANCE, SNAP_INCENTIVE, ZAP_OUT_POSITION,
+        ZAP_OUT_ROUTES,
+    },
+    Config, ContractError, IncentiveBalance, PairBalance, PendingPosition, ZapOutRoutes,
 };
 
 pub fn update_config(
@@ -102,11 +105,11 @@ pub fn zap_in_liquidity(
     SNAP_BALANCE.save(
         deps.storage,
         &PairBalance {
-            tokenX: Asset {
+            token_x: Asset {
                 info: token_x.clone(),
                 amount: balance_x,
             },
-            tokenY: Asset {
+            token_y: Asset {
                 info: token_y.clone(),
                 amount: balance_y,
             },
@@ -280,12 +283,103 @@ pub fn zap_out_liquidity(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    position_index: u32,
+    operation_from_x: Option<Vec<SwapOperation>>,
+    operation_from_y: Option<Vec<SwapOperation>>,
+    minimum_receive_x: Option<Uint128>,
+    minimum_receive_y: Option<Uint128>,
+    token_out: AssetInfo,
 ) -> Result<Response, ContractError> {
+    let mut msgs: Vec<CosmosMsg> = vec![];
+    let mut sub_msgs: Vec<SubMsg> = vec![];
+    let config = CONFIG.load(deps.storage)?;
+    let position: Position = deps.querier.query_wasm_smart(
+        config.dex_v3.to_string(),
+        &QueryMsg::Position {
+            owner_id: info.sender.clone(),
+            index: position_index,
+        },
+    )?;
+    let position_incentives: Vec<Asset> = deps.querier.query_wasm_smart(
+        config.dex_v3.to_string(),
+        &QueryMsg::PositionIncentives {
+            owner_id: info.sender.clone(),
+            index: position_index,
+        },
+    )?;
+    let snap_incentives = position_incentives
+        .iter()
+        .map(|asset| {
+            let balance = asset
+                .info
+                .balance(&deps.querier, &env.contract.address)
+                .unwrap();
+            Asset {
+                info: asset.info.clone(),
+                amount: balance,
+            }
+        })
+        .collect::<Vec<Asset>>();
+    SNAP_INCENTIVE.save(
+        deps.storage,
+        &IncentiveBalance {
+            incentives: snap_incentives,
+        },
+    )?;
+    ZAP_OUT_ROUTES.save(
+        deps.storage,
+        &ZapOutRoutes {
+            operation_from_x,
+            operation_from_y,
+            minimum_receive_x,
+            minimum_receive_y,
+            token_out,
+        },
+    )?;
+    ZAP_OUT_POSITION.save(deps.storage, &position)?;
+
     // 1. Transfer position to this contract
+    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: config.dex_v3.to_string(),
+        msg: to_json_binary(&ExecuteMsg::TransferPosition {
+            index: position_index,
+            receiver: env.contract.address.to_string(),
+        })?,
+        funds: vec![],
+    }));
+
+    // snap balance
+    let (token_x, token_y) = get_pool_v3_asset_info(deps.api, &position.pool_key);
+    let balance_x = token_x.balance(&deps.querier, &env.contract.address)?;
+    let balance_y = token_y.balance(&deps.querier, &env.contract.address)?;
+
+    SNAP_BALANCE.save(
+        deps.storage,
+        &PairBalance {
+            token_x: Asset {
+                info: token_x.clone(),
+                amount: balance_x,
+            },
+            token_y: Asset {
+                info: token_y.clone(),
+                amount: balance_y,
+            },
+        },
+    )?;
+    RECEIVER.save(deps.storage, &info.sender)?;
 
     // 2. Create SubMsg to process remove liquidity in dex_v3 contract
+    sub_msgs.push(SubMsg::reply_on_success(
+        WasmMsg::Execute {
+            contract_addr: config.dex_v3.to_string(),
+            msg: to_json_binary(&ExecuteMsg::RemovePosition {
+                index: position_index,
+            })
+            .unwrap(),
+            funds: vec![],
+        },
+        ZAP_OUT_LIQUIDITY_REPLY_ID,
+    ));
 
-    // 3. Reply on success, if error occurs, revert the state
-
-    Ok(Response::new())
+    Ok(Response::new().add_messages(msgs).add_submessages(sub_msgs))
 }
