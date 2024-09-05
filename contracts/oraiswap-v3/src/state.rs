@@ -1,15 +1,18 @@
 use cosmwasm_std::{Addr, Order, StdResult, Storage};
 use cw20::Expiration;
 use cw_storage_plus::{Bound, Item, Map};
-
-use crate::{
-    flip_bit_at_position, get_bit_at_position, get_search_limit,
-    incentive::IncentiveRecord,
+use oraiswap_v3_common::{
+    error::ContractError,
     interface::PoolWithPoolKey,
-    sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tick_to_position, Config, Pool, PoolKey, Position, Tick, CHUNK_SIZE, MAX_TICK,
+    math::{
+        sqrt_price::{calculate_sqrt_price, SqrtPrice},
+        MAX_TICK,
+    },
+    storage::{
+        flip_bit_at_position, get_bit_at_position, get_search_limit, incentive::IncentiveRecord,
+        tick_to_position, Config, Pool, PoolKey, Position, Tick, CHUNK_SIZE,
+    },
 };
-use oraiswap_v3_common::error::ContractError;
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
@@ -474,9 +477,11 @@ mod tests {
 
     use super::*;
     use crate::entrypoints::tickmap_slice;
-    use crate::math::percentage::Percentage;
-    use crate::sqrt_price::SqrtPrice;
-    use crate::{state, FeeTier, MAX_TICK, TICK_SEARCH_RANGE};
+    use crate::state;
+    use oraiswap_v3_common::math::percentage::Percentage;
+    use oraiswap_v3_common::math::sqrt_price::SqrtPrice;
+    use oraiswap_v3_common::math::TICK_SEARCH_RANGE;
+    use oraiswap_v3_common::storage::FeeTier;
 
     use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::Addr;
@@ -487,7 +492,7 @@ mod tests {
         let mut deps = mock_dependencies();
         let token_0: String = Addr::unchecked("token_0").to_string().to_string();
         let token_1: String = Addr::unchecked("token_1").to_string().to_string();
-        let fee_tier: FeeTier = FeeTier {
+        let fee_tier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
         };

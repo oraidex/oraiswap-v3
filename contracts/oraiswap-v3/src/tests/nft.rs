@@ -1,20 +1,20 @@
 use cosmwasm_std::{attr, coins, Addr, Attribute};
 use decimal::*;
 
-use crate::{
-    fee_growth::FeeGrowth,
+use crate::tests::helper::{macros::*, MockApp, FEE_DENOM};
+use oraiswap_v3_common::{
+    error::ContractError,
     interface::{NftInfoResponse, OwnerOfResponse, TokensResponse},
-    liquidity::Liquidity,
-    msg,
-    percentage::Percentage,
-    sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp},
-    token_amount::TokenAmount,
-    FeeTier, PoolKey, Position, MIN_SQRT_PRICE,
+    math::{
+        fee_growth::FeeGrowth,
+        liquidity::Liquidity,
+        percentage::Percentage,
+        sqrt_price::{calculate_sqrt_price, SqrtPrice},
+        token_amount::TokenAmount,
+        MIN_SQRT_PRICE,
+    },
+    storage::{FeeTier, PoolKey, Position},
 };
-use oraiswap_v3_common::error::ContractError;
-
-use super::helper::FEE_DENOM;
 
 #[test]
 fn test_mint_nft() {
@@ -50,8 +50,8 @@ fn test_mint_nft() {
     app.execute(
         Addr::unchecked(alice),
         dex.clone(),
-        &msg::ExecuteMsg::Mint {
-            extension: msg::NftExtensionMsg {
+        &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+            extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                 pool_key,
                 lower_tick: -10,
                 upper_tick: 10,
@@ -99,8 +99,8 @@ fn test_query_nft() {
     app.execute(
         Addr::unchecked(alice),
         dex.clone(),
-        &msg::ExecuteMsg::Mint {
-            extension: msg::NftExtensionMsg {
+        &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+            extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                 pool_key: pool_key.clone(),
                 lower_tick: -10,
                 upper_tick: 10,
@@ -116,7 +116,10 @@ fn test_query_nft() {
     let token_id = 1;
 
     let nft_info: NftInfoResponse = app
-        .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+        .query(
+            dex.clone(),
+            &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+        )
         .unwrap();
 
     assert_eq!(nft_info.extension.pool_key, pool_key);
@@ -124,7 +127,7 @@ fn test_query_nft() {
     let TokensResponse { tokens } = app
         .query(
             dex.clone(),
-            &msg::QueryMsg::Tokens {
+            &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                 owner: Addr::unchecked(alice),
                 start_after: None,
                 limit: None,
@@ -181,8 +184,8 @@ fn test_burn_nft() {
     app.execute(
         Addr::unchecked(alice),
         dex.clone(),
-        &msg::ExecuteMsg::Mint {
-            extension: msg::NftExtensionMsg {
+        &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+            extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                 pool_key: pool_key.clone(),
                 lower_tick: lower_tick_index,
                 upper_tick: upper_tick_index,
@@ -210,8 +213,8 @@ fn test_burn_nft() {
     app.execute(
         Addr::unchecked(alice),
         dex.clone(),
-        &msg::ExecuteMsg::Mint {
-            extension: msg::NftExtensionMsg {
+        &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+            extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                 pool_key: pool_key.clone(),
                 lower_tick: incorrect_lower_tick_index,
                 upper_tick: incorrect_upper_tick_index,
@@ -228,7 +231,10 @@ fn test_burn_nft() {
     let NftInfoResponse {
         extension: position_state,
     } = app
-        .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+        .query(
+            dex.clone(),
+            &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+        )
         .unwrap();
 
     // Check position
@@ -279,7 +285,7 @@ fn test_burn_nft() {
     app.execute(
         sender,
         dex.clone(),
-        &msg::ExecuteMsg::Burn { token_id },
+        &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Burn { token_id },
         &[],
     )
     .unwrap();
@@ -359,8 +365,8 @@ fn test_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::Mint {
-                extension: msg::NftExtensionMsg {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+                extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                     pool_key: pool_key.clone(),
                     lower_tick: tick_indexes[0],
                     upper_tick: tick_indexes[1],
@@ -376,7 +382,7 @@ fn test_transfer_nft() {
         let TokensResponse { tokens } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
@@ -392,8 +398,8 @@ fn test_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::Mint {
-                extension: msg::NftExtensionMsg {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+                extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                     pool_key: pool_key.clone(),
                     lower_tick: tick_indexes[0],
                     upper_tick: tick_indexes[1],
@@ -408,8 +414,8 @@ fn test_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::Mint {
-                extension: msg::NftExtensionMsg {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+                extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                     pool_key: pool_key.clone(),
                     lower_tick: tick_indexes[1],
                     upper_tick: tick_indexes[2],
@@ -424,8 +430,8 @@ fn test_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::Mint {
-                extension: msg::NftExtensionMsg {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+                extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                     pool_key: pool_key.clone(),
                     lower_tick: tick_indexes[2],
                     upper_tick: tick_indexes[3],
@@ -446,7 +452,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
@@ -458,7 +464,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
@@ -468,7 +474,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
@@ -477,7 +483,10 @@ fn test_transfer_nft() {
         let NftInfoResponse {
             extension: removed_position,
         } = app
-            .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+            .query(
+                dex.clone(),
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+            )
             .unwrap();
 
         let NftInfoResponse {
@@ -485,7 +494,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::NftInfo {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo {
                     token_id: owner_list_before[owner_list_before.len() - 1].clone(),
                 },
             )
@@ -494,7 +503,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
@@ -503,7 +512,7 @@ fn test_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::TransferNft {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::TransferNft {
                 recipient: Addr::unchecked(bob),
                 token_id,
             },
@@ -514,7 +523,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(bob),
                     index: transferred_index,
                 },
@@ -523,14 +532,17 @@ fn test_transfer_nft() {
         let NftInfoResponse {
             extension: recipient_position,
         } = app
-            .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+            .query(
+                dex.clone(),
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+            )
             .unwrap();
         let TokensResponse {
             tokens: owner_list_after,
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
@@ -542,7 +554,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
@@ -553,7 +565,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
@@ -562,7 +574,10 @@ fn test_transfer_nft() {
         let NftInfoResponse {
             extension: owner_first_position_after,
         } = app
-            .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+            .query(
+                dex.clone(),
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+            )
             .unwrap();
 
         assert_eq!(recipient_list_after.len(), recipient_list_before.len() + 1);
@@ -583,7 +598,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
@@ -595,7 +610,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
@@ -608,7 +623,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::NftInfo {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo {
                     token_id: owner_list_before[owner_list_before.len() - 1].clone(),
                 },
             )
@@ -617,7 +632,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
@@ -626,7 +641,7 @@ fn test_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::TransferNft {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::TransferNft {
                 recipient: Addr::unchecked(bob),
                 token_id,
             },
@@ -639,7 +654,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
@@ -651,7 +666,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
@@ -661,7 +676,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
@@ -670,7 +685,10 @@ fn test_transfer_nft() {
         let NftInfoResponse {
             extension: owner_first_position_after,
         } = app
-            .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+            .query(
+                dex.clone(),
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+            )
             .unwrap();
 
         assert_eq!(recipient_list_after.len(), recipient_list_before.len() + 1);
@@ -686,7 +704,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
@@ -697,7 +715,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
@@ -706,13 +724,16 @@ fn test_transfer_nft() {
         let NftInfoResponse {
             extension: removed_position,
         } = app
-            .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+            .query(
+                dex.clone(),
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+            )
             .unwrap();
 
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
@@ -721,7 +742,7 @@ fn test_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::TransferNft {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::TransferNft {
                 recipient: Addr::unchecked(bob),
                 token_id,
             },
@@ -733,7 +754,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
@@ -744,7 +765,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(bob),
                     index: recipient_position_index,
                 },
@@ -753,7 +774,10 @@ fn test_transfer_nft() {
         let NftInfoResponse {
             extension: recipient_position,
         } = app
-            .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+            .query(
+                dex.clone(),
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+            )
             .unwrap();
 
         positions_equals!(removed_position, recipient_position);
@@ -767,7 +791,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
@@ -777,7 +801,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
@@ -786,13 +810,16 @@ fn test_transfer_nft() {
         let NftInfoResponse {
             extension: removed_position,
         } = app
-            .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+            .query(
+                dex.clone(),
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+            )
             .unwrap();
 
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
@@ -801,7 +828,7 @@ fn test_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::TransferNft {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::TransferNft {
                 recipient: Addr::unchecked(bob),
                 token_id,
             },
@@ -814,7 +841,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
@@ -825,7 +852,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(bob),
                     index: recipient_position_index,
                 },
@@ -834,14 +861,17 @@ fn test_transfer_nft() {
         let NftInfoResponse {
             extension: recipient_position,
         } = app
-            .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+            .query(
+                dex.clone(),
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+            )
             .unwrap();
         let TokensResponse {
             tokens: owner_list_after,
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
@@ -864,7 +894,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
@@ -876,7 +906,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
@@ -886,7 +916,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(bob),
                     index: transferred_index,
                 },
@@ -895,7 +925,10 @@ fn test_transfer_nft() {
         let NftInfoResponse {
             extension: removed_position,
         } = app
-            .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+            .query(
+                dex.clone(),
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+            )
             .unwrap();
 
         let NftInfoResponse {
@@ -903,7 +936,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::NftInfo {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo {
                     token_id: recipient_list_before[recipient_list_before.len() - 1].clone(),
                 },
             )
@@ -912,7 +945,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(bob),
                     index: transferred_index,
                 },
@@ -921,7 +954,7 @@ fn test_transfer_nft() {
         app.execute(
             Addr::unchecked(bob),
             dex.clone(),
-            &msg::ExecuteMsg::TransferNft {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::TransferNft {
                 recipient: Addr::unchecked(alice),
                 token_id,
             },
@@ -934,7 +967,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
@@ -946,7 +979,7 @@ fn test_transfer_nft() {
         } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(bob),
                     start_after: None,
                     limit: None,
@@ -956,7 +989,7 @@ fn test_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(bob),
                     index: transferred_index,
                 },
@@ -965,13 +998,16 @@ fn test_transfer_nft() {
         let NftInfoResponse {
             extension: recipient_first_position_after,
         } = app
-            .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+            .query(
+                dex.clone(),
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+            )
             .unwrap();
 
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
@@ -980,7 +1016,10 @@ fn test_transfer_nft() {
         let NftInfoResponse {
             extension: owner_new_position,
         } = app
-            .query(dex.clone(), &msg::QueryMsg::NftInfo { token_id })
+            .query(
+                dex.clone(),
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::NftInfo { token_id },
+            )
             .unwrap();
 
         assert_eq!(recipient_list_after.len(), recipient_list_before.len() - 1);
@@ -1037,8 +1076,8 @@ fn test_only_owner_can_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::Mint {
-                extension: msg::NftExtensionMsg {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+                extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                     pool_key: pool_key.clone(),
                     lower_tick: tick_indexes[0],
                     upper_tick: tick_indexes[1],
@@ -1054,7 +1093,7 @@ fn test_only_owner_can_transfer_nft() {
         let TokensResponse { tokens } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Tokens {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Tokens {
                     owner: Addr::unchecked(alice),
                     start_after: None,
                     limit: None,
@@ -1070,8 +1109,8 @@ fn test_only_owner_can_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::Mint {
-                extension: msg::NftExtensionMsg {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+                extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                     pool_key: pool_key.clone(),
                     lower_tick: tick_indexes[0],
                     upper_tick: tick_indexes[1],
@@ -1086,8 +1125,8 @@ fn test_only_owner_can_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::Mint {
-                extension: msg::NftExtensionMsg {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+                extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                     pool_key: pool_key.clone(),
                     lower_tick: tick_indexes[1],
                     upper_tick: tick_indexes[2],
@@ -1102,8 +1141,8 @@ fn test_only_owner_can_transfer_nft() {
         app.execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::Mint {
-                extension: msg::NftExtensionMsg {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+                extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                     pool_key: pool_key.clone(),
                     lower_tick: tick_indexes[2],
                     upper_tick: tick_indexes[3],
@@ -1122,7 +1161,7 @@ fn test_only_owner_can_transfer_nft() {
         let Position { token_id, .. } = app
             .query(
                 dex.clone(),
-                &msg::QueryMsg::Position {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                     owner_id: Addr::unchecked(alice),
                     index: transferred_index,
                 },
@@ -1133,7 +1172,7 @@ fn test_only_owner_can_transfer_nft() {
             .execute(
                 Addr::unchecked(bob),
                 dex.clone(),
-                &msg::ExecuteMsg::TransferNft {
+                &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::TransferNft {
                     recipient: Addr::unchecked(alice),
                     token_id,
                 },
@@ -1187,8 +1226,8 @@ fn test_approving_revoking() {
     app.execute(
         Addr::unchecked(alice),
         dex.clone(),
-        &msg::ExecuteMsg::Mint {
-            extension: msg::NftExtensionMsg {
+        &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Mint {
+            extension: oraiswap_v3_common::oraiswap_v3_msg::NftExtensionMsg {
                 pool_key,
                 lower_tick: -10,
                 upper_tick: 10,
@@ -1204,7 +1243,7 @@ fn test_approving_revoking() {
     let Position { token_id, .. } = app
         .query(
             dex.clone(),
-            &msg::QueryMsg::Position {
+            &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::Position {
                 owner_id: Addr::unchecked(alice),
                 index: 0,
             },
@@ -1216,7 +1255,7 @@ fn test_approving_revoking() {
         .execute(
             Addr::unchecked(alice),
             dex.clone(),
-            &msg::ExecuteMsg::Approve {
+            &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Approve {
                 spender: Addr::unchecked(random),
                 token_id: token_id.clone(),
                 expires: None,
@@ -1244,7 +1283,7 @@ fn test_approving_revoking() {
     app.execute(
         Addr::unchecked(random),
         dex.clone(),
-        &msg::ExecuteMsg::TransferNft {
+        &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::TransferNft {
             recipient: Addr::unchecked(person),
             token_id: token_id.clone(),
         },
@@ -1256,7 +1295,7 @@ fn test_approving_revoking() {
     let res: OwnerOfResponse = app
         .query(
             dex.clone(),
-            &msg::QueryMsg::OwnerOf {
+            &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::OwnerOf {
                 token_id: token_id.clone(),
                 include_expired: None,
             },
@@ -1274,7 +1313,7 @@ fn test_approving_revoking() {
     app.execute(
         Addr::unchecked(person),
         dex.clone(),
-        &msg::ExecuteMsg::Approve {
+        &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Approve {
             spender: Addr::unchecked(random),
             token_id: token_id.clone(),
             expires: None,
@@ -1286,7 +1325,7 @@ fn test_approving_revoking() {
     app.execute(
         Addr::unchecked(person),
         dex.clone(),
-        &msg::ExecuteMsg::Revoke {
+        &oraiswap_v3_common::oraiswap_v3_msg::ExecuteMsg::Revoke {
             spender: Addr::unchecked(random),
             token_id: token_id.clone(),
         },
@@ -1298,7 +1337,7 @@ fn test_approving_revoking() {
     let res: OwnerOfResponse = app
         .query(
             dex.clone(),
-            &msg::QueryMsg::OwnerOf {
+            &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::OwnerOf {
                 token_id: token_id.clone(),
                 include_expired: None,
             },

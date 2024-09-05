@@ -1,12 +1,13 @@
-use crate::math::types::percentage::Percentage;
-use crate::math::types::sqrt_price::calculate_sqrt_price;
 use crate::tests::helper::macros::*;
 use crate::tests::helper::MockApp;
 use crate::tests::helper::FEE_DENOM;
-use crate::{FeeTier, PoolKey};
 use cosmwasm_std::coins;
 use decimal::Decimal;
 use oraiswap_v3_common::error::ContractError;
+use oraiswap_v3_common::math::percentage::Percentage;
+use oraiswap_v3_common::math::sqrt_price::calculate_sqrt_price;
+use oraiswap_v3_common::storage::FeeTier;
+use oraiswap_v3_common::storage::PoolKey;
 
 #[test]
 fn test_change_fee_reciever() {

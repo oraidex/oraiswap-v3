@@ -1,14 +1,12 @@
 use crate::tests::helper::{extract_amount, FEE_DENOM};
-use crate::token_amount::TokenAmount;
-use crate::{
-    percentage::Percentage,
-    sqrt_price::calculate_sqrt_price,
-    tests::helper::{macros::*, MockApp},
-    FeeTier, PoolKey,
-};
+use crate::tests::helper::{macros::*, MockApp};
 use cosmwasm_std::{coins, Addr};
 use decimal::{Decimal, Factories};
 use oraiswap_v3_common::error::ContractError;
+use oraiswap_v3_common::math::percentage::Percentage;
+use oraiswap_v3_common::math::sqrt_price::calculate_sqrt_price;
+use oraiswap_v3_common::math::token_amount::TokenAmount;
+use oraiswap_v3_common::storage::{FeeTier, PoolKey};
 
 #[test]
 fn test_interaction_with_pool_on_removed_fee_tier() {

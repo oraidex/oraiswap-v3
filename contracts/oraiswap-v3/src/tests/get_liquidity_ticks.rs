@@ -1,15 +1,17 @@
 use cosmwasm_std::{coins, Addr};
 use decimal::{Decimal, Factories};
-
-use crate::{
-    liquidity::Liquidity,
-    msg,
-    percentage::Percentage,
-    position_to_tick,
-    sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp, FEE_DENOM},
-    FeeTier, LiquidityTick, PoolKey, CHUNK_SIZE, LIQUIDITY_TICK_LIMIT,
+use oraiswap_v3_common::{
+    math::{
+        liquidity::Liquidity,
+        percentage::Percentage,
+        sqrt_price::{calculate_sqrt_price, SqrtPrice},
+    },
+    storage::{
+        position_to_tick, FeeTier, LiquidityTick, PoolKey, CHUNK_SIZE, LIQUIDITY_TICK_LIMIT,
+    },
 };
+
+use crate::tests::helper::{macros::*, MockApp, FEE_DENOM};
 
 #[test]
 fn test_get_liquidity_ticks() {

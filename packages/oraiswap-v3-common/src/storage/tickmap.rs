@@ -1,6 +1,6 @@
 use crate::math::sqrt_price::get_max_tick;
 use crate::math::MAX_TICK;
-use crate::{MAX_RESULT_SIZE, TICK_SEARCH_RANGE};
+use crate::{storage::MAX_RESULT_SIZE, math::TICK_SEARCH_RANGE};
 pub const CHUNK_SIZE: i32 = 64;
 pub const MAX_TICKMAP_QUERY_SIZE: usize = MAX_RESULT_SIZE / (16 + 64);
 

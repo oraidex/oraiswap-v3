@@ -2,19 +2,17 @@ use cosmwasm_std::{Addr, Binary, Coin, Event, StdResult, Uint64};
 use cosmwasm_testing_util::{ExecuteResponse, MockResult};
 
 use cosmwasm_testing_util::ContractWrapper;
-use oraiswap_v3_common::asset::{Asset, AssetInfo};
-
-use crate::{
-    interface::{PoolWithPoolKey, QuoteResult, SwapHop},
-    liquidity::Liquidity,
-    msg::{self},
-    percentage::Percentage,
-    sqrt_price::SqrtPrice,
-    state::MAX_LIMIT,
-    token_amount::TokenAmount,
-    FeeTier, LiquidityTick, Pool, PoolKey, Position, Tick,
-};
 use derive_more::{Deref, DerefMut};
+use oraiswap_v3_common::asset::{Asset, AssetInfo};
+use oraiswap_v3_common::interface::{PoolWithPoolKey, QuoteResult, SwapHop};
+use oraiswap_v3_common::math::liquidity::Liquidity;
+use oraiswap_v3_common::math::percentage::Percentage;
+use oraiswap_v3_common::math::sqrt_price::SqrtPrice;
+use oraiswap_v3_common::math::token_amount::TokenAmount;
+use oraiswap_v3_common::oraiswap_v3_msg;
+use oraiswap_v3_common::storage::{FeeTier, LiquidityTick, Pool, PoolKey, Position, Tick};
+
+use crate::state::MAX_LIMIT;
 
 pub const FEE_DENOM: &str = "orai";
 
@@ -89,7 +87,7 @@ impl MockApp {
         let dex_addr = self.instantiate(
             code_id,
             Addr::unchecked(owner),
-            &msg::InstantiateMsg {
+            &oraiswap_v3_msg::InstantiateMsg {
                 protocol_fee,
                 incentives_fund_manager: incentive_addr.clone(),
             },
@@ -114,7 +112,7 @@ impl MockApp {
     pub fn get_incentives_fund_manager(&mut self, dex: &str) -> StdResult<Addr> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::IncentivesFundManager {},
+            &oraiswap_v3_msg::QueryMsg::IncentivesFundManager {},
         )
     }
 
@@ -127,7 +125,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::AddFeeTier { fee_tier },
+            &oraiswap_v3_msg::ExecuteMsg::AddFeeTier { fee_tier },
             &[],
         )
     }
@@ -141,7 +139,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::RemoveFeeTier { fee_tier },
+            &oraiswap_v3_msg::ExecuteMsg::RemoveFeeTier { fee_tier },
             &[],
         )
     }
@@ -159,7 +157,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::CreatePool {
+            &oraiswap_v3_msg::ExecuteMsg::CreatePool {
                 token_0: token_x.to_string(),
                 token_1: token_y.to_string(),
                 fee_tier,
@@ -179,7 +177,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::WithdrawProtocolFee {
+            &oraiswap_v3_msg::ExecuteMsg::WithdrawProtocolFee {
                 pool_key: pool_key.clone(),
             },
             &[],
@@ -196,7 +194,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::ChangeFeeReceiver {
+            &oraiswap_v3_msg::ExecuteMsg::ChangeFeeReceiver {
                 pool_key: pool_key.clone(),
                 fee_receiver: Addr::unchecked(fee_recevier),
             },
@@ -218,7 +216,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::CreatePosition {
+            &oraiswap_v3_msg::ExecuteMsg::CreatePosition {
                 pool_key: pool_key.clone(),
                 lower_tick,
                 upper_tick,
@@ -240,7 +238,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::TransferPosition {
+            &oraiswap_v3_msg::ExecuteMsg::TransferPosition {
                 index,
                 receiver: receiver.to_string(),
             },
@@ -257,7 +255,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::RemovePosition { index },
+            &oraiswap_v3_msg::ExecuteMsg::RemovePosition { index },
             &[],
         )
     }
@@ -274,7 +272,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::SwapRoute {
+            &oraiswap_v3_msg::ExecuteMsg::SwapRoute {
                 amount_in,
                 expected_amount_out,
                 slippage,
@@ -297,7 +295,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::Swap {
+            &oraiswap_v3_msg::ExecuteMsg::Swap {
                 pool_key: pool_key.clone(),
                 x_to_y,
                 amount,
@@ -317,7 +315,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::ClaimFee { index },
+            &oraiswap_v3_msg::ExecuteMsg::ClaimFee { index },
             &[],
         )
     }
@@ -331,7 +329,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::ClaimIncentive { index },
+            &oraiswap_v3_msg::ExecuteMsg::ClaimIncentive { index },
             &[],
         )
     }
@@ -344,7 +342,7 @@ impl MockApp {
     ) -> StdResult<TokenAmount> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::QuoteRoute { amount_in, swaps },
+            &oraiswap_v3_msg::QueryMsg::QuoteRoute { amount_in, swaps },
         )
     }
 
@@ -359,7 +357,7 @@ impl MockApp {
     ) -> StdResult<QuoteResult> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::Quote {
+            &oraiswap_v3_msg::QueryMsg::Quote {
                 pool_key: pool_key.clone(),
                 x_to_y,
                 amount,
@@ -378,7 +376,7 @@ impl MockApp {
     ) -> StdResult<Pool> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::Pool {
+            &oraiswap_v3_msg::QueryMsg::Pool {
                 token_0: Addr::unchecked(token_x).to_string(),
                 token_1: Addr::unchecked(token_y).to_string(),
                 fee_tier,
@@ -394,7 +392,7 @@ impl MockApp {
     ) -> StdResult<Vec<LiquidityTick>> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::LiquidityTicks {
+            &oraiswap_v3_msg::QueryMsg::LiquidityTicks {
                 pool_key: pool_key.clone(),
                 tick_indexes,
             },
@@ -409,14 +407,14 @@ impl MockApp {
     ) -> StdResult<Vec<PoolWithPoolKey>> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::Pools { limit, start_after },
+            &oraiswap_v3_msg::QueryMsg::Pools { limit, start_after },
         )
     }
 
     pub fn get_position(&self, dex: &str, owner_id: &str, index: u32) -> StdResult<Position> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::Position {
+            &oraiswap_v3_msg::QueryMsg::Position {
                 owner_id: Addr::unchecked(owner_id),
                 index,
             },
@@ -431,7 +429,7 @@ impl MockApp {
     ) -> StdResult<Vec<Asset>> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::PositionIncentives {
+            &oraiswap_v3_msg::QueryMsg::PositionIncentives {
                 owner_id: Addr::unchecked(owner_id),
                 index,
             },
@@ -441,7 +439,7 @@ impl MockApp {
     pub fn get_all_positions(&self, dex: &str, owner_id: &str) -> StdResult<Vec<Position>> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::Positions {
+            &oraiswap_v3_msg::QueryMsg::Positions {
                 owner_id: Addr::unchecked(owner_id),
                 limit: Some(MAX_LIMIT),
                 offset: Some(0),
@@ -452,14 +450,14 @@ impl MockApp {
     pub fn fee_tier_exist(&self, dex: &str, fee_tier: FeeTier) -> StdResult<bool> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::FeeTierExist { fee_tier },
+            &oraiswap_v3_msg::QueryMsg::FeeTierExist { fee_tier },
         )
     }
 
     pub fn get_tick(&self, dex: &str, pool_key: &PoolKey, index: i32) -> StdResult<Tick> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::Tick {
+            &oraiswap_v3_msg::QueryMsg::Tick {
                 key: pool_key.clone(),
                 index,
             },
@@ -474,7 +472,7 @@ impl MockApp {
     ) -> StdResult<bool> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::IsTickInitialized {
+            &oraiswap_v3_msg::QueryMsg::IsTickInitialized {
                 key: pool_key.clone(),
                 index,
             },
@@ -494,7 +492,7 @@ impl MockApp {
         self.execute(
             Addr::unchecked(sender),
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::CreateIncentive {
+            &oraiswap_v3_msg::ExecuteMsg::CreateIncentive {
                 pool_key: pool_key.clone(),
                 reward_token,
                 total_reward,
@@ -512,7 +510,7 @@ impl MockApp {
     ) -> StdResult<Vec<Position>> {
         self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::AllPosition { limit, start_after },
+            &oraiswap_v3_msg::QueryMsg::AllPosition { limit, start_after },
         )
     }
 
@@ -526,7 +524,7 @@ impl MockApp {
     ) -> StdResult<Vec<(u16, u64)>> {
         let tickmaps: Vec<(u16, Uint64)> = self.query(
             Addr::unchecked(dex),
-            &msg::QueryMsg::TickMap {
+            &oraiswap_v3_msg::QueryMsg::TickMap {
                 pool_key: pool_key.clone(),
                 lower_tick_index: lower_tick,
                 upper_tick_index: upper_tick,
@@ -837,7 +835,8 @@ pub mod macros {
             add_fee_tier!($app, $dex_address, fee_tier, $owner).unwrap();
 
             let init_tick = 0;
-            let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+            let init_sqrt_price =
+                oraiswap_v3_common::math::sqrt_price::calculate_sqrt_price(init_tick).unwrap();
             create_pool!(
                 $app,
                 $dex_address,
@@ -862,7 +861,8 @@ pub mod macros {
             .unwrap();
             let lower_tick = -1000;
             let upper_tick = 1000;
-            let liquidity = Liquidity::from_integer(10_000_000_000u128);
+            let liquidity =
+                oraiswap_v3_common::math::liquidity::Liquidity::from_integer(10_000_000_000u128);
 
             let pool_before = get_pool!(
                 $app,
@@ -913,7 +913,8 @@ pub mod macros {
             add_fee_tier!($app, $dex_address, fee_tier, $owner).unwrap();
 
             let init_tick = 0;
-            let init_sqrt_price = crate::sqrt_price::calculate_sqrt_price(init_tick).unwrap();
+            let init_sqrt_price =
+                oraiswap_v3_common::math::sqrt_price::calculate_sqrt_price(init_tick).unwrap();
             create_pool!(
                 $app,
                 $dex_address,
@@ -940,7 +941,7 @@ pub mod macros {
             approve!($app, $token_x_address, $dex_address, mint_amount, $owner).unwrap();
             approve!($app, $token_y_address, $dex_address, mint_amount, $owner).unwrap();
 
-            let pool_key = crate::PoolKey::new(
+            let pool_key = oraiswap_v3_common::storage::PoolKey::new(
                 $token_x_address.to_string(),
                 $token_y_address.to_string(),
                 fee_tier,
@@ -948,7 +949,7 @@ pub mod macros {
             .unwrap();
             let lower_tick = -20;
             let upper_tick = 10;
-            let liquidity = crate::math::types::liquidity::Liquidity::from_integer(1000000);
+            let liquidity = oraiswap_v3_common::math::liquidity::Liquidity::from_integer(1000000);
 
             let pool_before = get_pool!(
                 $app,
@@ -1048,9 +1049,13 @@ pub mod macros {
     macro_rules! swap_exact_limit {
         ($app:ident, $dex_address:ident, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $caller:tt) => {{
             let sqrt_price_limit = if $x_to_y {
-                crate::sqrt_price::SqrtPrice::new(crate::MIN_SQRT_PRICE)
+                oraiswap_v3_common::math::sqrt_price::SqrtPrice::new(
+                    oraiswap_v3_common::math::MIN_SQRT_PRICE,
+                )
             } else {
-                crate::sqrt_price::SqrtPrice::new(crate::MAX_SQRT_PRICE)
+                oraiswap_v3_common::math::sqrt_price::SqrtPrice::new(
+                    oraiswap_v3_common::math::MAX_SQRT_PRICE,
+                )
             };
 
             let quote_result = quote!(
@@ -1080,7 +1085,6 @@ pub mod macros {
 
     macro_rules! init_dex_and_tokens {
         ($app:ident, $mint_amount:expr,$protocol_fee:expr,$owner:tt) => {{
-            use decimal::*;
             let (token_x, token_y) = create_tokens!($app, $mint_amount, $mint_amount, $owner);
             let dex = $app.create_dex($owner, $protocol_fee).unwrap();
             (dex, token_x, token_y)
@@ -1089,7 +1093,7 @@ pub mod macros {
             init_dex_and_tokens!(
                 $app,
                 10u128.pow(10),
-                crate::percentage::Percentage::from_scale(1, 2),
+                oraiswap_v3_common::math::percentage::Percentage::from_scale(1, 2),
                 $owner
             )
         }};
@@ -1101,7 +1105,7 @@ pub mod macros {
             let fee = Percentage::from_scale(6, 3);
             let tick_spacing = 10;
             let fee_tier = FeeTier { fee, tick_spacing };
-            let pool_key = crate::PoolKey::new(
+            let pool_key = oraiswap_v3_common::storage::PoolKey::new(
                 $token_x_address.to_string(),
                 $token_y_address.to_string(),
                 fee_tier,
@@ -1131,7 +1135,9 @@ pub mod macros {
             .unwrap();
 
             let swap_amount = TokenAmount::new(amount);
-            let slippage = crate::sqrt_price::SqrtPrice::new(crate::MIN_SQRT_PRICE);
+            let slippage = oraiswap_v3_common::math::sqrt_price::SqrtPrice::new(
+                oraiswap_v3_common::math::MIN_SQRT_PRICE,
+            );
             swap!(
                 $app,
                 $dex_address,
@@ -1168,11 +1174,11 @@ pub mod macros {
 
             assert_eq!(
                 pool_after.fee_growth_global_x,
-                crate::fee_growth::FeeGrowth::new(50000000000000000000000)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(50000000000000000000000)
             );
             assert_eq!(
                 pool_after.fee_growth_global_y,
-                crate::fee_growth::FeeGrowth::new(0)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(0)
             );
 
             assert_eq!(pool_after.fee_protocol_token_x, TokenAmount::new(1));
@@ -1224,8 +1230,10 @@ pub mod macros {
             )
             .unwrap();
 
-            let swap_amount = TokenAmount::new(amount);
-            let slippage = SqrtPrice::new(MIN_SQRT_PRICE);
+            let swap_amount = oraiswap_v3_common::math::token_amount::TokenAmount::new(amount);
+            let slippage = oraiswap_v3_common::math::sqrt_price::SqrtPrice::new(
+                oraiswap_v3_common::math::MIN_SQRT_PRICE,
+            );
             swap!(
                 $app,
                 $dex_address,
@@ -1270,8 +1278,14 @@ pub mod macros {
             );
             assert_eq!(pool_after.fee_growth_global_y, FeeGrowth::new(0));
 
-            assert_eq!(pool_after.fee_protocol_token_x, TokenAmount::new(2));
-            assert_eq!(pool_after.fee_protocol_token_y, TokenAmount::new(0));
+            assert_eq!(
+                pool_after.fee_protocol_token_x,
+                oraiswap_v3_common::math::token_amount::TokenAmount::new(2)
+            );
+            assert_eq!(
+                pool_after.fee_protocol_token_y,
+                oraiswap_v3_common::math::token_amount::TokenAmount::new(0)
+            );
         }};
     }
     pub(crate) use init_cross_swap;
@@ -1280,7 +1294,7 @@ pub mod macros {
         ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick:expr, $upper_tick:expr) => {{
             $app.query(
                 Addr::unchecked($dex_address.as_str()),
-                &msg::QueryMsg::LiquidityTicksAmount {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::LiquidityTicksAmount {
                     pool_key: $pool_key.clone(),
                     lower_tick: $lower_tick,
                     upper_tick: $upper_tick,
@@ -1323,7 +1337,7 @@ pub mod macros {
         ($app:ident, $dex_address:expr, $owner:expr, $offset:expr) => {{
             $app.query(
                 Addr::unchecked($dex_address.as_str()),
-                &msg::QueryMsg::PositionTicks {
+                &oraiswap_v3_common::oraiswap_v3_msg::QueryMsg::PositionTicks {
                     owner: $owner,
                     offset: $offset,
                 },
@@ -1378,15 +1392,16 @@ pub mod macros {
             use decimal::*;
             let (dex, token_x, token_y) = init_dex_and_tokens!($app, $owner);
 
-            let fee_tier = crate::FeeTier {
-                fee: crate::percentage::Percentage::from_scale(1, 3),
+            let fee_tier = oraiswap_v3_common::storage::FeeTier {
+                fee: oraiswap_v3_common::math::percentage::Percentage::from_scale(1, 3),
                 tick_spacing: 1,
             };
 
             add_fee_tier!($app, dex, fee_tier, $owner).unwrap();
 
             let init_tick = 0;
-            let init_sqrt_price = crate::math::sqrt_price::calculate_sqrt_price(init_tick).unwrap();
+            let init_sqrt_price =
+                oraiswap_v3_common::math::sqrt_price::calculate_sqrt_price(init_tick).unwrap();
             create_pool!(
                 $app,
                 dex,
@@ -1403,16 +1418,20 @@ pub mod macros {
             approve!($app, token_x, dex, mint_amount, $owner).unwrap();
             approve!($app, token_y, dex, mint_amount, $owner).unwrap();
 
-            let pool_key =
-                crate::PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+            let pool_key = oraiswap_v3_common::storage::PoolKey::new(
+                token_x.to_string(),
+                token_y.to_string(),
+                fee_tier,
+            )
+            .unwrap();
             let upper_tick = 953;
             let lower_tick = -upper_tick;
 
             let amount = 100;
             let pool_data = get_pool!($app, dex, token_x, token_y, fee_tier).unwrap();
-            let result = crate::logic::math::get_liquidity(
-                crate::token_amount::TokenAmount(amount),
-                crate::token_amount::TokenAmount(amount),
+            let result = oraiswap_v3_common::logic::math::get_liquidity(
+                oraiswap_v3_common::math::token_amount::TokenAmount(amount),
+                oraiswap_v3_common::math::token_amount::TokenAmount(amount),
                 lower_tick,
                 upper_tick,
                 pool_data.sqrt_price,
@@ -1450,7 +1469,7 @@ pub mod macros {
                 approve!($app, token_y, dex, amount, $bob).unwrap();
             }
 
-            let swap_amount = crate::token_amount::TokenAmount(10);
+            let swap_amount = oraiswap_v3_common::math::token_amount::TokenAmount(10);
             for _ in 1..=10 {
                 swap_exact_limit!($app, dex, pool_key, $x_to_y, swap_amount, true, $bob);
             }
@@ -1463,41 +1482,41 @@ pub mod macros {
             }
             assert_eq!(
                 pool.fee_growth_global_x,
-                crate::fee_growth::FeeGrowth::new(0)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(0)
             );
             assert_eq!(
                 pool.fee_growth_global_y,
-                crate::fee_growth::FeeGrowth::new(0)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(0)
             );
             if $x_to_y {
                 assert_eq!(
                     pool.fee_protocol_token_x,
-                    crate::token_amount::TokenAmount(10)
+                    oraiswap_v3_common::math::token_amount::TokenAmount(10)
                 );
                 assert_eq!(
                     pool.fee_protocol_token_y,
-                    crate::token_amount::TokenAmount(0)
+                    oraiswap_v3_common::math::token_amount::TokenAmount(0)
                 );
             } else {
                 assert_eq!(
                     pool.fee_protocol_token_x,
-                    crate::token_amount::TokenAmount(0)
+                    oraiswap_v3_common::math::token_amount::TokenAmount(0)
                 );
                 assert_eq!(
                     pool.fee_protocol_token_y,
-                    crate::token_amount::TokenAmount(10)
+                    oraiswap_v3_common::math::token_amount::TokenAmount(10)
                 );
             }
             assert_eq!(pool.liquidity, liquidity_delta);
             if $x_to_y {
                 assert_eq!(
                     pool.sqrt_price,
-                    crate::sqrt_price::SqrtPrice::new(959805958620596146276151)
+                    oraiswap_v3_common::math::sqrt_price::SqrtPrice::new(959805958620596146276151)
                 );
             } else {
                 assert_eq!(
                     pool.sqrt_price,
-                    crate::sqrt_price::SqrtPrice::new(1041877257604411525269920)
+                    oraiswap_v3_common::math::sqrt_price::SqrtPrice::new(1041877257604411525269920)
                 );
             }
 

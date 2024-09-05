@@ -13,6 +13,8 @@ homepage = { workspace = true }
 cosmwasm-std = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cosmwasm-storage = { workspace = true }
+decimal = { workspace = true }
+cw-storage-plus = { workspace = true }
 
 cw20 = { workspace = true }
 thiserror = { workspace = true }

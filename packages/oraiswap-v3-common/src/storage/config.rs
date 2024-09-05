@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
 
-use crate::{math::types::percentage::Percentage, FeeTier};
+use crate::{math::types::percentage::Percentage, storage::FeeTier};
 
 #[cw_serde]
 pub struct Config {

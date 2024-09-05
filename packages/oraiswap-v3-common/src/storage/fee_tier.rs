@@ -1,7 +1,7 @@
 use crate::math::types::percentage::Percentage;
 use cosmwasm_schema::cw_serde;
 use decimal::*;
-use oraiswap_v3_common::error::ContractError;
+use crate::error::ContractError;
 
 #[cw_serde]
 #[derive(Eq, Copy, Default)]

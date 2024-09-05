@@ -1,7 +1,6 @@
 use cosmwasm_schema::cw_serde;
 
-use crate::{fee_growth::FeeGrowth, liquidity::Liquidity, token_amount::TokenAmount};
-use oraiswap_v3_common::{asset::AssetInfo, error::ContractError};
+use crate::{asset::AssetInfo, error::ContractError, math::{fee_growth::FeeGrowth, liquidity::Liquidity, token_amount::TokenAmount}};
 
 #[cw_serde]
 pub struct IncentiveRecord {

@@ -2,18 +2,12 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Uint64};
 use cw20::Expiration;
-use oraiswap_v3_common::asset::{Asset, AssetInfo};
+use crate::asset::{Asset, AssetInfo};
 
-use crate::interface::{
-    AllNftInfoResponse, ApprovedForAllResponse, NftInfoResponse, NumTokensResponse,
-    OwnerOfResponse, PoolWithPoolKey, PositionTick, QuoteResult, TokensResponse,
-};
+use crate::{interface::{
+    AllNftInfoResponse, ApprovedForAllResponse, NftInfoResponse, NumTokensResponse, OwnerOfResponse, PoolWithPoolKey, PositionTick, QuoteResult, SwapHop, TokensResponse
+}, math::{liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice, token_amount::TokenAmount}, storage::{FeeTier, LiquidityTick, Pool, PoolKey, Position, Tick}};
 #[allow(unused_imports)]
-use crate::{
-    fee_growth::FeeGrowth, interface::SwapHop, liquidity::Liquidity, percentage::Percentage,
-    sqrt_price::SqrtPrice, token_amount::TokenAmount, FeeTier, LiquidityTick, Pool, PoolKey,
-    Position, Tick,
-};
 
 #[cw_serde]
 pub struct InstantiateMsg {

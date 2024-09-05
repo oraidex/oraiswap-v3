@@ -1,10 +1,10 @@
-use crate::msg::{ExecuteMsg, QueryMsg};
-use crate::percentage::Percentage;
 use crate::tests::helper::MockApp;
 use crate::tests::helper::{macros::*, FEE_DENOM};
 use cosmwasm_std::{coins, Addr};
 use decimal::Decimal;
 use oraiswap_v3_common::error::ContractError;
+use oraiswap_v3_common::math::percentage::Percentage;
+use oraiswap_v3_common::oraiswap_v3_msg::{ExecuteMsg, QueryMsg};
 
 #[test]
 fn test_change_admin() {

@@ -1,5 +1,3 @@
-use super::{FeeTier, Tick};
-use crate::incentive::IncentiveRecord;
 use crate::math::types::sqrt_price::check_tick_to_sqrt_price_relationship;
 use crate::math::{
     clamm::*,
@@ -9,7 +7,8 @@ use crate::math::{
         token_amount::TokenAmount,
     },
 };
-use oraiswap_v3_common::error::ContractError;
+use crate::error::ContractError;
+use crate::storage::{incentive::IncentiveRecord, tick::Tick, fee_tier::FeeTier};
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;

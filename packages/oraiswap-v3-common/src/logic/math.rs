@@ -1,10 +1,10 @@
 use decimal::*;
 
+use crate::error::ContractError;
 use crate::math::liquidity::Liquidity;
 use crate::math::sqrt_price::{calculate_sqrt_price, SqrtPrice};
 use crate::math::token_amount::TokenAmount;
 use crate::math::MAX_TICK;
-use oraiswap_v3_common::error::ContractError;
 
 #[derive(Debug)]
 pub struct LiquidityResult {

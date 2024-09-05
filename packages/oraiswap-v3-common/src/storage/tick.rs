@@ -1,6 +1,6 @@
 use super::Pool;
 use crate::{
-    incentive::TickIncentive,
+    storage::incentive::TickIncentive,
     math::types::{
         fee_growth::FeeGrowth,
         liquidity::Liquidity,
@@ -9,7 +9,7 @@ use crate::{
 };
 use cosmwasm_schema::cw_serde;
 use decimal::*;
-use oraiswap_v3_common::error::ContractError;
+use crate::error::ContractError;
 
 #[cw_serde]
 #[derive(Eq, Default)]

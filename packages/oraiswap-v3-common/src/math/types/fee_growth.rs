@@ -1,7 +1,7 @@
 use crate::math::types::{liquidity::*, token_amount::*};
 use cosmwasm_schema::cw_serde;
 use decimal::*;
-use oraiswap_v3_common::error::ContractError;
+use crate::error::ContractError;
 
 #[decimal(28)]
 #[cw_serde]
@@ -98,7 +98,7 @@ mod tests {
     use super::*;
     use crate::math::consts::{MAX_TICK, TICK_SEARCH_RANGE};
     use crate::math::types::sqrt_price::SqrtPrice;
-    use crate::CASTING_INTEGER_TO_U128_ERROR;
+    use crate::math::clamm::CASTING_INTEGER_TO_U128_ERROR;
 
     #[test]
     fn test_unchecked_add() {

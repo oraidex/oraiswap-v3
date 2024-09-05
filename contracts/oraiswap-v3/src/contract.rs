@@ -1,10 +1,13 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::entrypoints::*;
 use crate::state::CONFIG;
-use crate::{entrypoints::*, Config};
-use oraiswap_v3_common::error::ContractError;
+use oraiswap_v3_common::{
+    error::ContractError,
+    oraiswap_v3_msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    storage::Config,
+};
 
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;

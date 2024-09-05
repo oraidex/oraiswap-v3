@@ -38,7 +38,7 @@ impl MockApp {
         }
         #[cfg(feature = "test-tube")]
         {
-            dex_id = app.upload(include_bytes!("./testdata/oraiswap-v3.wasm"));
+            zapper_id = app.upload(include_bytes!("./testdata/zapper.wasm"));
         }
 
         (Self { app, zapper_id }, accounts)

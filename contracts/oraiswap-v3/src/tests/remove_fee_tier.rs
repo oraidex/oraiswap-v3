@@ -1,12 +1,8 @@
 use cosmwasm_std::coins;
 use decimal::*;
 
-use crate::{
-    percentage::Percentage,
-    tests::helper::{macros::*, MockApp, FEE_DENOM},
-    FeeTier,
-};
-use oraiswap_v3_common::error::ContractError;
+use crate::tests::helper::{macros::*, MockApp, FEE_DENOM};
+use oraiswap_v3_common::{error::ContractError, math::percentage::Percentage, storage::FeeTier};
 
 #[test]
 fn test_remove_fee_tier() {

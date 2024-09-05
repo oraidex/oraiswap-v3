@@ -3,7 +3,7 @@ use decimal::*;
 
 use crate::math::consts::*;
 use crate::math::types::{fixed_point::FixedPoint, token_amount::TokenAmount};
-use oraiswap_v3_common::error::ContractError;
+use crate::error::ContractError;
 
 #[decimal(24)]
 #[cw_serde]

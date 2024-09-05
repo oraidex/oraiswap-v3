@@ -1,15 +1,15 @@
 use cosmwasm_std::coins;
 use decimal::*;
-
-use crate::{
+use oraiswap_v3_common::{
     interface::SwapHop,
-    liquidity::Liquidity,
-    percentage::Percentage,
-    sqrt_price::calculate_sqrt_price,
-    tests::helper::{macros::*, MockApp, FEE_DENOM},
-    token_amount::TokenAmount,
-    FeeTier, PoolKey,
+    math::{
+        liquidity::Liquidity, percentage::Percentage, sqrt_price::calculate_sqrt_price,
+        token_amount::TokenAmount,
+    },
+    storage::{FeeTier, PoolKey},
 };
+
+use crate::tests::helper::{macros::*, MockApp, FEE_DENOM};
 
 #[test]
 fn swap_route() {

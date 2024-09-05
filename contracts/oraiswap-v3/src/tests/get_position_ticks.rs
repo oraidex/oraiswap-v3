@@ -1,20 +1,20 @@
 use cosmwasm_std::coins;
 use cosmwasm_std::Addr;
 use decimal::{Decimal, Factories};
+use oraiswap_v3_common::interface::PositionTick;
+use oraiswap_v3_common::math::fee_growth::FeeGrowth;
+use oraiswap_v3_common::math::liquidity::Liquidity;
+use oraiswap_v3_common::math::percentage::Percentage;
+use oraiswap_v3_common::math::sqrt_price::calculate_sqrt_price;
+use oraiswap_v3_common::math::sqrt_price::SqrtPrice;
+use oraiswap_v3_common::math::token_amount::TokenAmount;
+use oraiswap_v3_common::storage::FeeTier;
+use oraiswap_v3_common::storage::PoolKey;
+use oraiswap_v3_common::storage::Position;
+use oraiswap_v3_common::storage::POSITION_TICK_LIMIT;
 
-use crate::fee_growth::FeeGrowth;
 use crate::tests::helper::FEE_DENOM;
-use crate::token_amount::TokenAmount;
-use crate::Position;
-use crate::POSITION_TICK_LIMIT;
-use crate::{
-    liquidity::Liquidity,
-    msg,
-    percentage::Percentage,
-    sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp},
-    FeeTier, PoolKey, PositionTick,
-};
+use crate::tests::helper::{macros::*, MockApp};
 
 #[test]
 fn test_get_position_ticks() {

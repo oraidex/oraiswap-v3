@@ -1,6 +1,6 @@
 use super::{Pool, PoolKey, Tick};
 use crate::{
-    incentive::{calculate_incentive_growth_inside, PositionIncentives},
+    storage::incentive::{calculate_incentive_growth_inside, PositionIncentives},
     interface::Approval,
     math::{
         clamm::*,
@@ -14,7 +14,7 @@ use crate::{
 };
 use cosmwasm_schema::cw_serde;
 use decimal::*;
-use oraiswap_v3_common::{asset::Asset, error::ContractError};
+use crate::{asset::Asset, error::ContractError};
 
 #[cw_serde]
 #[derive(Default)]

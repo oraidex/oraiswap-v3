@@ -3,8 +3,8 @@ use cosmwasm_std::{to_json_binary, Addr, Binary, CosmosMsg, StdResult, WasmMsg};
 use cw20::Expiration;
 
 use crate::{
-    fee_growth::FeeGrowth, sqrt_price::SqrtPrice, token_amount::TokenAmount, Pool, PoolKey,
-    Position, Tick,
+    math::{fee_growth::FeeGrowth, sqrt_price::SqrtPrice, token_amount::TokenAmount},
+    storage::{Pool, PoolKey, Position, Tick},
 };
 
 #[cw_serde]

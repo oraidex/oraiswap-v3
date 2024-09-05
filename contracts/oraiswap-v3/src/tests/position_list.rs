@@ -1,13 +1,16 @@
 use cosmwasm_std::coins;
 use decimal::*;
 
-use crate::{
-    fee_growth::FeeGrowth,
-    liquidity::Liquidity,
-    percentage::Percentage,
-    sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp, FEE_DENOM},
-    FeeTier, PoolKey,
+use crate::tests::helper::{macros::*, MockApp, FEE_DENOM};
+
+use oraiswap_v3_common::{
+    math::{
+        fee_growth::FeeGrowth,
+        liquidity::Liquidity,
+        percentage::Percentage,
+        sqrt_price::{calculate_sqrt_price, SqrtPrice},
+    },
+    storage::{FeeTier, PoolKey},
 };
 
 #[test]

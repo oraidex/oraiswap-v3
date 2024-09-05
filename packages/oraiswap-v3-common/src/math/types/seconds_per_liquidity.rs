@@ -2,7 +2,7 @@ use cosmwasm_schema::cw_serde;
 use decimal::*;
 
 use crate::math::types::liquidity::Liquidity;
-use oraiswap_v3_common::error::ContractError;
+use crate::error::ContractError;
 
 #[decimal(24)]
 #[cw_serde]
@@ -75,7 +75,7 @@ pub mod tests {
     use super::*;
 
     use crate::{
-        math::types::seconds_per_liquidity::SecondsPerLiquidity, CASTING_INTEGER_TO_U128_ERROR,
+        math::types::seconds_per_liquidity::SecondsPerLiquidity, math::clamm::CASTING_INTEGER_TO_U128_ERROR,
     };
     #[test]
     fn test_domain_calculate_seconds_per_liquidity_global() {

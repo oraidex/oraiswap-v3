@@ -1,10 +1,10 @@
 use core::fmt;
+use cw_storage_plus::KeyDeserialize;
 
-use crate::FeeTier;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_storage::to_length_prefixed_nested;
-use cw_storage_plus::KeyDeserialize;
-use oraiswap_v3_common::error::ContractError;
+use crate::error::ContractError;
+use crate::storage::FeeTier;
 
 #[cw_serde]
 #[derive(Default, Eq)]
@@ -84,7 +84,7 @@ mod tests {
     use cosmwasm_storage::to_length_prefixed_nested;
     use decimal::Decimal;
 
-    use crate::{percentage::Percentage, FeeTier, PoolKey};
+    use crate::{math::percentage::Percentage, storage::{FeeTier, PoolKey}};
 
     #[test]
     fn test_key() {
