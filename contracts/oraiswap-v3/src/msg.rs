@@ -155,7 +155,12 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub admin: Addr,
+    pub fee_tiers: Vec<FeeTier>,
+    pub protocol_fee: Percentage,
+    pub incentives_fund_manager: Addr,
+}
 
 #[cw_serde]
 #[derive(QueryResponses)]

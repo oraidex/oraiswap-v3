@@ -12,8 +12,8 @@ use crate::{
     state::{self, CONFIG, MAX_LIMIT, POSITIONS},
     tick_to_position,
     token_amount::TokenAmount,
-     FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
-    LIQUIDITY_TICK_LIMIT, MAX_TICKMAP_QUERY_SIZE, POSITION_TICK_LIMIT
+    FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
+    LIQUIDITY_TICK_LIMIT, MAX_TICKMAP_QUERY_SIZE, POSITION_TICK_LIMIT,
 };
 use oraiswap_v3_common::{asset::Asset, error::ContractError};
 
