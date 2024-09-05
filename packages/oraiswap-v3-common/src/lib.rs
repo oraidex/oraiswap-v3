@@ -6,3 +6,4 @@ pub mod logic;
 pub mod interface;
 pub mod oraiswap_v3_msg;
 pub mod storage;
+pub mod utils;

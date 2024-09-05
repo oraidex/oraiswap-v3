@@ -16,6 +16,9 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("Invalid Reply ID")]
+    UnrecognizedReplyId { id: u64 },
 }
 
 impl From<ContractError> for StdError {

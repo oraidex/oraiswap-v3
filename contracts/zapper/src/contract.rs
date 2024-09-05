@@ -6,12 +6,19 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::CONFIG;
 use crate::{entrypoints::*, Config};
 
-use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+};
 use cw2::set_contract_version;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:zapper";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+// id for each reply
+pub const ZAP_IN_LIQUIDITY_REPLY_ID: u64 = 1;
+pub const ZAP_OUT_LIQUIDITY_REPLY_ID: u64 = 2;
+pub const ADD_LIQUIDITY_REPLY_ID: u64 = 3;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -59,4 +66,14 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
     let original_version =
         cw2::ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::new().add_attribute("new_version", original_version.to_string()))
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
+    match reply.id {
+        ZAP_IN_LIQUIDITY_REPLY_ID => reply::zap_in_liquidity(deps, env),
+        ZAP_OUT_LIQUIDITY_REPLY_ID => reply::zap_out_liquidity(deps, env),
+        ADD_LIQUIDITY_REPLY_ID => reply::add_liquidity(deps, env),
+        _ => Err(ContractError::UnrecognizedReplyId { id: reply.id }),
+    }
 }

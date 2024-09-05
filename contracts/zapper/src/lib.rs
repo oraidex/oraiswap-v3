@@ -2,8 +2,8 @@ mod error;
 
 pub mod contract;
 pub mod entrypoints;
-pub mod interface;
 pub mod msg;
+pub mod msgs;
 pub mod state;
 
 pub mod storage;

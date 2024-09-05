@@ -1,8 +1,8 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_json_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, Uint128, WasmMsg,
+    to_json_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, QuerierWrapper, StdResult, Uint128, WasmMsg
 };
-use cw20::Cw20ExecuteMsg;
+use cw20::{Cw20ExecuteMsg, BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg};
 
 use crate::error::ContractError;
 
@@ -29,6 +29,25 @@ impl AssetInfo {
         match self {
             AssetInfo::Token { contract_addr } => contract_addr.to_string(),
             AssetInfo::NativeToken { denom } => denom.to_string(),
+        }
+    }
+
+    pub fn balance(&self, querier: &QuerierWrapper, address: &Addr) -> StdResult<Uint128> {
+        match self {
+            AssetInfo::NativeToken { denom } => {
+                let res: Coin = querier
+                    .query_balance(address, denom)?;
+                Ok(res.amount)
+            }
+            AssetInfo::Token { contract_addr } => {
+                let res: Cw20BalanceResponse  = querier.query_wasm_smart(
+                    contract_addr,
+                    &Cw20QueryMsg::Balance {
+                        address: address.to_string(),
+                    },
+                )?;
+                Ok(res.balance)
+            }
         }
     }
 }
