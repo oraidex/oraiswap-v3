@@ -58,11 +58,14 @@ pub fn zap_in_liquidity(
     minimum_receive_x: Option<Uint128>,
     minimum_receive_y: Option<Uint128>,
 ) -> Result<Response, ContractError> {
+    // load config to get address
     let config = CONFIG.load(deps.storage)?;
 
+    // init messages and submessages
     let mut msgs: Vec<CosmosMsg> = vec![];
     let mut sub_msgs: Vec<SubMsg> = vec![];
 
+    // snap pending position
     let position_length: u32 = deps.querier.query_wasm_smart(
         config.dex_v3.to_string(),
         &QueryMsg::UserPositionAmount {
@@ -79,12 +82,15 @@ pub fn zap_in_liquidity(
         slippage_limit_upper: None,
     };
     PENDING_POSITION.save(deps.storage, &position)?;
+
+    // snap receiver
     RECEIVER.save(deps.storage, &info.sender)?;
 
+    // transfer the amount 
     match asset_in.info.clone() {
         AssetInfo::Token { contract_addr: _ } => {
             // 1. First transfer from tokenIn amount to this contract
-            asset_in.transfer(&mut msgs, &info).unwrap(); // handle error
+            asset_in.transfer_from(&mut msgs, &info, env.contract.address.to_string()).unwrap(); 
         }
         _ => {}
     }
