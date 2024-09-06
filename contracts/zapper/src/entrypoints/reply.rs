@@ -1,11 +1,9 @@
 use std::vec;
 
 use cosmwasm_std::{
-    coins, to_json_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, Response, SubMsg, WasmMsg,
+    to_json_binary, Coin, CosmosMsg, DepsMut, Env, Response, SubMsg, WasmMsg,
 };
-use cw20::Cw20ExecuteMsg;
 use oraiswap_v3_common::{
-    asset::{Asset, AssetInfo},
     logic::{get_liquidity_by_x, get_liquidity_by_y},
     math::{sqrt_price::get_min_sqrt_price, token_amount::TokenAmount},
     oraiswap_v3_msg::{ExecuteMsg, QueryMsg},
@@ -14,10 +12,11 @@ use oraiswap_v3_common::{
 
 use crate::{
     contract::ADD_LIQUIDITY_REPLY_ID,
-    msgs::mixed_router,
     state::{CONFIG, PENDING_POSITION, RECEIVER, SNAP_BALANCE, SNAP_INCENTIVE, ZAP_OUT_ROUTES},
     ContractError, PairBalance,
 };
+
+use super::process_single_swap_operation;
 
 pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
     let mut msgs: Vec<CosmosMsg> = vec![];
@@ -29,8 +28,12 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
     let token_y = snap_balance.token_y;
 
     // 6. Minus with the previous balance of tokenX and tokenY snap in state
-    let x_amount_after = token_x.info.balance(&deps.querier, &env.contract.address)?;
-    let y_amount_after = token_y.info.balance(&deps.querier, &env.contract.address)?;
+    let x_amount_after = token_x
+        .info
+        .balance(&deps.querier, env.contract.address.to_string())?;
+    let y_amount_after = token_y
+        .info
+        .balance(&deps.querier, env.contract.address.to_string())?;
     let x_amount = x_amount_after - token_x.amount;
     let y_amount = y_amount_after - token_y.amount;
 
@@ -67,47 +70,14 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
 
     // approve tokenX and tokenY to dex_v3
     let mut coins: Vec<Coin> = vec![];
-    match token_x.info.clone() {
-        AssetInfo::NativeToken { denom } => {
-            coins.push(Coin {
-                denom,
-                amount: x_amount.into(),
-            });
-        }
-        AssetInfo::Token { contract_addr } => {
-            msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: contract_addr.to_string(),
-                msg: to_json_binary(&Cw20ExecuteMsg::IncreaseAllowance {
-                    spender: config.dex_v3.to_string(),
-                    amount: x_amount.into(),
-                    expires: None,
-                })
-                .unwrap(),
-                funds: vec![],
-            }));
-        }
-    }
-
-    match token_y.info.clone() {
-        AssetInfo::NativeToken { denom } => {
-            coins.push(Coin {
-                denom,
-                amount: y_amount.into(),
-            });
-        }
-        AssetInfo::Token { contract_addr } => {
-            msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: contract_addr.to_string(),
-                msg: to_json_binary(&Cw20ExecuteMsg::IncreaseAllowance {
-                    spender: config.dex_v3.to_string(),
-                    amount: y_amount.into(),
-                    expires: None,
-                })
-                .unwrap(),
-                funds: vec![],
-            }));
-        }
-    }
+    token_x
+        .info
+        .increase_allowance(&mut coins, &mut msgs, config.dex_v3.to_string(), x_amount)
+        .unwrap();
+    token_y
+        .info
+        .increase_allowance(&mut coins, &mut msgs, config.dex_v3.to_string(), y_amount)
+        .unwrap();
 
     sub_msgs.push(SubMsg::reply_on_success(
         WasmMsg::Execute {
@@ -130,19 +100,14 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
         ADD_LIQUIDITY_REPLY_ID,
     ));
 
-    SNAP_BALANCE.save(
+    PairBalance::save(
         deps.storage,
-        &PairBalance {
-            token_x: Asset {
-                info: token_x.info,
-                amount: x_amount_after - x_amount,
-            },
-            token_y: Asset {
-                info: token_y.info,
-                amount: y_amount_after - y_amount,
-            },
-        },
-    )?;
+        &token_x.info,
+        token_x.amount,
+        &token_y.info,
+        token_y.amount,
+    )
+    .unwrap();
 
     Ok(Response::new().add_messages(msgs).add_submessages(sub_msgs))
 }
@@ -155,8 +120,12 @@ pub fn add_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError>
     let token_x = snap_balance.token_x;
     let token_y = snap_balance.token_y;
 
-    let x_amount_after = token_x.info.balance(&deps.querier, &env.contract.address)?;
-    let y_amount_after = token_y.info.balance(&deps.querier, &env.contract.address)?;
+    let x_amount_after = token_x
+        .info
+        .balance(&deps.querier, env.contract.address.to_string())?;
+    let y_amount_after = token_y
+        .info
+        .balance(&deps.querier, env.contract.address.to_string())?;
     // amount to refund
     let x_amount = x_amount_after - token_x.amount;
     let y_amount = y_amount_after - token_y.amount;
@@ -184,53 +153,10 @@ pub fn add_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError>
 
     // 10. Refund unused tokenX and tokenY to user
     if x_amount > 0u128.into() {
-        match token_x.info.clone() {
-            AssetInfo::NativeToken { denom } => {
-                msgs.push(CosmosMsg::Bank(BankMsg::Send {
-                    to_address: receiver.to_string(),
-                    amount: vec![Coin {
-                        denom,
-                        amount: x_amount.into(),
-                    }],
-                }));
-            }
-            AssetInfo::Token { contract_addr } => {
-                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: contract_addr.to_string(),
-                    msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
-                        recipient: receiver.to_string(),
-                        amount: x_amount.into(),
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                }));
-            }
-        }
+        token_x.info.transfer(&mut msgs, receiver.to_string(), x_amount).unwrap();
     }
-
     if y_amount > 0u128.into() {
-        match token_y.info.clone() {
-            AssetInfo::NativeToken { denom } => {
-                msgs.push(CosmosMsg::Bank(BankMsg::Send {
-                    to_address: receiver.to_string(),
-                    amount: vec![Coin {
-                        denom,
-                        amount: y_amount.into(),
-                    }],
-                }));
-            }
-            AssetInfo::Token { contract_addr } => {
-                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: contract_addr.to_string(),
-                    msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
-                        recipient: receiver.to_string(),
-                        amount: y_amount.into(),
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                }));
-            }
-        }
+        token_y.info.transfer(&mut msgs, receiver.to_string(), y_amount).unwrap();
     }
 
     Ok(Response::new().add_messages(msgs))
@@ -247,8 +173,12 @@ pub fn zap_out_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractEr
     let token_x = snap_balance.token_x;
     let token_y = snap_balance.token_y;
 
-    let x_amount_after = token_x.info.balance(&deps.querier, &env.contract.address)?;
-    let y_amount_after = token_y.info.balance(&deps.querier, &env.contract.address)?;
+    let x_amount_after = token_x
+        .info
+        .balance(&deps.querier, env.contract.address.to_string())?;
+    let y_amount_after = token_y
+        .info
+        .balance(&deps.querier, env.contract.address.to_string())?;
     // amount to refund
     let x_amount = x_amount_after - token_x.amount;
     let y_amount = y_amount_after - token_y.amount;
@@ -257,31 +187,10 @@ pub fn zap_out_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractEr
     for incentive in incentive_balance.incentives.iter() {
         let after_balance = incentive
             .info
-            .balance(&deps.querier, &env.contract.address)?;
+            .balance(&deps.querier, env.contract.address.to_string())?;
         let amount = after_balance - incentive.amount;
         if amount > 0u128.into() {
-            match incentive.info.clone() {
-                AssetInfo::NativeToken { denom } => {
-                    msgs.push(CosmosMsg::Bank(BankMsg::Send {
-                        to_address: receiver.to_string(),
-                        amount: vec![Coin {
-                            denom,
-                            amount: amount.into(),
-                        }],
-                    }));
-                }
-                AssetInfo::Token { contract_addr } => {
-                    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                        contract_addr: contract_addr.to_string(),
-                        msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
-                            recipient: receiver.to_string(),
-                            amount: amount.into(),
-                        })
-                        .unwrap(),
-                        funds: vec![],
-                    }));
-                }
-            }
+            incentive.info.transfer(&mut msgs, receiver.to_string(), amount).unwrap();
         }
     }
 
@@ -289,79 +198,35 @@ pub fn zap_out_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractEr
         && zap_out_routes.operation_from_x.is_some()
         && zap_out_routes.operation_from_x.as_ref().unwrap().len() > 0
     {
-        match token_x.info.clone() {
-            AssetInfo::NativeToken { denom } => {
-                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: config.mixed_router.to_string(),
-                    msg: to_json_binary(&mixed_router::ExecuteMsg::ExecuteSwapOperations {
-                        operations: zap_out_routes.operation_from_x.clone().unwrap(),
-                        minimum_receive: zap_out_routes.minimum_receive_x,
-                        to: Some(receiver.clone()),
-                        affiliates: None,
-                    })
-                    .unwrap(),
-                    funds: coins(x_amount.u128(), denom),
-                }));
-            }
-            AssetInfo::Token { contract_addr } => {
-                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: contract_addr.to_string(),
-                    msg: to_json_binary(&Cw20ExecuteMsg::Send {
-                        contract: config.mixed_router.to_string(),
-                        amount: x_amount.into(),
-                        msg: to_json_binary(&mixed_router::ExecuteMsg::ExecuteSwapOperations {
-                            operations: zap_out_routes.operation_from_x.clone().unwrap(),
-                            minimum_receive: zap_out_routes.minimum_receive_x,
-                            to: Some(receiver.clone()),
-                            affiliates: None,
-                        })?,
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                }));
-            }
-        }
+        let swap_msg = process_single_swap_operation(
+            // &mut sub_msgs,
+            token_x.info,
+            config.mixed_router.to_string(),
+            x_amount,
+            zap_out_routes.operation_from_x.unwrap(),
+            zap_out_routes.minimum_receive_x,
+            Some(receiver.clone()),
+            None,
+        )?;
+        msgs.push(CosmosMsg::Wasm(swap_msg));
     }
 
     if y_amount > 0u128.into()
         && zap_out_routes.operation_from_y.is_some()
         && zap_out_routes.operation_from_y.as_ref().unwrap().len() > 0
     {
-        match token_y.info.clone() {
-            AssetInfo::NativeToken { denom } => {
-                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: config.mixed_router.to_string(),
-                    msg: to_json_binary(&mixed_router::ExecuteMsg::ExecuteSwapOperations {
-                        operations: zap_out_routes.operation_from_y.unwrap(),
-                        minimum_receive: zap_out_routes.minimum_receive_y,
-                        to: Some(receiver.clone()),
-                        affiliates: None,
-                    })
-                    .unwrap(),
-                    funds: coins(y_amount.u128(), denom),
-                }));
-            }
-            AssetInfo::Token { contract_addr } => {
-                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: contract_addr.to_string(),
-                    msg: to_json_binary(&Cw20ExecuteMsg::Send {
-                        contract: config.mixed_router.to_string(),
-                        amount: y_amount.into(),
-                        msg: to_json_binary(&mixed_router::ExecuteMsg::ExecuteSwapOperations {
-                            operations: zap_out_routes.operation_from_y.unwrap(),
-                            minimum_receive: zap_out_routes.minimum_receive_y,
-                            to: Some(receiver.clone()),
-                            affiliates: None,
-                        })?,
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                }));
-            }
-        }
+        let swap_msg = process_single_swap_operation(
+            // &mut sub_msgs,
+            token_y.info,
+            config.mixed_router.to_string(),
+            y_amount,
+            zap_out_routes.operation_from_y.unwrap(),
+            zap_out_routes.minimum_receive_y,
+            Some(receiver.clone()),
+            None,
+        )?;
+        msgs.push(CosmosMsg::Wasm(swap_msg));
     }
-
-    // 6. Send the amounts of tokenX and tokenY to user
 
     Ok(Response::new().add_messages(msgs))
 }

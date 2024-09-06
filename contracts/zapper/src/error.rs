@@ -19,6 +19,9 @@ pub enum ContractError {
 
     #[error("Invalid Reply ID")]
     UnrecognizedReplyId { id: u64 },
+
+    #[error("No fund is sent")]
+    NoFundSent {},
 }
 
 impl From<ContractError> for StdError {

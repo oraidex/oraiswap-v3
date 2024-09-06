@@ -14,3 +14,25 @@ pub struct PendingPosition {
     pub slippage_limit_lower: Option<SqrtPrice>,
     pub slippage_limit_upper: Option<SqrtPrice>,
 }
+
+impl PendingPosition {
+    pub fn new(
+        index: u32,
+        pool_key: PoolKey,
+        lower_tick: i32,
+        upper_tick: i32,
+        liquidity_delta: Option<Liquidity>,
+        slippage_limit_lower: Option<SqrtPrice>,
+        slippage_limit_upper: Option<SqrtPrice>,
+    ) -> Self {
+        Self {
+            index,
+            pool_key,
+            lower_tick,
+            upper_tick,
+            liquidity_delta,
+            slippage_limit_lower,
+            slippage_limit_upper,
+        }
+    }
+}

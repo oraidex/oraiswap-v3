@@ -5,6 +5,7 @@ pub mod entrypoints;
 pub mod msg;
 pub mod msgs;
 pub mod state;
+pub mod interface;
 
 pub mod storage;
 
