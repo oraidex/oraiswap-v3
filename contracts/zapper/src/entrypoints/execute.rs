@@ -15,7 +15,7 @@ use crate::{
     Config, ContractError, IncentiveBalance, PairBalance, PendingPosition, ZapOutRoutes,
 };
 
-use super::{process_double_swap_operation, process_single_swap_operation, validate_fund};
+use super::{build_swap_msg, validate_fund};
 
 pub fn update_config(
     deps: DepsMut,
@@ -56,15 +56,28 @@ pub fn zap_in_liquidity(
     minimum_receive_x: Option<Uint128>,
     minimum_receive_y: Option<Uint128>,
 ) -> Result<Response, ContractError> {
-    // load config to get address
-    let config = CONFIG.load(deps.storage)?;
-
     // init messages and submessages
     let mut msgs: Vec<CosmosMsg> = vec![];
     let mut sub_msgs: Vec<SubMsg> = vec![];
 
+    // transfer the amount or check the fund is sent with request
+    validate_fund(
+        &deps.querier,
+        &info,
+        env.contract.address.to_string(),
+        asset_in.clone(),
+        &mut msgs,
+    )?;
+    // validate amount_to_x + amount_to_y = asset_in
+    if asset_in.amount != amount_to_x + amount_to_y {
+        return Err(ContractError::InvalidFund {});
+    }
+
+    // load config to get address
+    let config = CONFIG.load(deps.storage)?;
+
     // snap pending position
-    let position_length: u32 = deps.querier.query_wasm_smart(
+    let position_length = deps.querier.query_wasm_smart(
         config.dex_v3.to_string(),
         &QueryMsg::UserPositionAmount {
             owner: env.contract.address.clone(),
@@ -84,51 +97,42 @@ pub fn zap_in_liquidity(
     // snap receiver
     RECEIVER.save(deps.storage, &info.sender)?;
 
-    // transfer the amount or check the fund is sent with request
-    validate_fund(
-        &deps.querier,
-        &info,
-        env.contract.address.to_string(),
-        asset_in.clone(),
-        &mut msgs,
-    )?;
-
     // Snap the balance of tokenX and tokenY in this contract
     let (token_x, token_y) = get_pool_v3_asset_info(deps.api, &pool_key);
     let mut balance_x = token_x.balance(&deps.querier, env.contract.address.to_string())?;
     let mut balance_y = token_y.balance(&deps.querier, env.contract.address.to_string())?;
-    if asset_in.info.denom() == token_x.denom() {
+
+    if asset_in.info.eq(&token_x) {
         balance_x -= asset_in.amount;
     }
-    if asset_in.info.denom() == token_y.denom() {
+    if asset_in.info.eq(&token_y) {
         balance_y -= asset_in.amount;
     }
-    PairBalance::save(deps.storage, &token_x, balance_x, &token_y, balance_y).unwrap();
+    PairBalance::save(deps.storage, &token_x, balance_x, &token_y, balance_y)?;
 
     // 3. Create SubMsg to process swap operations in mixedRouter contract
     // 4. Reply on success, if error occurs, revert the state
-    if asset_in.info.denom() == token_x.denom() {
+    if asset_in.info.eq(&token_x) {
         // just need to swap x to y
-        let swap_msg = process_single_swap_operation(
-            // &mut sub_msgs,
-            asset_in.info,
-            config.mixed_router.to_string(),
+        let swap_msg = build_swap_msg(
+            &asset_in.info,
+            config.mixed_router,
             amount_to_y,
             operation_to_y.unwrap(),
             minimum_receive_y,
             None,
             None,
         )?;
+
         sub_msgs.push(SubMsg::reply_on_success(
             swap_msg,
             ZAP_IN_LIQUIDITY_REPLY_ID,
         ));
-    } else if asset_in.info.denom() == token_y.denom() {
+    } else if asset_in.info.eq(&token_y) {
         // just need to swap y to x
-        let swap_msg = process_single_swap_operation(
-            // &mut sub_msgs,
-            asset_in.info,
-            config.mixed_router.to_string(),
+        let swap_msg = build_swap_msg(
+            &asset_in.info,
+            config.mixed_router,
             amount_to_x,
             operation_to_x.unwrap(),
             minimum_receive_x,
@@ -140,21 +144,30 @@ pub fn zap_in_liquidity(
             ZAP_IN_LIQUIDITY_REPLY_ID,
         ));
     } else {
-        // need to swap two times, asset_in to x, asset_in to y
-        process_double_swap_operation(
-            &mut msgs,
-            &mut sub_msgs,
-            asset_in.info,
-            config.mixed_router.to_string(),
+        let swap_to_x_msg = build_swap_msg(
+            &asset_in.info,
+            config.mixed_router.clone(),
             amount_to_x,
-            amount_to_y,
             operation_to_x.unwrap(),
-            operation_to_y.unwrap(),
             minimum_receive_x,
+            None,
+            None,
+        )?;
+        let swap_to_y_msg = build_swap_msg(
+            &asset_in.info,
+            config.mixed_router,
+            amount_to_y,
+            operation_to_y.unwrap(),
             minimum_receive_y,
             None,
             None,
         )?;
+
+        sub_msgs.push(SubMsg::new(swap_to_x_msg));
+        sub_msgs.push(SubMsg::reply_on_success(
+            swap_to_y_msg,
+            ZAP_IN_LIQUIDITY_REPLY_ID,
+        ));
     }
 
     Ok(Response::new().add_messages(msgs).add_submessages(sub_msgs))

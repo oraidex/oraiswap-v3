@@ -22,6 +22,9 @@ pub enum ContractError {
 
     #[error("No fund is sent")]
     NoFundSent {},
+
+    #[error("Invalid fund")]
+    InvalidFund {},
 }
 
 impl From<ContractError> for StdError {
