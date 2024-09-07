@@ -1,8 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Uint128;
+use oraiswap::mixed_router::SwapOperation;
 use oraiswap_v3_common::asset::AssetInfo;
-
-use crate::msgs::SwapOperation;
 
 #[cw_serde]
 pub struct ZapOutRoutes {

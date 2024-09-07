@@ -8,11 +8,8 @@ use oraiswap_v3_common::{
     storage::PoolKey,
 };
 
-use crate::{
-    contract::ZAP_IN_LIQUIDITY_REPLY_ID,
-    msgs::{mixed_router, Affiliate, SwapOperation},
-    ContractError,
-};
+use crate::{contract::ZAP_IN_LIQUIDITY_REPLY_ID, ContractError};
+use oraiswap::mixed_router::{self, Affiliate, SwapOperation};
 
 pub fn get_pool_v3_asset_info(api: &dyn Api, pool_key: &PoolKey) -> (AssetInfo, AssetInfo) {
     (
@@ -85,7 +82,7 @@ pub fn process_single_swap_operation(
             let swap_msg = WasmMsg::Execute {
                 contract_addr: contract,
                 msg: to_json_binary(&swap_msg)?,
-                funds: coins(amount.u128(), &denom),
+                funds: coins(amount.u128(), denom),
             };
             Ok(swap_msg)
             // sub_msgs.push(SubMsg::reply_on_success(
@@ -96,6 +93,7 @@ pub fn process_single_swap_operation(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_double_swap_operation(
     msgs: &mut Vec<CosmosMsg>,
     sub_msgs: &mut Vec<SubMsg>,

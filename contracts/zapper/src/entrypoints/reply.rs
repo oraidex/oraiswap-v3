@@ -1,8 +1,6 @@
 use std::vec;
 
-use cosmwasm_std::{
-    to_json_binary, Coin, CosmosMsg, DepsMut, Env, Response, SubMsg, WasmMsg,
-};
+use cosmwasm_std::{to_json_binary, Coin, CosmosMsg, DepsMut, Env, Response, SubMsg, WasmMsg};
 use oraiswap_v3_common::{
     logic::{get_liquidity_by_x, get_liquidity_by_y},
     math::{sqrt_price::get_min_sqrt_price, token_amount::TokenAmount},
@@ -153,10 +151,16 @@ pub fn add_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError>
 
     // 10. Refund unused tokenX and tokenY to user
     if x_amount > 0u128.into() {
-        token_x.info.transfer(&mut msgs, receiver.to_string(), x_amount).unwrap();
+        token_x
+            .info
+            .transfer(&mut msgs, receiver.to_string(), x_amount)
+            .unwrap();
     }
     if y_amount > 0u128.into() {
-        token_y.info.transfer(&mut msgs, receiver.to_string(), y_amount).unwrap();
+        token_y
+            .info
+            .transfer(&mut msgs, receiver.to_string(), y_amount)
+            .unwrap();
     }
 
     Ok(Response::new().add_messages(msgs))
@@ -190,13 +194,16 @@ pub fn zap_out_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractEr
             .balance(&deps.querier, env.contract.address.to_string())?;
         let amount = after_balance - incentive.amount;
         if amount > 0u128.into() {
-            incentive.info.transfer(&mut msgs, receiver.to_string(), amount).unwrap();
+            incentive
+                .info
+                .transfer(&mut msgs, receiver.to_string(), amount)
+                .unwrap();
         }
     }
 
     if x_amount > 0u128.into()
         && zap_out_routes.operation_from_x.is_some()
-        && zap_out_routes.operation_from_x.as_ref().unwrap().len() > 0
+        && !zap_out_routes.operation_from_x.as_ref().unwrap().is_empty()
     {
         let swap_msg = process_single_swap_operation(
             // &mut sub_msgs,
@@ -213,7 +220,7 @@ pub fn zap_out_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractEr
 
     if y_amount > 0u128.into()
         && zap_out_routes.operation_from_y.is_some()
-        && zap_out_routes.operation_from_y.as_ref().unwrap().len() > 0
+        && !zap_out_routes.operation_from_y.as_ref().unwrap().is_empty()
     {
         let swap_msg = process_single_swap_operation(
             // &mut sub_msgs,

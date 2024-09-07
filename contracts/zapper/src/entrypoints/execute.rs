@@ -1,7 +1,7 @@
 use cosmwasm_std::{
-    to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128,
-    WasmMsg,
+    to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, WasmMsg,
 };
+use oraiswap::mixed_router::SwapOperation;
 use oraiswap_v3_common::{
     asset::{Asset, AssetInfo},
     oraiswap_v3_msg::{ExecuteMsg, QueryMsg},
@@ -11,7 +11,6 @@ use oraiswap_v3_common::{
 use crate::{
     contract::{ZAP_IN_LIQUIDITY_REPLY_ID, ZAP_OUT_LIQUIDITY_REPLY_ID},
     entrypoints::common::get_pool_v3_asset_info,
-    msgs::SwapOperation,
     state::{CONFIG, PENDING_POSITION, RECEIVER, SNAP_INCENTIVE, ZAP_OUT_POSITION, ZAP_OUT_ROUTES},
     Config, ContractError, IncentiveBalance, PairBalance, PendingPosition, ZapOutRoutes,
 };
@@ -41,6 +40,7 @@ pub fn update_config(
     Ok(Response::new().add_attributes(event_attributes))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn zap_in_liquidity(
     deps: DepsMut,
     env: Env,
@@ -98,16 +98,16 @@ pub fn zap_in_liquidity(
     let mut balance_x = token_x.balance(&deps.querier, env.contract.address.to_string())?;
     let mut balance_y = token_y.balance(&deps.querier, env.contract.address.to_string())?;
     if asset_in.info.denom() == token_x.denom() {
-        balance_x = balance_x - asset_in.amount;
+        balance_x -= asset_in.amount;
     }
     if asset_in.info.denom() == token_y.denom() {
-        balance_y = balance_y - asset_in.amount;
+        balance_y -= asset_in.amount;
     }
     PairBalance::save(deps.storage, &token_x, balance_x, &token_y, balance_y).unwrap();
 
     // 3. Create SubMsg to process swap operations in mixedRouter contract
     // 4. Reply on success, if error occurs, revert the state
-    if &asset_in.info.denom() == &token_x.denom() {
+    if asset_in.info.denom() == token_x.denom() {
         // just need to swap x to y
         let swap_msg = process_single_swap_operation(
             // &mut sub_msgs,
@@ -119,8 +119,11 @@ pub fn zap_in_liquidity(
             None,
             None,
         )?;
-        sub_msgs.push(SubMsg::reply_on_success(swap_msg, ZAP_IN_LIQUIDITY_REPLY_ID));
-    } else if &asset_in.info.denom() == &token_y.denom() {
+        sub_msgs.push(SubMsg::reply_on_success(
+            swap_msg,
+            ZAP_IN_LIQUIDITY_REPLY_ID,
+        ));
+    } else if asset_in.info.denom() == token_y.denom() {
         // just need to swap y to x
         let swap_msg = process_single_swap_operation(
             // &mut sub_msgs,
@@ -132,7 +135,10 @@ pub fn zap_in_liquidity(
             None,
             None,
         )?;
-        sub_msgs.push(SubMsg::reply_on_success(swap_msg, ZAP_IN_LIQUIDITY_REPLY_ID));
+        sub_msgs.push(SubMsg::reply_on_success(
+            swap_msg,
+            ZAP_IN_LIQUIDITY_REPLY_ID,
+        ));
     } else {
         // need to swap two times, asset_in to x, asset_in to y
         process_double_swap_operation(
@@ -154,6 +160,7 @@ pub fn zap_in_liquidity(
     Ok(Response::new().add_messages(msgs).add_submessages(sub_msgs))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn zap_out_liquidity(
     deps: DepsMut,
     env: Env,

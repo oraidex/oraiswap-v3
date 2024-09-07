@@ -502,9 +502,28 @@ dependencies = [
  "cw20",
  "cw20-base",
  "osmosis-test-tube",
- "token-bindings",
- "token-bindings-test",
- "tokenfactory",
+ "token-bindings 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=9796c74)",
+ "token-bindings-test 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=9796c74)",
+ "tokenfactory 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=9796c74)",
+]
+
+[[package]]
+name = "cosmwasm-testing-util"
+version = "0.1.0"
+source = "git+https://github.com/oraichain/cosmwasm-testing-util.git?rev=1b9c412#1b9c4126e8b5e19dc547f992a1a5cd9dde3d1b0d"
+dependencies = [
+ "anyhow",
+ "bech32 0.9.1",
+ "cosmwasm-crypto",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-vm",
+ "cw-multi-test",
+ "cw20",
+ "cw20-base",
+ "token-bindings 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=7861576)",
+ "token-bindings-test 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=7861576)",
+ "tokenfactory 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=7861576)",
 ]
 
 [[package]]
@@ -738,8 +757,8 @@ dependencies = [
  "anyhow",
  "bech32 0.11.0",
  "cosmwasm-std",
- "cw-storage-plus",
- "cw-utils",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
  "derivative",
  "itertools 0.13.0",
  "prost 0.12.6",
@@ -747,6 +766,17 @@ dependencies = [
  "serde",
  "sha2 0.10.8",
  "thiserror",
+]
+
+[[package]]
+name = "cw-storage-plus"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9b6f91c0b94481a3e9ef1ceb183c37d00764f8751e39b45fc09f4d9b970d469"
+dependencies = [
+ "cosmwasm-std",
+ "schemars",
+ "serde",
 ]
 
 [[package]]
@@ -762,17 +792,45 @@ dependencies = [
 
 [[package]]
 name = "cw-utils"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6a84c6c1c0acc3616398eba50783934bd6c964bad6974241eaee3460c8f5b26"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw2 0.16.0",
+ "schemars",
+ "semver",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw-utils"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c4a657e5caacc3a0d00ee96ca8618745d050b8f757c709babafb81208d4239c"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw2",
+ "cw2 1.1.2",
  "schemars",
  "semver",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "cw2"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91398113b806f4d2a8d5f8d05684704a20ffd5968bf87e3473e1973710b884ad"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.16.0",
+ "schemars",
+ "serde",
 ]
 
 [[package]]
@@ -783,7 +841,7 @@ checksum = "c6c120b24fbbf5c3bedebb97f2cc85fbfa1c3287e09223428e7e597b5293c1fa"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-plus",
+ "cw-storage-plus 1.2.0",
  "schemars",
  "semver",
  "serde",
@@ -798,7 +856,7 @@ checksum = "011c45920f8200bd5d32d4fe52502506f64f2f75651ab408054d4cfc75ca3a9b"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-utils",
+ "cw-utils 1.0.3",
  "schemars",
  "serde",
 ]
@@ -811,9 +869,9 @@ checksum = "0b3ad456059901a36cfa68b596d85d579c3df2b797dae9950dc34c27e14e995f"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
+ "cw2 1.1.2",
  "cw20",
  "schemars",
  "semver",
@@ -870,12 +928,34 @@ dependencies = [
 
 [[package]]
 name = "decimal"
-version = "0.2.0"
+version = "0.1.0"
+source = "git+https://github.com/oraichain/oraiswap-v3.git?rev=7f2b8ac#7f2b8ac6a239790006d7a662e6f56c175e189be0"
 dependencies = [
- "decimal-core",
+ "decimal-core 0.1.0",
  "integer-sqrt",
  "num-traits",
  "uint",
+]
+
+[[package]]
+name = "decimal"
+version = "0.2.0"
+dependencies = [
+ "decimal-core 0.2.0",
+ "integer-sqrt",
+ "num-traits",
+ "uint",
+]
+
+[[package]]
+name = "decimal-core"
+version = "0.1.0"
+source = "git+https://github.com/oraichain/oraiswap-v3.git?rev=7f2b8ac#7f2b8ac6a239790006d7a662e6f56c175e189be0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn 2.0.66",
 ]
 
 [[package]]
@@ -1645,8 +1725,8 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-storage-plus",
- "cw2",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
  "cw20",
  "oraiswap-v3-common",
  "thiserror",
@@ -1975,18 +2055,55 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
+name = "oraiswap"
+version = "0.2.0"
+source = "git+https://github.com/oraichain/oraiswap.git?rev=a4a013f#a4a013fad952aadb781aa504bd4e2544ff824520"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cosmwasm-testing-util 0.1.0 (git+https://github.com/oraichain/cosmwasm-testing-util.git?rev=1b9c412)",
+ "cw-utils 0.16.0",
+ "cw20",
+ "cw20-base",
+ "derive_more",
+ "oraiswap-v3 0.1.0",
+ "prost 0.11.9",
+ "protobuf",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "oraiswap-v3"
+version = "0.1.0"
+source = "git+https://github.com/oraichain/oraiswap-v3.git?rev=7f2b8ac#7f2b8ac6a239790006d7a662e6f56c175e189be0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
+ "cw20",
+ "decimal 0.1.0",
+ "derive_more",
+ "thiserror",
+]
+
+[[package]]
 name = "oraiswap-v3"
 version = "0.2.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cosmwasm-testing-util",
- "cw-storage-plus",
- "cw2",
+ "cosmwasm-testing-util 0.1.0 (git+https://github.com/oraichain/cosmwasm-testing-util.git?rev=143348c)",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
  "cw20",
  "cw20-base",
- "decimal",
+ "decimal 0.2.0",
  "derive_more",
  "incentives-fund-manager",
  "oraiswap-v3-common",
@@ -2000,9 +2117,9 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-storage-plus",
+ "cw-storage-plus 1.2.0",
  "cw20",
- "decimal",
+ "decimal 0.2.0",
  "thiserror",
 ]
 
@@ -2010,7 +2127,7 @@ dependencies = [
 name = "oraiswap-v3-wasm"
 version = "0.2.0"
 dependencies = [
- "decimal",
+ "decimal 0.2.0",
  "derive_more",
  "js-sys",
  "paste",
@@ -2253,6 +2370,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "213622a1460818959ac1181aaeb2dc9c7f63df720db7d788b3e24eacd1983e13"
 dependencies = [
  "prost 0.11.9",
+]
+
+[[package]]
+name = "protobuf"
+version = "3.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bcc343da15609eaecd65f8aa76df8dc4209d325131d8219358c0aaaebab0bf6"
+dependencies = [
+ "bytes",
+ "once_cell",
+ "protobuf-support",
+ "thiserror",
+]
+
+[[package]]
+name = "protobuf-support"
+version = "3.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0766e3675a627c327e4b3964582594b0e8741305d628a98a5de75a1d15f99b9"
+dependencies = [
+ "thiserror",
 ]
 
 [[package]]
@@ -3182,6 +3320,17 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 [[package]]
 name = "token-bindings"
 version = "0.11.0"
+source = "git+https://github.com/oraichain/token-bindings.git?rev=7861576#78615761c7c0eb8ff8ebe64e26f70d20fec5b4e2"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "token-bindings"
+version = "0.11.0"
 source = "git+https://github.com/oraichain/token-bindings.git?rev=9796c74#9796c7480ee2955a508e84be54421fc231b74ee8"
 dependencies = [
  "cosmwasm-schema",
@@ -3193,17 +3342,49 @@ dependencies = [
 [[package]]
 name = "token-bindings-test"
 version = "0.11.0"
+source = "git+https://github.com/oraichain/token-bindings.git?rev=7861576#78615761c7c0eb8ff8ebe64e26f70d20fec5b4e2"
+dependencies = [
+ "anyhow",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "cw-storage-plus 1.2.0",
+ "itertools 0.11.0",
+ "schemars",
+ "serde",
+ "thiserror",
+ "token-bindings 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=7861576)",
+]
+
+[[package]]
+name = "token-bindings-test"
+version = "0.11.0"
 source = "git+https://github.com/oraichain/token-bindings.git?rev=9796c74#9796c7480ee2955a508e84be54421fc231b74ee8"
 dependencies = [
  "anyhow",
  "cosmwasm-std",
  "cw-multi-test",
- "cw-storage-plus",
+ "cw-storage-plus 1.2.0",
  "itertools 0.11.0",
  "schemars",
  "serde",
  "thiserror",
- "token-bindings",
+ "token-bindings 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=9796c74)",
+]
+
+[[package]]
+name = "tokenfactory"
+version = "0.11.0"
+source = "git+https://github.com/oraichain/token-bindings.git?rev=7861576#78615761c7c0eb8ff8ebe64e26f70d20fec5b4e2"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
+ "schemars",
+ "serde",
+ "thiserror",
+ "token-bindings 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=7861576)",
 ]
 
 [[package]]
@@ -3214,12 +3395,12 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-storage-plus",
- "cw2",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
  "schemars",
  "serde",
  "thiserror",
- "token-bindings",
+ "token-bindings 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=9796c74)",
 ]
 
 [[package]]
@@ -3908,13 +4089,14 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cosmwasm-testing-util",
- "cw-storage-plus",
- "cw2",
+ "cosmwasm-testing-util 0.1.0 (git+https://github.com/oraichain/cosmwasm-testing-util.git?rev=143348c)",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
  "cw20",
  "cw20-base",
- "decimal",
+ "decimal 0.2.0",
  "derive_more",
+ "oraiswap",
  "oraiswap-v3-common",
  "thiserror",
 ]

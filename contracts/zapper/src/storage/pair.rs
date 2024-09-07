@@ -28,6 +28,6 @@ impl PairBalance {
             Asset::new(token_x.clone(), balance_x),
             Asset::new(token_y.clone(), balance_y),
         );
-        Ok(SNAP_BALANCE.save(storage, &pair_balance).unwrap())
+        Ok(SNAP_BALANCE.save(storage, &pair_balance)?)
     }
 }
