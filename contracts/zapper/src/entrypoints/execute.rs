@@ -3,8 +3,9 @@ use cosmwasm_std::{
 };
 use oraiswap::mixed_router::SwapOperation;
 use oraiswap_v3_common::{
-    asset::{Asset, AssetInfo},
-    oraiswap_v3_msg::{ExecuteMsg, QueryMsg},
+    asset::Asset,
+    error::ContractError,
+    oraiswap_v3_msg::{ExecuteMsg as V3ExecuteMsg, QueryMsg as V3QueryMsg},
     storage::{PoolKey, Position},
 };
 
@@ -12,7 +13,7 @@ use crate::{
     contract::{ZAP_IN_LIQUIDITY_REPLY_ID, ZAP_OUT_LIQUIDITY_REPLY_ID},
     entrypoints::common::get_pool_v3_asset_info,
     state::{CONFIG, PENDING_POSITION, RECEIVER, SNAP_INCENTIVE, ZAP_OUT_POSITION, ZAP_OUT_ROUTES},
-    Config, ContractError, IncentiveBalance, PairBalance, PendingPosition, ZapOutRoutes,
+    Config, IncentiveBalance, PairBalance, PendingPosition, ZapOutRoutes,
 };
 
 use super::{build_swap_msg, validate_fund};
@@ -79,7 +80,7 @@ pub fn zap_in_liquidity(
     // snap pending position
     let position_length = deps.querier.query_wasm_smart(
         config.dex_v3.to_string(),
-        &QueryMsg::UserPositionAmount {
+        &V3QueryMsg::UserPositionAmount {
             owner: env.contract.address.clone(),
         },
     )?;
@@ -183,21 +184,20 @@ pub fn zap_out_liquidity(
     operation_from_y: Option<Vec<SwapOperation>>,
     minimum_receive_x: Option<Uint128>,
     minimum_receive_y: Option<Uint128>,
-    token_out: AssetInfo,
 ) -> Result<Response, ContractError> {
     let mut msgs: Vec<CosmosMsg> = vec![];
     let mut sub_msgs: Vec<SubMsg> = vec![];
     let config = CONFIG.load(deps.storage)?;
     let position: Position = deps.querier.query_wasm_smart(
         config.dex_v3.to_string(),
-        &QueryMsg::Position {
+        &V3QueryMsg::Position {
             owner_id: info.sender.clone(),
             index: position_index,
         },
     )?;
     let position_incentives: Vec<Asset> = deps.querier.query_wasm_smart(
         config.dex_v3.to_string(),
-        &QueryMsg::PositionIncentives {
+        &V3QueryMsg::PositionIncentives {
             owner_id: info.sender.clone(),
             index: position_index,
         },
@@ -228,17 +228,17 @@ pub fn zap_out_liquidity(
             operation_from_y,
             minimum_receive_x,
             minimum_receive_y,
-            token_out,
         },
     )?;
     ZAP_OUT_POSITION.save(deps.storage, &position)?;
 
     // 1. Transfer position to this contract
+    // sender must be approve for contract first
     msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: config.dex_v3.to_string(),
-        msg: to_json_binary(&ExecuteMsg::TransferPosition {
-            index: position_index,
-            receiver: env.contract.address.to_string(),
+        msg: to_json_binary(&V3ExecuteMsg::TransferNft {
+            token_id: position.token_id,
+            recipient: env.contract.address.clone(),
         })?,
         funds: vec![],
     }));
@@ -255,7 +255,7 @@ pub fn zap_out_liquidity(
     sub_msgs.push(SubMsg::reply_on_success(
         WasmMsg::Execute {
             contract_addr: config.dex_v3.to_string(),
-            msg: to_json_binary(&ExecuteMsg::RemovePosition {
+            msg: to_json_binary(&V3ExecuteMsg::RemovePosition {
                 index: position_index,
             })
             .unwrap(),

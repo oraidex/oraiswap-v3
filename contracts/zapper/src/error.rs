@@ -16,15 +16,6 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
-
-    #[error("Invalid Reply ID")]
-    UnrecognizedReplyId { id: u64 },
-
-    #[error("No fund is sent")]
-    NoFundSent {},
-
-    #[error("Invalid fund")]
-    InvalidFund {},
 }
 
 impl From<ContractError> for StdError {

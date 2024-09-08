@@ -145,6 +145,15 @@ pub enum ContractError {
 
     #[error("NotEmptyTickDeinitialization")]
     NotEmptyTickDeinitialization,
+
+    #[error("Invalid Reply ID")]
+    UnrecognizedReplyId { id: u64 },
+
+    #[error("No fund is sent")]
+    NoFundSent {},
+
+    #[error("Invalid fund")]
+    InvalidFund {},
 }
 
 impl From<ContractError> for StdError {

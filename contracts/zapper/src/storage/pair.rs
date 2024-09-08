@@ -1,10 +1,11 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Storage, Uint128};
-use oraiswap_v3_common::asset::{Asset, AssetInfo};
+use oraiswap_v3_common::{
+    asset::{Asset, AssetInfo},
+    error::ContractError,
+};
 
 use crate::state::SNAP_BALANCE;
-
-use super::ContractError;
 
 #[cw_serde]
 pub struct PairBalance {

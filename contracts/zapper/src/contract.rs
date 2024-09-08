@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use oraiswap_v3_common::error::ContractError;
 
-use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::CONFIG;
 use crate::{entrypoints::*, Config};
