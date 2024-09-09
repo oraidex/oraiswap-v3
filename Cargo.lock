@@ -2076,6 +2076,59 @@ dependencies = [
 ]
 
 [[package]]
+name = "oraiswap-factory"
+version = "0.2.0"
+source = "git+https://github.com/oraichain/oraiswap.git?rev=a4a013f#a4a013fad952aadb781aa504bd4e2544ff824520"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus 1.2.0",
+ "oraiswap",
+]
+
+[[package]]
+name = "oraiswap-mixed-router"
+version = "0.2.0"
+source = "git+https://github.com/oraichain/oraiswap.git?rev=a4a013f#a4a013fad952aadb781aa504bd4e2544ff824520"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 1.2.0",
+ "cw20",
+ "oraiswap",
+ "oraiswap-v3 0.1.0",
+]
+
+[[package]]
+name = "oraiswap-oracle"
+version = "0.2.0"
+source = "git+https://github.com/oraichain/oraiswap.git?rev=a4a013f#a4a013fad952aadb781aa504bd4e2544ff824520"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 1.2.0",
+ "oraiswap",
+ "thiserror",
+]
+
+[[package]]
+name = "oraiswap-pair"
+version = "0.2.0"
+source = "git+https://github.com/oraichain/oraiswap.git?rev=a4a013f#a4a013fad952aadb781aa504bd4e2544ff824520"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
+ "cw20",
+ "cw20-base",
+ "integer-sqrt",
+ "oraiswap",
+ "thiserror",
+]
+
+[[package]]
 name = "oraiswap-v3"
 version = "0.1.0"
 source = "git+https://github.com/oraichain/oraiswap-v3.git?rev=7f2b8ac#7f2b8ac6a239790006d7a662e6f56c175e189be0"
@@ -4096,7 +4149,13 @@ dependencies = [
  "cw20-base",
  "decimal 0.2.0",
  "derive_more",
+ "incentives-fund-manager",
  "oraiswap",
+ "oraiswap-factory",
+ "oraiswap-mixed-router",
+ "oraiswap-oracle",
+ "oraiswap-pair",
+ "oraiswap-v3 0.2.0",
  "oraiswap-v3-common",
  "thiserror",
 ]

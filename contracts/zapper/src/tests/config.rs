@@ -14,7 +14,7 @@ fn test_change_config_admin() {
     let alice = &accounts[0];
     let bob = &accounts[1];
 
-    let zapper = create_zapper!(app, alice, "mixed_router", "dex_v3");
+    let zapper = create_zapper!(app, alice);
 
     let query_msg = QueryMsg::Config {};
     let config: Config = app.query(zapper.clone(), &query_msg).unwrap();
