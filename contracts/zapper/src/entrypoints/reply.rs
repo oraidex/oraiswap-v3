@@ -178,15 +178,17 @@ pub fn zap_out_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractEr
 
     let incentive_balance = SNAP_INCENTIVE.load(deps.storage)?;
     for incentive in incentive_balance.incentives.iter() {
-        let after_balance = incentive
-            .info
-            .balance(&deps.querier, env.contract.address.to_string())?;
-        let amount = after_balance - incentive.amount;
-        if !amount.is_zero() {
-            incentive
+        if incentive.info.ne(&token_x.info) && incentive.info.ne(&token_y.info) {
+            let after_balance = incentive
                 .info
-                .transfer(&mut msgs, receiver.to_string(), amount)
-                .unwrap();
+                .balance(&deps.querier, env.contract.address.to_string())?;
+            let amount = after_balance - incentive.amount;
+            if !amount.is_zero() {
+                incentive
+                    .info
+                    .transfer(&mut msgs, receiver.to_string(), amount)
+                    .unwrap();
+            }
         }
     }
 
