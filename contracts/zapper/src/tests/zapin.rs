@@ -31,9 +31,10 @@ fn init_basic_v3_pool(
     mint!(app, token_x, user, initial_amount, admin).unwrap();
     mint!(app, token_y, user, initial_amount, admin).unwrap();
     mint!(app, token_z, user, initial_amount, admin).unwrap();
+
     approve!(app, token_x, config.dex_v3, initial_amount, user).unwrap();
     approve!(app, token_y, config.dex_v3, initial_amount, user).unwrap();
-    approve!(app, token_z, zapper, initial_amount, user).unwrap();
+    approve!(app, token_z, config.dex_v3, initial_amount, user).unwrap();
     approve!(app, token_x, zapper, initial_amount, user).unwrap();
     approve!(app, token_y, zapper, initial_amount, user).unwrap();
     approve!(app, token_z, zapper, initial_amount, user).unwrap();
