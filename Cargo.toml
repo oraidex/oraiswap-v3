@@ -37,6 +37,13 @@ cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-u
 oraiswap-v3-common = { path = "./packages/oraiswap-v3-common" }
 incentives-fund-manager = { path = "./contracts/incentives-fund-manager" }
 oraiswap = { git = "https://github.com/oraichain/oraiswap.git", rev = "a4a013f" }
+oraiswap-v3 = { path = "./contracts/oraiswap-v3" }
+
+
+oraiswap-oracle = { git = "https://github.com/oraichain/oraiswap.git", rev = "a4a013f" }
+oraiswap-pair = { git = "https://github.com/oraichain/oraiswap.git", rev = "a4a013f" }
+oraiswap-factory = { git = "https://github.com/oraichain/oraiswap.git", rev = "a4a013f" }
+oraiswap-mixed-router = { git = "https://github.com/oraichain/oraiswap.git", rev = "a4a013f" }
 
 [profile.release]
 opt-level = 3

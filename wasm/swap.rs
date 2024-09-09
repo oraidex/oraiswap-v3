@@ -38,9 +38,9 @@ pub fn simulate_swap(
     }
 
     let tick_limit = if x_to_y {
-        get_min_tick(fee_tier.tick_spacing as u16)
+        get_min_tick(fee_tier.tick_spacing)
     } else {
-        get_max_tick(fee_tier.tick_spacing as u16)
+        get_max_tick(fee_tier.tick_spacing)
     };
 
     let start_sqrt_price = pool.sqrt_price;
@@ -59,8 +59,8 @@ pub fn simulate_swap(
         let closer_limit = tickmap.get_closer_limit(
             sqrt_price_limit,
             x_to_y,
-            pool.current_tick_index as i32,
-            fee_tier.tick_spacing as u16,
+            pool.current_tick_index,
+            fee_tier.tick_spacing,
         );
         let (swap_limit, limiting_tick) = if let Ok(closer_limit) = closer_limit {
             closer_limit
@@ -101,7 +101,7 @@ pub fn simulate_swap(
         let mut tick_update = {
             if let Some((tick_index, is_initialized)) = limiting_tick {
                 if is_initialized {
-                    let tick = ticks.iter().find(|t| t.index as i32 == tick_index);
+                    let tick = ticks.iter().find(|t| t.index == tick_index);
 
                     match tick {
                         Some(tick) => UpdatePoolTick::TickInitialized(*tick),

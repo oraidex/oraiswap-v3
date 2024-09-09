@@ -34,5 +34,11 @@ derive_more = { workspace = true }
 oraiswap = { workspace = true }
 
 [dev-dependencies]
+incentives-fund-manager = { workspace = true }
 cw20-base = { workspace = true, features = ["library"] }
 cosmwasm-testing-util = { workspace = true }
+oraiswap-v3 = { workspace = true }
+oraiswap-oracle = { workspace = true }
+oraiswap-pair = { workspace = true }
+oraiswap-factory = { workspace = true }
+oraiswap-mixed-router = { workspace = true }

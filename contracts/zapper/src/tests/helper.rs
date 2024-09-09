@@ -1,7 +1,10 @@
 use cosmwasm_std::{Addr, Coin};
-use cosmwasm_testing_util::MockResult;
+use cosmwasm_testing_util::{ContractWrapper, MockResult};
 
+use decimal::Decimal;
 use derive_more::{Deref, DerefMut};
+
+use oraiswap_v3_common::{math::percentage::Percentage, oraiswap_v3_msg};
 
 use crate::msg;
 
@@ -26,6 +29,7 @@ impl MockApp {
         let (mut app, accounts) = TestMockApp::new(init_balances);
 
         let zapper_id;
+
         #[cfg(not(feature = "test-tube"))]
         {
             zapper_id = app.upload(Box::new(
@@ -38,26 +42,141 @@ impl MockApp {
         }
         #[cfg(feature = "test-tube")]
         {
-            zapper_id = app.upload(include_bytes!("./testdata/zapper.wasm"));
+            zapper_id = app.upload(include_bytes!("../../artifacts/zapper.wasm"));
         }
 
         (Self { app, zapper_id }, accounts)
     }
 
-    pub fn create_zapper(
-        &mut self,
-        admin: &str,
-        mixed_router: &str,
-        dex_v3: &str,
-    ) -> MockResult<Addr> {
+    fn init_dex_and_router(&mut self, owner: &str) -> MockResult<(Addr, Addr)> {
+        let dex_v3_id;
+        let incentive_id;
+        let mixed_router_id;
+        let v2_factory_id;
+        let oracle_id;
+        #[cfg(not(feature = "test-tube"))]
+        {
+            dex_v3_id = self.app.upload(Box::new(ContractWrapper::new_with_empty(
+                oraiswap_v3::contract::execute,
+                oraiswap_v3::contract::instantiate,
+                oraiswap_v3::contract::query,
+            )));
+            incentive_id = self.app.upload(Box::new(ContractWrapper::new_with_empty(
+                incentives_fund_manager::contract::execute,
+                incentives_fund_manager::contract::instantiate,
+                incentives_fund_manager::contract::query,
+            )));
+            mixed_router_id = self.app.upload(Box::new(ContractWrapper::new_with_empty(
+                oraiswap_mixed_router::contract::execute,
+                oraiswap_mixed_router::contract::instantiate,
+                oraiswap_mixed_router::contract::query,
+            )));
+            v2_factory_id = self.app.upload(Box::new(ContractWrapper::new_with_empty(
+                oraiswap_factory::contract::execute,
+                oraiswap_factory::contract::instantiate,
+                oraiswap_factory::contract::query,
+            )));
+            oracle_id = self.app.upload(Box::new(ContractWrapper::new_with_empty(
+                oraiswap_oracle::contract::execute,
+                oraiswap_oracle::contract::instantiate,
+                oraiswap_oracle::contract::query,
+            )));
+        }
+        #[cfg(feature = "test-tube")]
+        {
+            dex_v3_id = self.app.upload(include_bytes!(
+                "../../../oraiswap-v3/artifacts/oraiswap-v3.wasm"
+            ));
+            incentive_id = self.app.upload(include_bytes!(
+                "../../../incentives-fund-manager/artifacts/incentives-fund-manager.wasm"
+            ));
+            mixed_router_id = self
+                .app
+                .upload(include_bytes!("./testdata/oraiswap-mixed-router.wasm"));
+            v2_factory_id = self
+                .app
+                .upload(include_bytes!("./testdata/oraiswap-factory.wasm"));
+            oracle_id = self
+                .app
+                .upload(include_bytes!("./testdata/oraiswap-oracle.wasm"));
+        }
+
+        let incentive_addr = self.instantiate(
+            incentive_id,
+            Addr::unchecked(owner),
+            &oraiswap_v3_common::incentives_fund_manager::InstantiateMsg {
+                owner: None,
+                oraiswap_v3: Addr::unchecked("oraiswap_v3"),
+            },
+            &[],
+            "incentives_fund_mamnager",
+        )?;
+
+        let dex_v3_addr = self.instantiate(
+            dex_v3_id,
+            Addr::unchecked(owner),
+            &oraiswap_v3_msg::InstantiateMsg {
+                protocol_fee: Percentage::new(0),
+                incentives_fund_manager: incentive_addr.clone(),
+            },
+            &[],
+            "oraiswap_v3",
+        )?;
+
+        let oracle_addr = self.instantiate(
+            oracle_id,
+            Addr::unchecked(owner),
+            &oraiswap::oracle::InstantiateMsg {
+                name: None,
+                version: None,
+                admin: None,
+                min_rate: None,
+                max_rate: None,
+            },
+            &[],
+            "oraiswap_v3",
+        )?;
+
+        let v2_factory_addr = self.instantiate(
+            v2_factory_id,
+            Addr::unchecked(owner),
+            &oraiswap::factory::InstantiateMsg {
+                pair_code_id: 1,
+                token_code_id: 1,
+                oracle_addr,
+                commission_rate: None,
+            },
+            &[],
+            "oraiswap_v3",
+        )?;
+
+        let mixed_router_addr = self.instantiate(
+            mixed_router_id,
+            Addr::unchecked(owner),
+            &oraiswap::mixed_router::InstantiateMsg {
+                factory_addr: v2_factory_addr.clone(),
+                factory_addr_v2: v2_factory_addr,
+                oraiswap_v3: dex_v3_addr.clone(),
+            },
+            &[],
+            "oraiswap_v3",
+        )?;
+
+        Ok((dex_v3_addr, mixed_router_addr))
+        // upload incentive
+    }
+
+    pub fn create_zapper(&mut self, admin: &str) -> MockResult<Addr> {
         let code_id = self.zapper_id;
+        let (dex_v3_addr, mixed_router_addr) = self.init_dex_and_router(admin)?;
+
         self.instantiate(
             code_id,
             Addr::unchecked(admin),
             &msg::InstantiateMsg {
                 admin: Addr::unchecked(admin),
-                mixed_router: Addr::unchecked(mixed_router),
-                dex_v3: Addr::unchecked(dex_v3),
+                mixed_router: mixed_router_addr,
+                dex_v3: dex_v3_addr,
             },
             &[],
             "zapper",
@@ -67,8 +186,8 @@ impl MockApp {
 
 pub mod macros {
     macro_rules! create_zapper {
-        ($app:ident, $admin:expr, $mixed_router:expr, $dex_v3:expr) => {{
-                $app.create_zapper($admin, $mixed_router, $dex_v3).unwrap()
+        ($app:ident, $admin:expr) => {{
+                $app.create_zapper($admin).unwrap()
             }};
     }
     pub(crate) use create_zapper;
