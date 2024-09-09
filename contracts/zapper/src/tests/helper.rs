@@ -1,12 +1,18 @@
-use cosmwasm_std::{Addr, Coin};
-use cosmwasm_testing_util::{ContractWrapper, MockResult};
+use cosmwasm_std::{Addr, Coin, StdResult, Uint128};
+use cosmwasm_testing_util::{ContractWrapper, ExecuteResponse, MockResult};
 
 use decimal::Decimal;
 use derive_more::{Deref, DerefMut};
 
-use oraiswap_v3_common::{math::percentage::Percentage, oraiswap_v3_msg};
+use oraiswap::mixed_router::SwapOperation;
+use oraiswap_v3_common::{
+    asset::Asset,
+    math::{liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice},
+    oraiswap_v3_msg,
+    storage::{FeeTier, Pool, PoolKey},
+};
 
-use crate::msg;
+use crate::{msg, Config};
 
 pub const FEE_DENOM: &str = "orai";
 
@@ -182,6 +188,125 @@ impl MockApp {
             "zapper",
         )
     }
+
+    pub fn get_zapper_config(&mut self, zapper: &str) -> StdResult<Config> {
+        self.query(Addr::unchecked(zapper), &msg::QueryMsg::Config {})
+    }
+
+    pub fn zap_in_liquidity(
+        &mut self,
+        sender: &str,
+        zapper: &str,
+        pool_key: PoolKey,
+        tick_lower_index: i32,
+        tick_upper_index: i32,
+        asset_in: &Asset,
+        amount_to_x: Uint128,
+        amount_to_y: Uint128,
+        operation_to_x: Option<Vec<SwapOperation>>,
+        operation_to_y: Option<Vec<SwapOperation>>,
+        minimum_receive_x: Option<Uint128>,
+        minimum_receive_y: Option<Uint128>,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(zapper),
+            &msg::ExecuteMsg::ZapInLiquidity {
+                pool_key,
+                tick_lower_index,
+                tick_upper_index,
+                asset_in: asset_in.to_owned(),
+                amount_to_x,
+                amount_to_y,
+                operation_to_x,
+                operation_to_y,
+                minimum_receive_x,
+                minimum_receive_y,
+            },
+            &[],
+        )
+    }
+
+    pub fn create_pool(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        token_x: &str,
+        token_y: &str,
+        fee_tier: FeeTier,
+        init_sqrt_price: SqrtPrice,
+        init_tick: i32,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::ExecuteMsg::CreatePool {
+                token_0: token_x.to_string(),
+                token_1: token_y.to_string(),
+                fee_tier,
+                init_sqrt_price,
+                init_tick,
+            },
+            &[],
+        )
+    }
+
+    pub fn create_position(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        pool_key: &PoolKey,
+        lower_tick: i32,
+        upper_tick: i32,
+        liquidity_delta: Liquidity,
+        slippage_limit_lower: SqrtPrice,
+        slippage_limit_upper: SqrtPrice,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::ExecuteMsg::CreatePosition {
+                pool_key: pool_key.clone(),
+                lower_tick,
+                upper_tick,
+                liquidity_delta,
+                slippage_limit_lower,
+                slippage_limit_upper,
+            },
+            &[],
+        )
+    }
+
+    pub fn add_fee_tier(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        fee_tier: FeeTier,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::ExecuteMsg::AddFeeTier { fee_tier },
+            &[],
+        )
+    }
+
+    pub fn get_pool(
+        &self,
+        dex: &str,
+        token_x: &str,
+        token_y: &str,
+        fee_tier: FeeTier,
+    ) -> StdResult<Pool> {
+        self.query(
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::QueryMsg::Pool {
+                token_0: Addr::unchecked(token_x).to_string(),
+                token_1: Addr::unchecked(token_y).to_string(),
+                fee_tier,
+            },
+        )
+    }
 }
 
 pub mod macros {
@@ -191,6 +316,113 @@ pub mod macros {
             }};
     }
     pub(crate) use create_zapper;
+
+    macro_rules! create_tokens {
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr, $owner: tt) => {{
+            let token_x = $app.create_token($owner, "tokenx", $token_x_supply);
+            let token_y = $app.create_token($owner, "tokeny", $token_y_supply);
+            if token_x < token_y {
+                (token_x, token_y)
+            } else {
+                (token_y, token_x)
+            }
+        }};
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr,$owner:tt) => {{
+            create_tokens!($app, $token_x_supply, $token_y_supply, $owner)
+        }};
+        ($app:ident, $token_supply:expr,$owner:tt) => {{
+            create_tokens!($app, $token_supply, $token_supply, $owner)
+        }};
+    }
+
+    pub(crate) use create_tokens;
+
+    macro_rules! create_3_tokens {
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr,$token_z_supply:expr, $owner: tt) => {{
+            let mut tokens = [
+                $app.create_token($owner, "tokenx", $token_x_supply),
+                $app.create_token($owner, "tokeny", $token_y_supply),
+                $app.create_token($owner, "tokenz", $token_y_supply),
+            ];
+            tokens.sort();
+            (tokens[0].clone(), tokens[1].clone(), tokens[2].clone())
+        }};
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr,$token_z_supply:expr,$owner:tt) => {{
+            create_3_tokens!(
+                $app,
+                $token_x_supply,
+                $token_y_supply,
+                $token_z_supply,
+                $owner
+            )
+        }};
+    }
+    pub(crate) use create_3_tokens;
+
+    macro_rules! create_pool {
+        ($app:ident, $dex_address:expr, $token_0:expr, $token_1:expr, $fee_tier:expr, $init_sqrt_price:expr, $init_tick:expr, $caller:tt) => {{
+            $app.create_pool(
+                $caller,
+                $dex_address.as_str(),
+                $token_0.as_str(),
+                $token_1.as_str(),
+                $fee_tier,
+                $init_sqrt_price,
+                $init_tick,
+            )
+        }};
+    }
+    pub(crate) use create_pool;
+
+    macro_rules! create_position {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick:expr, $upper_tick:expr, $liquidity_delta:expr, $slippage_limit_lower:expr, $slippage_limit_upper:expr, $caller:tt) => {{
+            $app.create_position(
+                $caller,
+                $dex_address.as_str(),
+                &$pool_key,
+                $lower_tick,
+                $upper_tick,
+                $liquidity_delta,
+                $slippage_limit_lower,
+                $slippage_limit_upper,
+            )
+        }};
+    }
+    pub(crate) use create_position;
+
+    macro_rules! approve {
+        ($app:ident, $token_address:expr, $spender:expr, $value:expr, $caller:tt) => {{
+            $app.approve_token($token_address.as_str(), $caller, $spender.as_str(), $value)
+        }};
+    }
+    pub(crate) use approve;
+
+    macro_rules! mint {
+        ($app:ident, $token_address:expr, $to:tt, $value:expr, $caller:tt) => {{
+            $app.mint_token($caller, $to, $token_address.as_str(), $value)
+        }};
+    }
+
+    pub(crate) use mint;
+
+    macro_rules! add_fee_tier {
+        ($app:ident, $dex_address:expr, $fee_tier:expr, $caller:tt) => {{
+            $app.add_fee_tier($caller, $dex_address.as_str(), $fee_tier)
+        }};
+    }
+    pub(crate) use add_fee_tier;
+
+    macro_rules! get_pool {
+        ($app:ident, $dex_address:expr, $token_0:expr, $token_1:expr, $fee_tier:expr) => {{
+            $app.get_pool(
+                $dex_address.as_str(),
+                $token_0.as_str(),
+                $token_1.as_str(),
+                $fee_tier,
+            )
+        }};
+    }
+    pub(crate) use get_pool;
 }
 
 #[cfg(test)]

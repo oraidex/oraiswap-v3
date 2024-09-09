@@ -3,7 +3,7 @@ use cosmwasm_std::{
 };
 use oraiswap::mixed_router::SwapOperation;
 use oraiswap_v3_common::{
-    asset::Asset,
+    asset::{Asset, AssetInfo},
     error::ContractError,
     oraiswap_v3_msg::{ExecuteMsg as V3ExecuteMsg, QueryMsg as V3QueryMsg},
     storage::{PoolKey, Position},
@@ -100,15 +100,17 @@ pub fn zap_in_liquidity(
 
     // Snap the balance of tokenX and tokenY in this contract
     let (token_x, token_y) = get_pool_v3_asset_info(deps.api, &pool_key);
-    let balance_x = token_x.balance(&deps.querier, env.contract.address.to_string())?;
-    let balance_y = token_y.balance(&deps.querier, env.contract.address.to_string())?;
+    let mut balance_x = token_x.balance(&deps.querier, env.contract.address.to_string())?;
+    let mut balance_y = token_y.balance(&deps.querier, env.contract.address.to_string())?;
 
-    // if asset_in.info.eq(&token_x) {
-    //     balance_x -= asset_in.amount;
-    // }
-    // if asset_in.info.eq(&token_y) {
-    //     balance_y -= asset_in.amount;
-    // }
+    if let AssetInfo::NativeToken { denom: _ } = &asset_in.info {
+        if asset_in.info.eq(&token_x) {
+            balance_x -= asset_in.amount;
+        } else if asset_in.info.eq(&token_y) {
+            balance_y -= asset_in.amount;
+        }
+    }
+
     PairBalance::save(deps.storage, &token_x, balance_x, &token_y, balance_y)?;
 
     // 3. Create SubMsg to process swap operations in mixedRouter contract
