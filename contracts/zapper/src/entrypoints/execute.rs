@@ -214,7 +214,7 @@ pub fn zap_out_liquidity(
                 amount: balance,
             }
         })
-        .collect::<Vec<Asset>>();
+        .collect();
     SNAP_INCENTIVE.save(
         deps.storage,
         &IncentiveBalance {
