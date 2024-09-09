@@ -5,7 +5,7 @@ use oraiswap_v3_common::{
     error::ContractError,
     logic::{get_liquidity_by_x, get_liquidity_by_y},
     math::{sqrt_price::get_min_sqrt_price, token_amount::TokenAmount},
-    oraiswap_v3_msg::{ExecuteMsg, QueryMsg},
+    oraiswap_v3_msg::{ExecuteMsg as V3ExecuteMsg, QueryMsg as V3QueryMsg},
     storage::Pool,
 };
 
@@ -40,7 +40,7 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
     let pending_position = PENDING_POSITION.load(deps.storage)?;
     let pool_info: Pool = deps.querier.query_wasm_smart(
         config.dex_v3.to_string(),
-        &QueryMsg::Pool {
+        &V3QueryMsg::Pool {
             token_0: token_x.info.denom(),
             token_1: token_y.info.denom(),
             fee_tier: pending_position.pool_key.fee_tier,
@@ -80,7 +80,7 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
     sub_msgs.push(SubMsg::reply_on_success(
         WasmMsg::Execute {
             contract_addr: config.dex_v3.to_string(),
-            msg: to_json_binary(&ExecuteMsg::CreatePosition {
+            msg: to_json_binary(&V3ExecuteMsg::CreatePosition {
                 pool_key: pending_position.pool_key.clone(),
                 lower_tick: pending_position.lower_tick,
                 upper_tick: pending_position.upper_tick,
@@ -125,7 +125,7 @@ pub fn add_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError>
     let receiver = RECEIVER.load(deps.storage)?;
     msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: config.dex_v3.to_string(),
-        msg: to_json_binary(&ExecuteMsg::TransferPosition {
+        msg: to_json_binary(&V3ExecuteMsg::TransferPosition {
             index: pending_position.index,
             receiver: receiver.to_string(),
         })

@@ -255,8 +255,8 @@ pub fn zap_out_liquidity(
     sub_msgs.push(SubMsg::reply_on_success(
         WasmMsg::Execute {
             contract_addr: config.dex_v3.to_string(),
-            msg: to_json_binary(&V3ExecuteMsg::RemovePosition {
-                index: position_index,
+            msg: to_json_binary(&V3ExecuteMsg::Burn {
+                token_id: position.token_id,
             })
             .unwrap(),
             funds: vec![],
