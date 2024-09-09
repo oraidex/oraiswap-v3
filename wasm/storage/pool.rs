@@ -43,7 +43,7 @@ impl Pool {
             y,
             update_liquidity,
         } = ok_or_mark_trace!(calculate_amount_delta(
-            self.current_tick_index as i32,
+            self.current_tick_index,
             self.sqrt_price,
             liquidity_delta,
             liquidity_sign,
@@ -88,7 +88,7 @@ impl Pool {
         if UpdatePoolTick::NoTick == *tick || swap_limit != result.next_sqrt_price {
             self.current_tick_index = unwrap!(get_tick_at_sqrt_price(
                 result.next_sqrt_price,
-                fee_tier.tick_spacing as u16
+                fee_tier.tick_spacing
             ));
 
             return Ok((total_amount, remaining_amount, has_crossed));
