@@ -1,8 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_json_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, QuerierWrapper, StdResult, Uint128, WasmMsg
+    to_json_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, QuerierWrapper, StdResult,
+    Uint128, WasmMsg,
 };
-use cw20::{Cw20ExecuteMsg, BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg};
+use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
 use crate::error::ContractError;
 
@@ -35,17 +36,12 @@ impl AssetInfo {
     pub fn balance(&self, querier: &QuerierWrapper, address: String) -> StdResult<Uint128> {
         match self {
             AssetInfo::NativeToken { denom } => {
-                let res: Coin = querier
-                    .query_balance(address, denom)?;
+                let res: Coin = querier.query_balance(address, denom)?;
                 Ok(res.amount)
             }
             AssetInfo::Token { contract_addr } => {
-                let res: Cw20BalanceResponse  = querier.query_wasm_smart(
-                    contract_addr,
-                    &Cw20QueryMsg::Balance {
-                        address,
-                    },
-                )?;
+                let res: Cw20BalanceResponse =
+                    querier.query_wasm_smart(contract_addr, &Cw20QueryMsg::Balance { address })?;
                 Ok(res.balance)
             }
         }
@@ -60,10 +56,12 @@ impl AssetInfo {
     ) -> Result<(), ContractError> {
         match self {
             AssetInfo::NativeToken { denom } => {
-                coins.push(Coin {
-                    denom: denom.to_string(),
-                    amount,
-                });
+                if !amount.is_zero() {
+                    coins.push(Coin {
+                        denom: denom.to_string(),
+                        amount,
+                    });
+                }
             }
             AssetInfo::Token { contract_addr } => {
                 msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
