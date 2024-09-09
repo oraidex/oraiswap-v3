@@ -41,7 +41,7 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -51,6 +51,48 @@ pub fn execute(
             mixed_router,
             dex_v3,
         } => update_config(deps, info, admin, mixed_router, dex_v3),
+        ExecuteMsg::ZapInLiquidity {
+            pool_key,
+            tick_lower_index,
+            tick_upper_index,
+            asset_in,
+            amount_to_x,
+            amount_to_y,
+            operation_to_x,
+            operation_to_y,
+            minimum_receive_x,
+            minimum_receive_y,
+        } => zap_in_liquidity(
+            deps,
+            env,
+            info,
+            pool_key,
+            tick_lower_index,
+            tick_upper_index,
+            asset_in,
+            amount_to_x,
+            amount_to_y,
+            operation_to_x,
+            operation_to_y,
+            minimum_receive_x,
+            minimum_receive_y,
+        ),
+        ExecuteMsg::ZapOutLiquidity {
+            position_index,
+            operation_from_x,
+            operation_from_y,
+            minimum_receive_x,
+            minimum_receive_y,
+        } => zap_out_liquidity(
+            deps,
+            env,
+            info,
+            position_index,
+            operation_from_x,
+            operation_from_y,
+            minimum_receive_x,
+            minimum_receive_y,
+        ),
     }
 }
 
