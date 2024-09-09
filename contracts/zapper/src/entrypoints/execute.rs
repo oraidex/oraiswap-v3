@@ -100,15 +100,15 @@ pub fn zap_in_liquidity(
 
     // Snap the balance of tokenX and tokenY in this contract
     let (token_x, token_y) = get_pool_v3_asset_info(deps.api, &pool_key);
-    let mut balance_x = token_x.balance(&deps.querier, env.contract.address.to_string())?;
-    let mut balance_y = token_y.balance(&deps.querier, env.contract.address.to_string())?;
+    let balance_x = token_x.balance(&deps.querier, env.contract.address.to_string())?;
+    let balance_y = token_y.balance(&deps.querier, env.contract.address.to_string())?;
 
-    if asset_in.info.eq(&token_x) {
-        balance_x -= asset_in.amount;
-    }
-    if asset_in.info.eq(&token_y) {
-        balance_y -= asset_in.amount;
-    }
+    // if asset_in.info.eq(&token_x) {
+    //     balance_x -= asset_in.amount;
+    // }
+    // if asset_in.info.eq(&token_y) {
+    //     balance_y -= asset_in.amount;
+    // }
     PairBalance::save(deps.storage, &token_x, balance_x, &token_y, balance_y)?;
 
     // 3. Create SubMsg to process swap operations in mixedRouter contract
