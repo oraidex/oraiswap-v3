@@ -248,7 +248,7 @@ pub fn zap_out_liquidity(
     let balance_x = token_x.balance(&deps.querier, env.contract.address.to_string())?;
     let balance_y = token_y.balance(&deps.querier, env.contract.address.to_string())?;
 
-    PairBalance::save(deps.storage, &token_x, balance_x, &token_y, balance_y).unwrap();
+    PairBalance::save(deps.storage, &token_x, balance_x, &token_y, balance_y)?;
     RECEIVER.save(deps.storage, &info.sender)?;
 
     // 2. Create SubMsg to process remove liquidity in dex_v3 contract
@@ -257,8 +257,7 @@ pub fn zap_out_liquidity(
             contract_addr: config.dex_v3.to_string(),
             msg: to_json_binary(&V3ExecuteMsg::Burn {
                 token_id: position.token_id,
-            })
-            .unwrap(),
+            })?,
             funds: vec![],
         },
         ZAP_OUT_LIQUIDITY_REPLY_ID,

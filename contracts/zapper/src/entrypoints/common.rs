@@ -27,10 +27,10 @@ pub fn validate_fund(
 ) -> Result<(), ContractError> {
     match asset.info.clone() {
         AssetInfo::Token { contract_addr: _ } => {
-            asset.transfer_from(msgs, info, address).unwrap();
+            asset.transfer_from(msgs, info, address)?;
         }
         AssetInfo::NativeToken { denom: _ } => {
-            let balance = asset.info.balance(querier, address).unwrap();
+            let balance = asset.info.balance(querier, address)?;
             if balance < asset.amount {
                 return Err(ContractError::NoFundSent {});
             }

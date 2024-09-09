@@ -4,7 +4,10 @@ use cosmwasm_std::{to_json_binary, Coin, CosmosMsg, DepsMut, Env, Response, SubM
 use oraiswap_v3_common::{
     error::ContractError,
     logic::{get_liquidity_by_x, get_liquidity_by_y},
-    math::{sqrt_price::get_min_sqrt_price, token_amount::TokenAmount},
+    math::{
+        sqrt_price::{get_max_sqrt_price, get_min_sqrt_price},
+        token_amount::TokenAmount,
+    },
     oraiswap_v3_msg::{ExecuteMsg as V3ExecuteMsg, QueryMsg as V3QueryMsg},
     storage::Pool,
 };
@@ -52,8 +55,7 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
         pending_position.upper_tick,
         pool_info.sqrt_price,
         false,
-    )
-    .unwrap();
+    )?;
 
     if res.amount > TokenAmount(y_amount.u128()) {
         res = get_liquidity_by_y(
@@ -62,20 +64,17 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
             pending_position.upper_tick,
             pool_info.sqrt_price,
             false,
-        )
-        .unwrap();
+        )?;
     }
 
     // approve tokenX and tokenY to dex_v3
     let mut coins: Vec<Coin> = vec![];
     token_x
         .info
-        .increase_allowance(&mut coins, &mut msgs, config.dex_v3.to_string(), x_amount)
-        .unwrap();
+        .increase_allowance(&mut coins, &mut msgs, config.dex_v3.to_string(), x_amount)?;
     token_y
         .info
-        .increase_allowance(&mut coins, &mut msgs, config.dex_v3.to_string(), y_amount)
-        .unwrap();
+        .increase_allowance(&mut coins, &mut msgs, config.dex_v3.to_string(), y_amount)?;
 
     sub_msgs.push(SubMsg::reply_on_success(
         WasmMsg::Execute {
@@ -89,10 +88,9 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
                     get_min_sqrt_price(pending_position.pool_key.fee_tier.tick_spacing),
                 ),
                 slippage_limit_upper: pending_position.slippage_limit_upper.unwrap_or(
-                    get_min_sqrt_price(pending_position.pool_key.fee_tier.tick_spacing),
+                    get_max_sqrt_price(pending_position.pool_key.fee_tier.tick_spacing),
                 ),
-            })
-            .unwrap(),
+            })?,
             funds: coins,
         },
         ADD_LIQUIDITY_REPLY_ID,
@@ -128,8 +126,7 @@ pub fn add_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError>
         msg: to_json_binary(&V3ExecuteMsg::TransferPosition {
             index: pending_position.index,
             receiver: receiver.to_string(),
-        })
-        .unwrap(),
+        })?,
         funds: vec![],
     }));
 
@@ -137,14 +134,12 @@ pub fn add_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError>
     if !x_amount.is_zero() {
         token_x
             .info
-            .transfer(&mut msgs, receiver.to_string(), x_amount)
-            .unwrap();
+            .transfer(&mut msgs, receiver.to_string(), x_amount)?;
     }
     if !y_amount.is_zero() {
         token_y
             .info
-            .transfer(&mut msgs, receiver.to_string(), y_amount)
-            .unwrap();
+            .transfer(&mut msgs, receiver.to_string(), y_amount)?;
     }
 
     // remove pending position
@@ -186,8 +181,7 @@ pub fn zap_out_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractEr
             if !amount.is_zero() {
                 incentive
                     .info
-                    .transfer(&mut msgs, receiver.to_string(), amount)
-                    .unwrap();
+                    .transfer(&mut msgs, receiver.to_string(), amount)?;
             }
         }
     }
