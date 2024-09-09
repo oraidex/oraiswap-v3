@@ -136,22 +136,23 @@ fn test_zap_in() {
         amount: Uint128::new(1000000),
     };
 
-    app.zap_in_liquidity(
-        &bob,
-        zapper.as_str(),
-        pool_key_x_y.clone(),
-        tick_lower_index,
-        tick_upper_index,
-        &asset_in,
-        Uint128::new(500000),
-        Uint128::new(500000),
-        None,
-        Some(vec![SwapOperation::SwapV3 {
-            pool_key: pool_key_x_y,
-            x_to_y: true,
-        }]),
-        None,
-        None,
-    )
-    .unwrap();
+    let _res = app
+        .zap_in_liquidity(
+            &bob,
+            zapper.as_str(),
+            pool_key_x_y.clone(),
+            tick_lower_index,
+            tick_upper_index,
+            &asset_in,
+            Uint128::new(500000),
+            Uint128::new(500000),
+            None,
+            Some(vec![SwapOperation::SwapV3 {
+                pool_key: pool_key_x_y,
+                x_to_y: true,
+            }]),
+            None,
+            None,
+        )
+        .unwrap();
 }
