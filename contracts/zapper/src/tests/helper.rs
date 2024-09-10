@@ -49,7 +49,7 @@ impl MockApp {
         }
         #[cfg(feature = "test-tube")]
         {
-            zapper_id = app.upload(include_bytes!("../../artifacts/zapper.wasm"));
+            zapper_id = app.upload(include_bytes!("testdata/zapper.wasm"));
         }
 
         (Self { app, zapper_id }, accounts)
@@ -92,20 +92,20 @@ impl MockApp {
         #[cfg(feature = "test-tube")]
         {
             dex_v3_id = self.app.upload(include_bytes!(
-                "../../../oraiswap-v3/artifacts/oraiswap-v3.wasm"
+                "../../../oraiswap-v3/src/tests/testdata/oraiswap-v3.wasm"
             ));
             incentive_id = self.app.upload(include_bytes!(
-                "../../../incentives-fund-manager/artifacts/incentives-fund-manager.wasm"
+                "../../../oraiswap-v3/src/tests/testdata/incentives-fund-manager.wasm"
             ));
             mixed_router_id = self
                 .app
-                .upload(include_bytes!("./testdata/oraiswap-mixed-router.wasm"));
+                .upload(include_bytes!("testdata/oraiswap-mixed-router.wasm"));
             v2_factory_id = self
                 .app
-                .upload(include_bytes!("./testdata/oraiswap-factory.wasm"));
+                .upload(include_bytes!("testdata/oraiswap-factory.wasm"));
             oracle_id = self
                 .app
-                .upload(include_bytes!("./testdata/oraiswap-oracle.wasm"));
+                .upload(include_bytes!("testdata/oraiswap-oracle.wasm"));
         }
 
         let incentive_addr = self.instantiate(
