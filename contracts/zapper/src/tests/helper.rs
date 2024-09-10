@@ -5,11 +5,12 @@ use decimal::Decimal;
 use derive_more::{Deref, DerefMut};
 
 use oraiswap::mixed_router::SwapOperation;
+use oraiswap_v3::state::MAX_LIMIT;
 use oraiswap_v3_common::{
     asset::Asset,
     math::{liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice},
     oraiswap_v3_msg,
-    storage::{FeeTier, Pool, PoolKey},
+    storage::{FeeTier, Pool, PoolKey, Position},
 };
 
 use crate::{msg, Config};
@@ -308,6 +309,17 @@ impl MockApp {
             },
         )
     }
+
+    pub fn get_all_positions(&self, dex: &str, owner_id: &str) -> StdResult<Vec<Position>> {
+        self.query(
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::QueryMsg::Positions {
+                owner_id: Addr::unchecked(owner_id),
+                limit: Some(MAX_LIMIT),
+                offset: Some(0),
+            },
+        )
+    }
 }
 
 pub mod macros {
@@ -424,6 +436,14 @@ pub mod macros {
         }};
     }
     pub(crate) use get_pool;
+
+    macro_rules! get_all_positions {
+        ($app:ident, $dex_address:expr, $caller:tt) => {{
+            $app.get_all_positions($dex_address.as_str(), $caller)
+                .unwrap()
+        }};
+    }
+    pub(crate) use get_all_positions;
 }
 
 #[cfg(test)]

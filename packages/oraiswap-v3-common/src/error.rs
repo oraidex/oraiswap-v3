@@ -154,6 +154,9 @@ pub enum ContractError {
 
     #[error("Invalid fund")]
     InvalidFund {},
+
+    #[error("Missing route swap")]
+    MissingRouteSwap {},
 }
 
 impl From<ContractError> for StdError {

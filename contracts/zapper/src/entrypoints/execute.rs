@@ -116,6 +116,9 @@ pub fn zap_in_liquidity(
     // 3. Create SubMsg to process swap operations in mixedRouter contract
     // 4. Reply on success, if error occurs, revert the state
     if asset_in.info.eq(&token_x) {
+        if operation_to_y.is_none() {
+            return Err(ContractError::MissingRouteSwap {});
+        }
         // just need to swap x to y
         let swap_msg = build_swap_msg(
             &asset_in.info,
@@ -132,6 +135,9 @@ pub fn zap_in_liquidity(
             ZAP_IN_LIQUIDITY_REPLY_ID,
         ));
     } else if asset_in.info.eq(&token_y) {
+        if operation_to_x.is_none() {
+            return Err(ContractError::MissingRouteSwap {});
+        }
         // just need to swap y to x
         let swap_msg = build_swap_msg(
             &asset_in.info,
@@ -147,6 +153,9 @@ pub fn zap_in_liquidity(
             ZAP_IN_LIQUIDITY_REPLY_ID,
         ));
     } else {
+        if operation_to_x.is_none() || operation_to_y.is_none() {
+            return Err(ContractError::MissingRouteSwap {});
+        }
         let swap_to_x_msg = build_swap_msg(
             &asset_in.info,
             config.mixed_router.clone(),

@@ -105,7 +105,7 @@ fn init_basic_v3_pool(
     .unwrap();
 }
 #[test]
-fn test_zap_in() {
+fn test_zap_in_with_same_token() {
     let (mut app, accounts) = MockApp::new(&[
         ("alice", &coins(100_000_000_000, FEE_DENOM)),
         ("bob", &coins(100_000_000_000, FEE_DENOM)),
@@ -117,6 +117,7 @@ fn test_zap_in() {
         create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
 
     let zapper = create_zapper!(app, alice);
+    let config = app.get_zapper_config(zapper.as_str()).unwrap();
 
     init_basic_v3_pool(
         &mut app, &zapper, &token_x, &token_y, &token_z, &alice, &bob,
@@ -129,13 +130,14 @@ fn test_zap_in() {
 
     let tick_lower_index = 0;
     let tick_upper_index = 10;
+
+    // asset_in = token_x
     let asset_in = Asset {
         info: AssetInfo::Token {
-            contract_addr: token_x,
+            contract_addr: token_x.clone(),
         },
         amount: Uint128::new(1000000),
     };
-
     let _res = app
         .zap_in_liquidity(
             &bob,
@@ -148,11 +150,82 @@ fn test_zap_in() {
             Uint128::new(500000),
             None,
             Some(vec![SwapOperation::SwapV3 {
-                pool_key: pool_key_x_y,
+                pool_key: pool_key_x_y.clone(),
                 x_to_y: true,
             }]),
             None,
             None,
         )
         .unwrap();
+
+    // get all positions
+    let all_positions = get_all_positions!(app, config.dex_v3, bob);
+    assert_eq!(all_positions.len(), 1);
+
+    // asset_in = token_y
+    let asset_in = Asset {
+        info: AssetInfo::Token {
+            contract_addr: token_y.clone(),
+        },
+        amount: Uint128::new(1000000),
+    };
+    // missing route => error
+    app.zap_in_liquidity(
+        &bob,
+        zapper.as_str(),
+        pool_key_x_y.clone(),
+        tick_lower_index,
+        tick_upper_index,
+        &asset_in,
+        Uint128::new(500000),
+        Uint128::new(500000),
+        None,
+        None,
+        None,
+        None,
+    )
+    .unwrap_err();
+
+    // amount_to_x + amount_to_y != asset_in
+    app.zap_in_liquidity(
+        &bob,
+        zapper.as_str(),
+        pool_key_x_y.clone(),
+        tick_lower_index,
+        tick_upper_index,
+        &asset_in,
+        Uint128::new(400000),
+        Uint128::new(500000),
+        Some(vec![SwapOperation::SwapV3 {
+            pool_key: pool_key_x_y.clone(),
+            x_to_y: false,
+        }]),
+        None,
+        None,
+        None,
+    )
+    .unwrap_err();
+
+    // success
+    app.zap_in_liquidity(
+        &bob,
+        zapper.as_str(),
+        pool_key_x_y.clone(),
+        tick_lower_index,
+        tick_upper_index,
+        &asset_in,
+        Uint128::new(500000),
+        Uint128::new(500000),
+        Some(vec![SwapOperation::SwapV3 {
+            pool_key: pool_key_x_y.clone(),
+            x_to_y: false,
+        }]),
+        None,
+        None,
+        None,
+    )
+    .unwrap();
+    // get all positions
+    let all_positions = get_all_positions!(app, config.dex_v3, bob);
+    assert_eq!(all_positions.len(), 2);
 }
