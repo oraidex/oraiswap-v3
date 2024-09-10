@@ -1,10 +1,9 @@
-use cosmwasm_std::{Addr, Coin, StdResult, Uint128};
+use cosmwasm_std::{Addr, Coin, StdResult};
 use cosmwasm_testing_util::{ContractWrapper, ExecuteResponse, MockResult};
 
 use decimal::Decimal;
 use derive_more::{Deref, DerefMut};
 
-use oraiswap::mixed_router::SwapOperation;
 use oraiswap_v3::state::MAX_LIMIT;
 use oraiswap_v3_common::{
     asset::Asset,
@@ -13,7 +12,10 @@ use oraiswap_v3_common::{
     storage::{FeeTier, Pool, PoolKey, Position},
 };
 
-use crate::{msg, Config};
+use crate::{
+    msg::{self, Route},
+    Config,
+};
 
 pub const FEE_DENOM: &str = "orai";
 
@@ -203,12 +205,8 @@ impl MockApp {
         tick_lower_index: i32,
         tick_upper_index: i32,
         asset_in: &Asset,
-        amount_to_x: Uint128,
-        amount_to_y: Uint128,
-        operation_to_x: Option<Vec<SwapOperation>>,
-        operation_to_y: Option<Vec<SwapOperation>>,
-        minimum_receive_x: Option<Uint128>,
-        minimum_receive_y: Option<Uint128>,
+        routes: Vec<Route>,
+        minimum_liquidity: Option<Liquidity>,
     ) -> MockResult<ExecuteResponse> {
         self.execute(
             Addr::unchecked(sender),
@@ -218,12 +216,8 @@ impl MockApp {
                 tick_lower_index,
                 tick_upper_index,
                 asset_in: asset_in.to_owned(),
-                amount_to_x,
-                amount_to_y,
-                operation_to_x,
-                operation_to_y,
-                minimum_receive_x,
-                minimum_receive_y,
+                routes,
+                minimum_liquidity,
             },
             &[],
         )

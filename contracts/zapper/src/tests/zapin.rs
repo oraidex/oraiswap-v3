@@ -7,6 +7,7 @@ use oraiswap_v3_common::math::percentage::Percentage;
 use oraiswap_v3_common::math::sqrt_price::{calculate_sqrt_price, SqrtPrice};
 use oraiswap_v3_common::storage::{FeeTier, PoolKey};
 
+use crate::msg::Route;
 use crate::tests::helper::MockApp;
 use crate::tests::helper::{macros::*, FEE_DENOM};
 
@@ -144,14 +145,13 @@ fn test_zap_in_with_same_token() {
             tick_lower_index,
             tick_upper_index,
             &asset_in,
-            Uint128::new(500000),
-            Uint128::new(500000),
-            None,
-            Some(vec![SwapOperation::SwapV3 {
-                pool_key: pool_key_x_y.clone(),
-                x_to_y: true,
-            }]),
-            None,
+            vec![Route {
+                offer_amount: Uint128::new(500000),
+                operations: vec![SwapOperation::SwapV3 {
+                    pool_key: pool_key_x_y.clone(),
+                    x_to_y: true,
+                }],
+            }],
             None,
         )
         .unwrap();
@@ -167,42 +167,6 @@ fn test_zap_in_with_same_token() {
         },
         amount: Uint128::new(1000000),
     };
-    // missing route => error
-    app.zap_in_liquidity(
-        &bob,
-        zapper.as_str(),
-        pool_key_x_y.clone(),
-        tick_lower_index,
-        tick_upper_index,
-        &asset_in,
-        Uint128::new(500000),
-        Uint128::new(500000),
-        None,
-        None,
-        None,
-        None,
-    )
-    .unwrap_err();
-
-    // amount_to_x + amount_to_y != asset_in
-    app.zap_in_liquidity(
-        &bob,
-        zapper.as_str(),
-        pool_key_x_y.clone(),
-        tick_lower_index,
-        tick_upper_index,
-        &asset_in,
-        Uint128::new(400000),
-        Uint128::new(500000),
-        Some(vec![SwapOperation::SwapV3 {
-            pool_key: pool_key_x_y.clone(),
-            x_to_y: false,
-        }]),
-        None,
-        None,
-        None,
-    )
-    .unwrap_err();
 
     // success
     app.zap_in_liquidity(
@@ -212,14 +176,13 @@ fn test_zap_in_with_same_token() {
         tick_lower_index,
         tick_upper_index,
         &asset_in,
-        Uint128::new(500000),
-        Uint128::new(500000),
-        Some(vec![SwapOperation::SwapV3 {
-            pool_key: pool_key_x_y.clone(),
-            x_to_y: false,
-        }]),
-        None,
-        None,
+        vec![Route {
+            offer_amount: Uint128::new(500000),
+            operations: vec![SwapOperation::SwapV3 {
+                pool_key: pool_key_x_y.clone(),
+                x_to_y: false,
+            }],
+        }],
         None,
     )
     .unwrap();
@@ -263,58 +226,6 @@ fn test_zap_in_by_diff_token() {
         amount: Uint128::new(1000),
     };
 
-    // missing route swap to x
-    app.zap_in_liquidity(
-        &bob,
-        zapper.as_str(),
-        pool_key_x_y.clone(),
-        tick_lower_index,
-        tick_upper_index,
-        &asset_in,
-        Uint128::new(500),
-        Uint128::new(500),
-        None,
-        Some(vec![SwapOperation::SwapV3 {
-            pool_key: pool_key_y_z.clone(),
-            x_to_y: false,
-        }]),
-        None,
-        None,
-    )
-    .unwrap_err()
-    .root_cause()
-    .to_string()
-    .contains("Missing route swap");
-
-    // missing route swap to y
-    app.zap_in_liquidity(
-        &bob,
-        zapper.as_str(),
-        pool_key_x_y.clone(),
-        tick_lower_index,
-        tick_upper_index,
-        &asset_in,
-        Uint128::new(500),
-        Uint128::new(500),
-        Some(vec![
-            SwapOperation::SwapV3 {
-                pool_key: pool_key_y_z.clone(),
-                x_to_y: false,
-            },
-            SwapOperation::SwapV3 {
-                pool_key: pool_key_x_y.clone(),
-                x_to_y: false,
-            },
-        ]),
-        None,
-        None,
-        None,
-    )
-    .unwrap_err()
-    .root_cause()
-    .to_string()
-    .contains("Missing route swap");
-
     // add successful
     app.zap_in_liquidity(
         &bob,
@@ -323,23 +234,28 @@ fn test_zap_in_by_diff_token() {
         tick_lower_index,
         tick_upper_index,
         &asset_in,
-        Uint128::new(500),
-        Uint128::new(500),
-        Some(vec![
-            SwapOperation::SwapV3 {
-                pool_key: pool_key_y_z.clone(),
-                x_to_y: false,
+        vec![
+            Route {
+                offer_amount: Uint128::new(500),
+                operations: vec![
+                    SwapOperation::SwapV3 {
+                        pool_key: pool_key_y_z.clone(),
+                        x_to_y: false,
+                    },
+                    SwapOperation::SwapV3 {
+                        pool_key: pool_key_x_y.clone(),
+                        x_to_y: false,
+                    },
+                ],
             },
-            SwapOperation::SwapV3 {
-                pool_key: pool_key_x_y.clone(),
-                x_to_y: false,
+            Route {
+                offer_amount: Uint128::new(500),
+                operations: vec![SwapOperation::SwapV3 {
+                    pool_key: pool_key_y_z.clone(),
+                    x_to_y: false,
+                }],
             },
-        ]),
-        Some(vec![SwapOperation::SwapV3 {
-            pool_key: pool_key_y_z.clone(),
-            x_to_y: false,
-        }]),
-        None,
+        ],
         None,
     )
     .unwrap();
