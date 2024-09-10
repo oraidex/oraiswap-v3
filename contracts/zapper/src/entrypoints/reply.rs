@@ -67,6 +67,16 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
         )?;
     }
 
+    // validate minimum liquidity
+    if let Some(min_liquidity) = pending_position.minimum_liquidity {
+        if res.l.lt(&min_liquidity) {
+            return Err(ContractError::ZapInAssertionFailure {
+                minium_receive: min_liquidity,
+                return_amount: res.l,
+            });
+        }
+    }
+
     // approve tokenX and tokenY to dex_v3
     let mut coins: Vec<Coin> = vec![];
     token_x

@@ -13,6 +13,7 @@ pub struct PendingPosition {
     pub liquidity_delta: Option<Liquidity>,
     pub slippage_limit_lower: Option<SqrtPrice>,
     pub slippage_limit_upper: Option<SqrtPrice>,
+    pub minimum_liquidity: Option<Liquidity>,
 }
 
 impl PendingPosition {
@@ -24,6 +25,7 @@ impl PendingPosition {
         liquidity_delta: Option<Liquidity>,
         slippage_limit_lower: Option<SqrtPrice>,
         slippage_limit_upper: Option<SqrtPrice>,
+        minimum_liquidity: Option<Liquidity>,
     ) -> Self {
         Self {
             index,
@@ -33,6 +35,7 @@ impl PendingPosition {
             liquidity_delta,
             slippage_limit_lower,
             slippage_limit_upper,
+            minimum_liquidity,
         }
     }
 }

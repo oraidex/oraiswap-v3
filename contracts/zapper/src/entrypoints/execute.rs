@@ -5,6 +5,7 @@ use oraiswap::mixed_router::SwapOperation;
 use oraiswap_v3_common::{
     asset::{Asset, AssetInfo},
     error::ContractError,
+    math::liquidity::Liquidity,
     oraiswap_v3_msg::{ExecuteMsg as V3ExecuteMsg, QueryMsg as V3QueryMsg},
     storage::{PoolKey, Position},
 };
@@ -12,6 +13,7 @@ use oraiswap_v3_common::{
 use crate::{
     contract::{ZAP_IN_LIQUIDITY_REPLY_ID, ZAP_OUT_LIQUIDITY_REPLY_ID},
     entrypoints::common::get_pool_v3_asset_info,
+    msg::Route,
     state::{CONFIG, PENDING_POSITION, RECEIVER, SNAP_INCENTIVE, ZAP_OUT_POSITION, ZAP_OUT_ROUTES},
     Config, IncentiveBalance, PairBalance, PendingPosition, ZapOutRoutes,
 };
@@ -50,12 +52,8 @@ pub fn zap_in_liquidity(
     tick_lower_index: i32,
     tick_upper_index: i32,
     asset_in: Asset,
-    amount_to_x: Uint128,
-    amount_to_y: Uint128,
-    operation_to_x: Option<Vec<SwapOperation>>,
-    operation_to_y: Option<Vec<SwapOperation>>,
-    minimum_receive_x: Option<Uint128>,
-    minimum_receive_y: Option<Uint128>,
+    routes: Vec<Route>,
+    minimum_liquidity: Option<Liquidity>,
 ) -> Result<Response, ContractError> {
     // init messages and submessages
     let mut msgs: Vec<CosmosMsg> = vec![];
@@ -69,10 +67,7 @@ pub fn zap_in_liquidity(
         asset_in.clone(),
         &mut msgs,
     )?;
-    // validate amount_to_x + amount_to_y = asset_in
-    if asset_in.amount != amount_to_x + amount_to_y {
-        return Err(ContractError::InvalidFund {});
-    }
+    // TODO: validate asset_in and routes
 
     // load config to get address
     let config = CONFIG.load(deps.storage)?;
@@ -92,6 +87,7 @@ pub fn zap_in_liquidity(
         None,
         None,
         None,
+        minimum_liquidity,
     );
     PENDING_POSITION.save(deps.storage, &position)?;
 
@@ -115,71 +111,24 @@ pub fn zap_in_liquidity(
 
     // 3. Create SubMsg to process swap operations in mixedRouter contract
     // 4. Reply on success, if error occurs, revert the state
-    if asset_in.info.eq(&token_x) {
-        if operation_to_y.is_none() {
-            return Err(ContractError::MissingRouteSwap {});
-        }
-        // just need to swap x to y
+    for i in 0..routes.len() {
         let swap_msg = build_swap_msg(
-            &asset_in.info,
-            config.mixed_router,
-            amount_to_y,
-            operation_to_y.unwrap(),
-            minimum_receive_y,
-            None,
-            None,
-        )?;
-
-        sub_msgs.push(SubMsg::reply_on_success(
-            swap_msg,
-            ZAP_IN_LIQUIDITY_REPLY_ID,
-        ));
-    } else if asset_in.info.eq(&token_y) {
-        if operation_to_x.is_none() {
-            return Err(ContractError::MissingRouteSwap {});
-        }
-        // just need to swap y to x
-        let swap_msg = build_swap_msg(
-            &asset_in.info,
-            config.mixed_router,
-            amount_to_x,
-            operation_to_x.unwrap(),
-            minimum_receive_x,
-            None,
-            None,
-        )?;
-        sub_msgs.push(SubMsg::reply_on_success(
-            swap_msg,
-            ZAP_IN_LIQUIDITY_REPLY_ID,
-        ));
-    } else {
-        if operation_to_x.is_none() || operation_to_y.is_none() {
-            return Err(ContractError::MissingRouteSwap {});
-        }
-        let swap_to_x_msg = build_swap_msg(
             &asset_in.info,
             config.mixed_router.clone(),
-            amount_to_x,
-            operation_to_x.unwrap(),
-            minimum_receive_x,
+            routes[i].offer_amount,
+            routes[i].operations.clone(),
             None,
-            None,
-        )?;
-        let swap_to_y_msg = build_swap_msg(
-            &asset_in.info,
-            config.mixed_router,
-            amount_to_y,
-            operation_to_y.unwrap(),
-            minimum_receive_y,
             None,
             None,
         )?;
-
-        sub_msgs.push(SubMsg::new(swap_to_x_msg));
-        sub_msgs.push(SubMsg::reply_on_success(
-            swap_to_y_msg,
-            ZAP_IN_LIQUIDITY_REPLY_ID,
-        ));
+        if i == routes.len() - 1 {
+            sub_msgs.push(SubMsg::reply_on_success(
+                swap_msg,
+                ZAP_IN_LIQUIDITY_REPLY_ID,
+            ));
+        } else {
+            sub_msgs.push(SubMsg::new(swap_msg));
+        }
     }
 
     Ok(Response::new().add_messages(msgs).add_submessages(sub_msgs))

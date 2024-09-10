@@ -3,6 +3,8 @@ use std::string::FromUtf8Error;
 use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 
+use crate::math::liquidity::Liquidity;
+
 #[derive(Error, Debug)]
 pub enum ContractError {
     #[error("{0}")]
@@ -157,6 +159,12 @@ pub enum ContractError {
 
     #[error("Missing route swap")]
     MissingRouteSwap {},
+
+    #[error("Assertion failed; expect: {minium_receive}, got: {return_amount}")]
+    ZapInAssertionFailure {
+        minium_receive: Liquidity,
+        return_amount: Liquidity,
+    },
 }
 
 impl From<ContractError> for StdError {
