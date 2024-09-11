@@ -29,10 +29,7 @@ pub enum ExecuteMsg {
     },
     ZapOutLiquidity {
         position_index: u32,
-        operation_from_x: Option<Vec<SwapOperation>>,
-        operation_from_y: Option<Vec<SwapOperation>>,
-        minimum_receive_x: Option<Uint128>,
-        minimum_receive_y: Option<Uint128>,
+        routes: Vec<Route>,
     },
     RegisterProtocolFee {
         percent: Decimal,
@@ -52,6 +49,8 @@ pub struct MigrateMsg {}
 
 #[cw_serde]
 pub struct Route {
+    pub token_in: String,
     pub offer_amount: Uint128,
     pub operations: Vec<SwapOperation>,
+    pub minimum_receive: Option<Uint128>,
 }

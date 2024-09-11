@@ -2,7 +2,7 @@ use cosmwasm_std::{
     to_json_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128,
     WasmMsg,
 };
-use oraiswap::mixed_router::SwapOperation;
+
 use oraiswap_v3_common::{
     asset::{Asset, AssetInfo},
     error::ContractError,
@@ -15,11 +15,8 @@ use crate::{
     contract::{ZAP_IN_LIQUIDITY_REPLY_ID, ZAP_OUT_LIQUIDITY_REPLY_ID},
     entrypoints::common::get_pool_v3_asset_info,
     msg::Route,
-    state::{
-        CONFIG, PENDING_POSITION, PROTOCOL_FEE, RECEIVER, SNAP_INCENTIVE, ZAP_OUT_POSITION,
-        ZAP_OUT_ROUTES,
-    },
-    Config, IncentiveBalance, PairBalance, PendingPosition, ZapOutRoutes,
+    state::{CONFIG, PENDING_POSITION, PROTOCOL_FEE, RECEIVER, SNAP_BALANCES, ZAP_OUT_ROUTES},
+    Config, PairBalance, PendingPosition,
 };
 
 use super::{build_swap_msg, validate_fund};
@@ -66,7 +63,7 @@ pub fn execute_register_protocol_fee(
     PROTOCOL_FEE.save(
         deps.storage,
         &crate::ProtocolFee {
-            percent: percent.clone(),
+            percent,
             fee_receiver: fee_receiver.clone(),
         },
     )?;
@@ -196,10 +193,7 @@ pub fn zap_out_liquidity(
     env: Env,
     info: MessageInfo,
     position_index: u32,
-    operation_from_x: Option<Vec<SwapOperation>>,
-    operation_from_y: Option<Vec<SwapOperation>>,
-    minimum_receive_x: Option<Uint128>,
-    minimum_receive_y: Option<Uint128>,
+    routes: Vec<Route>,
 ) -> Result<Response, ContractError> {
     let mut msgs: Vec<CosmosMsg> = vec![];
     let mut sub_msgs: Vec<SubMsg> = vec![];
@@ -218,35 +212,13 @@ pub fn zap_out_liquidity(
             index: position_index,
         },
     )?;
-    let snap_incentives = position_incentives
-        .iter()
-        .map(|asset| {
-            let balance = asset
-                .info
-                .balance(&deps.querier, env.contract.address.to_string())
-                .unwrap();
-            Asset {
-                info: asset.info.clone(),
-                amount: balance,
-            }
-        })
-        .collect();
-    SNAP_INCENTIVE.save(
-        deps.storage,
-        &IncentiveBalance {
-            incentives: snap_incentives,
-        },
-    )?;
-    ZAP_OUT_ROUTES.save(
-        deps.storage,
-        &ZapOutRoutes {
-            operation_from_x,
-            operation_from_y,
-            minimum_receive_x,
-            minimum_receive_y,
-        },
-    )?;
-    ZAP_OUT_POSITION.save(deps.storage, &position)?;
+    for incentive in position_incentives {
+        let balance = incentive
+            .info
+            .balance(&deps.querier, env.contract.address.to_string())
+            .unwrap();
+        SNAP_BALANCES.save(deps.storage, incentive.info.denom(), &balance)?;
+    }
 
     // 1. Transfer position to this contract
     // sender must be approve for contract first
@@ -263,9 +235,11 @@ pub fn zap_out_liquidity(
     let (token_x, token_y) = get_pool_v3_asset_info(deps.api, &position.pool_key);
     let balance_x = token_x.balance(&deps.querier, env.contract.address.to_string())?;
     let balance_y = token_y.balance(&deps.querier, env.contract.address.to_string())?;
+    SNAP_BALANCES.save(deps.storage, token_x.denom(), &balance_x)?;
+    SNAP_BALANCES.save(deps.storage, token_y.denom(), &balance_y)?;
 
-    PairBalance::save(deps.storage, &token_x, balance_x, &token_y, balance_y)?;
     RECEIVER.save(deps.storage, &info.sender)?;
+    ZAP_OUT_ROUTES.save(deps.storage, &routes)?;
 
     // 2. Create SubMsg to process remove liquidity in dex_v3 contract
     sub_msgs.push(SubMsg::reply_on_success(

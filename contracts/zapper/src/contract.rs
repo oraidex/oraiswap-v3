@@ -71,20 +71,8 @@ pub fn execute(
         ),
         ExecuteMsg::ZapOutLiquidity {
             position_index,
-            operation_from_x,
-            operation_from_y,
-            minimum_receive_x,
-            minimum_receive_y,
-        } => zap_out_liquidity(
-            deps,
-            env,
-            info,
-            position_index,
-            operation_from_x,
-            operation_from_y,
-            minimum_receive_x,
-            minimum_receive_y,
-        ),
+            routes,
+        } => zap_out_liquidity(deps, env, info, position_index, routes),
         ExecuteMsg::RegisterProtocolFee {
             percent,
             fee_receiver,

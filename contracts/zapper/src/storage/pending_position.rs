@@ -17,6 +17,7 @@ pub struct PendingPosition {
 }
 
 impl PendingPosition {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         index: u32,
         pool_key: PoolKey,

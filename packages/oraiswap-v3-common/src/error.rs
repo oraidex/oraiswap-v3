@@ -165,6 +165,9 @@ pub enum ContractError {
         minium_receive: Liquidity,
         return_amount: Liquidity,
     },
+
+    #[error("Error on zap out: not enough balance to swap")]
+    ZapOutNotEnoughBalanceToSwap {},
 }
 
 impl From<ContractError> for StdError {

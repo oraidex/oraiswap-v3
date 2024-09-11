@@ -146,11 +146,13 @@ fn test_zap_in_with_same_token() {
             tick_upper_index,
             &asset_in,
             vec![Route {
+                token_in: token_x.to_string(),
                 offer_amount: Uint128::new(500000),
                 operations: vec![SwapOperation::SwapV3 {
                     pool_key: pool_key_x_y.clone(),
                     x_to_y: true,
                 }],
+                minimum_receive: None,
             }],
             None,
         )
@@ -177,11 +179,13 @@ fn test_zap_in_with_same_token() {
         tick_upper_index,
         &asset_in,
         vec![Route {
+            token_in: token_x.to_string(),
             offer_amount: Uint128::new(500000),
             operations: vec![SwapOperation::SwapV3 {
                 pool_key: pool_key_x_y.clone(),
                 x_to_y: false,
             }],
+            minimum_receive: None,
         }],
         None,
     )
@@ -236,6 +240,7 @@ fn test_zap_in_by_diff_token() {
         &asset_in,
         vec![
             Route {
+                token_in: token_z.to_string(),
                 offer_amount: Uint128::new(500),
                 operations: vec![
                     SwapOperation::SwapV3 {
@@ -247,13 +252,16 @@ fn test_zap_in_by_diff_token() {
                         x_to_y: false,
                     },
                 ],
+                minimum_receive: None,
             },
             Route {
+                token_in: token_z.to_string(),
                 offer_amount: Uint128::new(500),
                 operations: vec![SwapOperation::SwapV3 {
                     pool_key: pool_key_y_z.clone(),
                     x_to_y: false,
                 }],
+                minimum_receive: None,
             },
         ],
         None,
@@ -310,6 +318,7 @@ fn test_zap_in_with_asset_in_lt_total_swap() {
             &asset_in,
             vec![
                 Route {
+                    token_in: token_z.to_string(),
                     offer_amount: Uint128::new(500),
                     operations: vec![
                         SwapOperation::SwapV3 {
@@ -321,13 +330,16 @@ fn test_zap_in_with_asset_in_lt_total_swap() {
                             x_to_y: false,
                         },
                     ],
+                    minimum_receive: None,
                 },
                 Route {
+                    token_in: token_z.to_string(),
                     offer_amount: Uint128::new(500),
                     operations: vec![SwapOperation::SwapV3 {
                         pool_key: pool_key_y_z.clone(),
                         x_to_y: false,
                     }],
+                    minimum_receive: None,
                 },
             ],
             None,
