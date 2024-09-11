@@ -1,7 +1,8 @@
 use std::vec;
 
 use cosmwasm_std::{
-    to_json_binary, Coin, CosmosMsg, DepsMut, Env, Order, Response, StdResult, SubMsg, WasmMsg,
+    to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, Order, Response, StdResult, SubMsg,
+    WasmMsg,
 };
 
 use oraiswap_v3_common::{
@@ -18,7 +19,11 @@ use oraiswap_v3_common::{
 
 use crate::{
     contract::ADD_LIQUIDITY_REPLY_ID,
-    state::{CONFIG, PENDING_POSITION, RECEIVER, SNAP_BALANCE, SNAP_BALANCES, ZAP_OUT_ROUTES},
+    state::{
+        CONFIG, PENDING_POSITION, PROTOCOL_FEE, RECEIVER, SNAP_BALANCE, SNAP_BALANCES,
+        ZAP_OUT_ROUTES,
+    },
+    ProtocolFee,
 };
 
 use super::build_swap_msg;
@@ -186,6 +191,10 @@ pub fn zap_out_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractEr
         })
         .collect::<StdResult<Vec<Asset>>>()?;
 
+    let protocol_fee = PROTOCOL_FEE.may_load(deps.storage)?.unwrap_or(ProtocolFee {
+        percent: Decimal::zero(),
+        fee_receiver: receiver.clone(),
+    });
     // try swaps
     for route in zap_out_routes {
         let token_info = AssetInfo::from_denom(deps.api, &route.token_in);
@@ -195,10 +204,23 @@ pub fn zap_out_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractEr
             }
             balance.amount -= route.offer_amount;
 
+            let mut amount_to_swap = route.offer_amount;
+            if !protocol_fee.percent.is_zero() {
+                let fee_amount = amount_to_swap * protocol_fee.percent;
+                amount_to_swap -= fee_amount;
+
+                // transfer fee to fee_receiver
+                token_info.transfer(
+                    &mut msgs,
+                    protocol_fee.fee_receiver.to_string(),
+                    fee_amount,
+                )?;
+            }
+
             let swap_msg = build_swap_msg(
                 &token_info,
                 config.mixed_router.clone(),
-                route.offer_amount,
+                amount_to_swap,
                 route.operations,
                 route.minimum_receive,
                 Some(receiver.clone()),
