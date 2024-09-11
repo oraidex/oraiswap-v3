@@ -102,7 +102,28 @@ pub fn zap_in_liquidity(
         asset_in.clone(),
         &mut msgs,
     )?;
-    // TODO: validate asset_in and routes
+
+    let mut amount_after_fee = asset_in.amount;
+    // handle deduct zap in fee
+    if let Some(protocol_fee) = PROTOCOL_FEE.may_load(deps.storage)? {
+        let fee_amount = asset_in.amount * protocol_fee.percent;
+        amount_after_fee -= fee_amount;
+        // transfer fee to fee_receiver
+        asset_in
+            .info
+            .transfer(&mut msgs, protocol_fee.fee_receiver.to_string(), fee_amount)?;
+    }
+
+    // validate asset_in and routes
+    let total_swap_amount: Uint128 = routes
+        .iter()
+        .map(|route| route.offer_amount)
+        .collect::<Vec<Uint128>>()
+        .iter()
+        .sum();
+    if total_swap_amount.gt(&amount_after_fee) {
+        return Err(ContractError::InvalidFund {});
+    }
 
     // load config to get address
     let config = CONFIG.load(deps.storage)?;
