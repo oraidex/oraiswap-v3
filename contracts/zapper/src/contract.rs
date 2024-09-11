@@ -85,6 +85,10 @@ pub fn execute(
             minimum_receive_x,
             minimum_receive_y,
         ),
+        ExecuteMsg::RegisterProtocolFee {
+            percent,
+            fee_receiver,
+        } => execute_register_protocol_fee(deps, info, percent, fee_receiver),
     }
 }
 

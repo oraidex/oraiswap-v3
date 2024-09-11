@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Decimal, Uint128};
 use oraiswap::mixed_router::SwapOperation;
 use oraiswap_v3_common::{asset::Asset, math::liquidity::Liquidity, storage::PoolKey};
 
@@ -33,6 +33,10 @@ pub enum ExecuteMsg {
         operation_from_y: Option<Vec<SwapOperation>>,
         minimum_receive_x: Option<Uint128>,
         minimum_receive_y: Option<Uint128>,
+    },
+    RegisterProtocolFee {
+        percent: Decimal,
+        fee_receiver: Addr,
     },
 }
 

@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, WasmMsg,
+    to_json_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128,
+    WasmMsg,
 };
 use oraiswap::mixed_router::SwapOperation;
 use oraiswap_v3_common::{
@@ -14,7 +15,10 @@ use crate::{
     contract::{ZAP_IN_LIQUIDITY_REPLY_ID, ZAP_OUT_LIQUIDITY_REPLY_ID},
     entrypoints::common::get_pool_v3_asset_info,
     msg::Route,
-    state::{CONFIG, PENDING_POSITION, RECEIVER, SNAP_INCENTIVE, ZAP_OUT_POSITION, ZAP_OUT_ROUTES},
+    state::{
+        CONFIG, PENDING_POSITION, PROTOCOL_FEE, RECEIVER, SNAP_INCENTIVE, ZAP_OUT_POSITION,
+        ZAP_OUT_ROUTES,
+    },
     Config, IncentiveBalance, PairBalance, PendingPosition, ZapOutRoutes,
 };
 
@@ -41,6 +45,37 @@ pub fn update_config(
 
     let event_attributes = vec![("action", "update_config")];
     Ok(Response::new().add_attributes(event_attributes))
+}
+
+pub fn execute_register_protocol_fee(
+    deps: DepsMut,
+    info: MessageInfo,
+    percent: Decimal,
+    fee_receiver: Addr,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if info.sender != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // validate percent must be < 1
+    if percent.gt(&Decimal::one()) {
+        return Err(ContractError::InvalidFee {});
+    }
+
+    PROTOCOL_FEE.save(
+        deps.storage,
+        &crate::ProtocolFee {
+            percent: percent.clone(),
+            fee_receiver: fee_receiver.clone(),
+        },
+    )?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "register_protocol_fee"),
+        ("percent", &percent.to_string()),
+        ("fee_receiver", fee_receiver.as_str()),
+    ]))
 }
 
 #[allow(clippy::too_many_arguments)]
