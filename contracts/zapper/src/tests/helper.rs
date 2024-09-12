@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, StdResult};
+use cosmwasm_std::{Addr, Coin, Decimal as StdDecimal, StdResult};
 use cosmwasm_testing_util::{ContractWrapper, ExecuteResponse, MockResult};
 
 use decimal::Decimal;
@@ -190,6 +190,23 @@ impl MockApp {
             },
             &[],
             "zapper",
+        )
+    }
+
+    pub fn register_protocol_fee(
+        &mut self,
+        zapper: &str,
+        percent: StdDecimal,
+        fee_receiver: &str,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(zapper),
+            Addr::unchecked(zapper),
+            &msg::ExecuteMsg::RegisterProtocolFee {
+                percent,
+                fee_receiver: Addr::unchecked(fee_receiver.to_string()),
+            },
+            &[],
         )
     }
 

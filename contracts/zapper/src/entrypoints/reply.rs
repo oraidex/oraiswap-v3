@@ -8,7 +8,7 @@ use cosmwasm_std::{
 use oraiswap_v3_common::{
     asset::{Asset, AssetInfo},
     error::ContractError,
-    logic::{get_liquidity_by_x, get_liquidity_by_y},
+    logic::{get_liquidity_by_x, get_liquidity_by_y, SingleTokenLiquidity},
     math::{
         sqrt_price::{get_max_sqrt_price, get_min_sqrt_price},
         token_amount::TokenAmount,
@@ -58,15 +58,39 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
             fee_tier: pending_position.pool_key.fee_tier,
         },
     )?;
-    let mut res = get_liquidity_by_x(
-        TokenAmount(x_amount.u128()),
-        pending_position.lower_tick,
-        pending_position.upper_tick,
-        pool_info.sqrt_price,
-        false,
-    )?;
 
-    if res.amount > TokenAmount(y_amount.u128()) {
+    let mut res: SingleTokenLiquidity; 
+
+    let is_in_range = pending_position.lower_tick <= pool_info.current_tick_index && pending_position.upper_tick > pool_info.current_tick_index;
+    if is_in_range {
+        res = get_liquidity_by_x(
+            TokenAmount(x_amount.u128()),
+            pending_position.lower_tick,
+            pending_position.upper_tick,
+            pool_info.sqrt_price,
+            false,
+        )?;
+    } else {
+        if pending_position.lower_tick > pool_info.current_tick_index {
+            res = get_liquidity_by_x(
+                TokenAmount(x_amount.u128()),
+                pending_position.lower_tick,
+                pending_position.upper_tick,
+                pool_info.sqrt_price,
+                false,
+            )?;
+        } else {
+            res = get_liquidity_by_y(
+                TokenAmount(y_amount.u128()),
+                pending_position.lower_tick,
+                pending_position.upper_tick,
+                pool_info.sqrt_price,
+                false,
+            )?;
+        }
+    }
+
+    if res.amount > TokenAmount(y_amount.u128()) && is_in_range {
         res = get_liquidity_by_y(
             TokenAmount(y_amount.u128()),
             pending_position.lower_tick,
