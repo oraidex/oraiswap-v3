@@ -3,7 +3,7 @@ use cosmwasm_std::{Addr, Decimal, Uint128};
 use oraiswap::mixed_router::SwapOperation;
 use oraiswap_v3_common::{asset::Asset, math::liquidity::Liquidity, storage::PoolKey};
 
-use crate::Config;
+use crate::{Config, ProtocolFee};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -42,6 +42,9 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     #[returns(Config)]
     Config {},
+
+    #[returns(ProtocolFee)]
+    ProtocolFee {},
 }
 
 #[cw_serde]

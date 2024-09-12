@@ -84,6 +84,7 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_json_binary(&get_config(deps)?),
+        QueryMsg::ProtocolFee {} => to_json_binary(&get_protocol_fee(deps)?),
     }
 }
 
