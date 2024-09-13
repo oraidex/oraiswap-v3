@@ -195,12 +195,13 @@ impl MockApp {
 
     pub fn register_protocol_fee(
         &mut self,
+        sender: &str,
         zapper: &str,
         percent: StdDecimal,
         fee_receiver: &str,
     ) -> MockResult<ExecuteResponse> {
         self.execute(
-            Addr::unchecked(zapper),
+            Addr::unchecked(sender),
             Addr::unchecked(zapper),
             &msg::ExecuteMsg::RegisterProtocolFee {
                 percent,
@@ -455,6 +456,21 @@ pub mod macros {
         }};
     }
     pub(crate) use get_all_positions;
+
+    macro_rules! balance_of {
+        // any type that can converted to string
+        ($app:ident, $token_address:expr, $owner:expr) => {{
+            $app.query_token_balance($token_address.as_str(), &$owner.to_string())
+                .unwrap()
+                .u128()
+        }};
+        ($app:ident, $token_address:expr, $owner:tt) => {{
+            $app.query_token_balance($token_address.as_str(), $owner)
+                .unwrap()
+                .u128()
+        }};
+    }
+    pub(crate) use balance_of;
 }
 
 #[cfg(test)]
