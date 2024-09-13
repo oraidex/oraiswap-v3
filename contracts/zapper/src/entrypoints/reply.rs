@@ -59,9 +59,10 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
         },
     )?;
 
-    let mut res: SingleTokenLiquidity; 
+    let mut res: SingleTokenLiquidity;
 
-    let is_in_range = pending_position.lower_tick <= pool_info.current_tick_index && pending_position.upper_tick > pool_info.current_tick_index;
+    let is_in_range = pending_position.lower_tick <= pool_info.current_tick_index
+        && pending_position.upper_tick > pool_info.current_tick_index;
     if is_in_range {
         res = get_liquidity_by_x(
             TokenAmount(x_amount.u128()),
@@ -70,16 +71,7 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
             pool_info.sqrt_price,
             false,
         )?;
-    } else {
-        if pending_position.lower_tick > pool_info.current_tick_index {
-            res = get_liquidity_by_x(
-                TokenAmount(x_amount.u128()),
-                pending_position.lower_tick,
-                pending_position.upper_tick,
-                pool_info.sqrt_price,
-                false,
-            )?;
-        } else {
+        if res.amount > TokenAmount(y_amount.u128()) {
             res = get_liquidity_by_y(
                 TokenAmount(y_amount.u128()),
                 pending_position.lower_tick,
@@ -88,9 +80,15 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
                 false,
             )?;
         }
-    }
-
-    if res.amount > TokenAmount(y_amount.u128()) && is_in_range {
+    } else if pending_position.lower_tick > pool_info.current_tick_index {
+        res = get_liquidity_by_x(
+            TokenAmount(x_amount.u128()),
+            pending_position.lower_tick,
+            pending_position.upper_tick,
+            pool_info.sqrt_price,
+            false,
+        )?;
+    } else {
         res = get_liquidity_by_y(
             TokenAmount(y_amount.u128()),
             pending_position.lower_tick,
