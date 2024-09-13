@@ -108,6 +108,7 @@ pub fn init_basic_v3_pool(
     let incentives_addr = app
         .get_incentives_fund_manager(config.dex_v3.as_str())
         .unwrap();
+
     let incentives_addr_raw = &incentives_addr.to_string();
     mint!(app, token_z, incentives_addr_raw, initial_amount, admin).unwrap();
     let reward_token = AssetInfo::Token {

@@ -136,6 +136,17 @@ impl MockApp {
             "oraiswap_v3",
         )?;
 
+        // update config for incentive_contract
+        self.execute(
+            Addr::unchecked(owner),
+            incentive_addr.clone(),
+            &oraiswap_v3_common::incentives_fund_manager::ExecuteMsg::UpdateConfig {
+                owner: None,
+                oraiswap_v3: Some(dex_v3_addr.clone()),
+            },
+            &[],
+        )?;
+
         let oracle_addr = self.instantiate(
             oracle_id,
             Addr::unchecked(owner),
@@ -386,6 +397,25 @@ impl MockApp {
         self.query(
             Addr::unchecked(dex),
             &oraiswap_v3_msg::QueryMsg::IncentivesFundManager {},
+        )
+    }
+
+    pub fn approve_position(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        spender: &str,
+        token_id: u64,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::ExecuteMsg::Approve {
+                spender: Addr::unchecked(spender),
+                token_id,
+                expires: None,
+            },
+            &[],
         )
     }
 }
