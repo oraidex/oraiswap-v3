@@ -509,3 +509,80 @@ fn test_zap_in_out_of_range() {
 
     assert_eq!(all_positions.len(), 2);
 }
+
+#[test]
+fn test_zap_in_with_minimum_receive() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let initial_amount = 10u128.pow(20);
+    let (token_x, token_y, token_z) =
+        create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
+
+    let zapper = create_zapper!(app, alice);
+    let _config = app.get_zapper_config(zapper.as_str()).unwrap();
+
+    init_basic_v3_pool(
+        &mut app, &zapper, &token_x, &token_y, &token_z, &alice, &bob,
+    );
+
+    let protocol_fee = Percentage::from_scale(6, 3);
+    let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
+    let pool_key_x_y = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+    let pool_key_y_z = PoolKey::new(token_y.to_string(), token_z.to_string(), fee_tier).unwrap();
+
+    let tick_lower_index = 0;
+    let tick_upper_index = 10;
+
+    // asset_in = token_z
+    let asset_in = Asset {
+        info: AssetInfo::Token {
+            contract_addr: token_z.clone(),
+        },
+        amount: Uint128::new(1000),
+    };
+
+    let minimum_liquidity = Liquidity(10u128.pow(15));
+    let err = app
+        .zap_in_liquidity(
+            &bob,
+            zapper.as_str(),
+            pool_key_x_y.clone(),
+            tick_lower_index,
+            tick_upper_index,
+            &asset_in,
+            vec![
+                Route {
+                    token_in: token_z.to_string(),
+                    offer_amount: Uint128::new(500),
+                    operations: vec![
+                        SwapOperation::SwapV3 {
+                            pool_key: pool_key_y_z.clone(),
+                            x_to_y: false,
+                        },
+                        SwapOperation::SwapV3 {
+                            pool_key: pool_key_x_y.clone(),
+                            x_to_y: false,
+                        },
+                    ],
+                    minimum_receive: None,
+                },
+                Route {
+                    token_in: token_z.to_string(),
+                    offer_amount: Uint128::new(500),
+                    operations: vec![SwapOperation::SwapV3 {
+                        pool_key: pool_key_y_z.clone(),
+                        x_to_y: false,
+                    }],
+                    minimum_receive: None,
+                },
+            ],
+            Some(minimum_liquidity),
+        )
+        .unwrap_err();
+
+    assert!(err.root_cause().to_string().contains("Assertion failed"));
+}
