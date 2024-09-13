@@ -7,6 +7,7 @@ use derive_more::{Deref, DerefMut};
 use oraiswap_v3::state::MAX_LIMIT;
 use oraiswap_v3_common::{
     asset::{Asset, AssetInfo},
+    interface::QuoteResult,
     math::{
         liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice,
         token_amount::TokenAmount,
@@ -418,6 +419,27 @@ impl MockApp {
             &[],
         )
     }
+
+    pub fn quote(
+        &mut self,
+        dex: &str,
+        pool_key: &PoolKey,
+        x_to_y: bool,
+        amount: TokenAmount,
+        by_amount_in: bool,
+        sqrt_price_limit: SqrtPrice,
+    ) -> StdResult<QuoteResult> {
+        self.query(
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::QueryMsg::Quote {
+                pool_key: pool_key.clone(),
+                x_to_y,
+                amount,
+                by_amount_in,
+                sqrt_price_limit,
+            },
+        )
+    }
 }
 
 pub mod macros {
@@ -572,6 +594,20 @@ pub mod macros {
         }};
     }
     pub(crate) use create_incentive;
+
+    macro_rules! quote {
+        ($app:ident,  $dex_address:expr, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $sqrt_price_limit:expr) => {{
+            $app.quote(
+                $dex_address.as_str(),
+                &$pool_key,
+                $x_to_y,
+                $amount,
+                $by_amount_in,
+                $sqrt_price_limit,
+            )
+        }};
+    }
+    pub(crate) use quote;
 }
 
 #[cfg(test)]

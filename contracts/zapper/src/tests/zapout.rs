@@ -7,6 +7,8 @@ use oraiswap_v3_common::math::liquidity::Liquidity;
 use oraiswap_v3_common::math::percentage::Percentage;
 
 use oraiswap_v3_common::math::sqrt_price::SqrtPrice;
+use oraiswap_v3_common::math::token_amount::TokenAmount;
+use oraiswap_v3_common::math::MIN_TICK;
 use oraiswap_v3_common::storage::{FeeTier, PoolKey};
 
 use crate::msg::Route;
@@ -254,10 +256,100 @@ fn zap_out_position_not_enough_balance_to_swap() {
 }
 
 #[test]
-fn zap_out_position_with_slippage() {}
+fn zap_out_position_with_slippage() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let initial_amount = 10u128.pow(20);
+    let (token_x, token_y, token_z) =
+        create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
+
+    let zapper = create_zapper!(app, alice);
+    let config = app.get_zapper_config(zapper.as_str()).unwrap();
+
+    init_basic_v3_pool(
+        &mut app, &zapper, &token_x, &token_y, &token_z, &alice, &bob,
+    );
+
+    let protocol_fee = Percentage::from_scale(6, 3);
+    let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+
+    let tick_lower_index = -10;
+    let tick_upper_index = 10;
+    let liquidity_delta = Liquidity::new(2u128.pow(60) - 1);
+
+    let balance_x_before = balance_of!(app, token_x, bob);
+    create_position!(
+        app,
+        config.dex_v3,
+        pool_key,
+        tick_lower_index,
+        tick_upper_index,
+        liquidity_delta,
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        bob
+    )
+    .unwrap();
+    let balance_x_after = balance_of!(app, token_x, bob);
+
+    let amount_x_to_swap = balance_x_before - balance_x_after;
+
+    let all_positions = get_all_positions!(app, config.dex_v3, bob);
+    assert_eq!(all_positions.len(), 1);
+    app.approve_position(
+        &bob,
+        config.dex_v3.as_str(),
+        zapper.as_str(),
+        all_positions[0].token_id,
+    )
+    .unwrap();
+
+    let quote = quote!(
+        app,
+        config.dex_v3,
+        pool_key,
+        true,
+        TokenAmount::new(amount_x_to_swap - 10),
+        true,
+        SqrtPrice::from_tick(MIN_TICK).unwrap()
+    )
+    .unwrap();
+
+    // we will swap x_to_y
+    let err = app
+        .zap_out_liquidity(
+            &bob,
+            zapper.as_str(),
+            0,
+            vec![Route {
+                token_in: token_x.to_string(),
+                offer_amount: Uint128::new(amount_x_to_swap - 10),
+                operations: vec![SwapOperation::SwapV3 {
+                    pool_key: pool_key.clone(),
+                    x_to_y: true,
+                }],
+                minimum_receive: Some(Uint128::new(quote.amount_out.0 + 10)),
+            }],
+        )
+        .unwrap_err();
+
+    assert!(err
+        .root_cause()
+        .to_string()
+        .contains("Assertion failed; minimum receive amount:"));
+}
 
 #[test]
 fn zap_out_position_with_routes_success() {}
 
 #[test]
-fn zap_out_position_with_fee() {}
+fn zap_out_position_with_fee() {
+    // test 1: failed: assert minimum swap not cover fee
+
+    // test 2: success
+}
