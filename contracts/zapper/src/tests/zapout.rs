@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use cosmwasm_std::{coins, Decimal as StdDecimal, Uint128};
 use decimal::*;
 use oraiswap::mixed_router::SwapOperation;
@@ -345,11 +347,170 @@ fn zap_out_position_with_slippage() {
 }
 
 #[test]
-fn zap_out_position_with_routes_success() {}
+fn zap_out_position_with_routes_success() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let initial_amount = 10u128.pow(20);
+    let (token_x, token_y, token_z) =
+        create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
+
+    let zapper = create_zapper!(app, alice);
+    let config = app.get_zapper_config(zapper.as_str()).unwrap();
+
+    init_basic_v3_pool(
+        &mut app, &zapper, &token_x, &token_y, &token_z, &alice, &bob,
+    );
+
+    let protocol_fee = Percentage::from_scale(6, 3);
+    let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+
+    let tick_lower_index = -10;
+    let tick_upper_index = 10;
+    let liquidity_delta = Liquidity::new(2u128.pow(60) - 1);
+
+    let balance_x_before = balance_of!(app, token_x, bob);
+    let balance_y_before = balance_of!(app, token_y, bob);
+    create_position!(
+        app,
+        config.dex_v3,
+        pool_key,
+        tick_lower_index,
+        tick_upper_index,
+        liquidity_delta,
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        bob
+    )
+    .unwrap();
+    let balance_x_after = balance_of!(app, token_x, bob);
+    let amount_x_to_swap = balance_x_before - balance_x_after;
+
+    let all_positions = get_all_positions!(app, config.dex_v3, bob);
+    assert_eq!(all_positions.len(), 1);
+    app.approve_position(
+        &bob,
+        config.dex_v3.as_str(),
+        zapper.as_str(),
+        all_positions[0].token_id,
+    )
+    .unwrap();
+
+    let balance_x_before = balance_of!(app, token_x, bob);
+    // we will swap x_to_y
+    app.zap_out_liquidity(
+        &bob,
+        zapper.as_str(),
+        0,
+        vec![Route {
+            token_in: token_x.to_string(),
+            offer_amount: Uint128::new(amount_x_to_swap - 10),
+            operations: vec![SwapOperation::SwapV3 {
+                pool_key: pool_key.clone(),
+                x_to_y: true,
+            }],
+            minimum_receive: None,
+        }],
+    )
+    .unwrap();
+    let balance_x_after = balance_of!(app, token_x, bob);
+    let balance_y_after = balance_of!(app, token_y, bob);
+
+    assert!(balance_x_before.abs_diff(balance_x_after).lt(&10u128));
+    assert!(balance_y_before.lt(&balance_y_after));
+}
 
 #[test]
 fn zap_out_position_with_fee() {
-    // test 1: failed: assert minimum swap not cover fee
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+        ("charlie", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let charlie = &accounts[2];
 
-    // test 2: success
+    let initial_amount = 10u128.pow(20);
+    let (token_x, token_y, token_z) =
+        create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
+
+    let zapper = create_zapper!(app, alice);
+    let config = app.get_zapper_config(zapper.as_str()).unwrap();
+
+    init_basic_v3_pool(
+        &mut app, &zapper, &token_x, &token_y, &token_z, &alice, &bob,
+    );
+
+    // register protocol fee: 0.1%
+    app.register_protocol_fee(
+        &alice,
+        zapper.as_str(),
+        StdDecimal::from_ratio(1u128, 10u128),
+        &charlie,
+    )
+    .unwrap();
+
+    let protocol_fee = Percentage::from_scale(6, 3);
+    let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+
+    let tick_lower_index = -10;
+    let tick_upper_index = 10;
+    let liquidity_delta = Liquidity::new(2u128.pow(60) - 1);
+
+    let balance_x_before = balance_of!(app, token_x, bob);
+    create_position!(
+        app,
+        config.dex_v3,
+        pool_key,
+        tick_lower_index,
+        tick_upper_index,
+        liquidity_delta,
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        bob
+    )
+    .unwrap();
+    let balance_x_after = balance_of!(app, token_x, bob);
+    let amount_x_to_swap = balance_x_before - balance_x_after - 1;
+
+    let all_positions = get_all_positions!(app, config.dex_v3, bob);
+    assert_eq!(all_positions.len(), 1);
+    app.approve_position(
+        &bob,
+        config.dex_v3.as_str(),
+        zapper.as_str(),
+        all_positions[0].token_id,
+    )
+    .unwrap();
+
+    let balance_fee_receiver_before = balance_of!(app, token_x, charlie);
+    // we will swap x_to_y
+    app.zap_out_liquidity(
+        &bob,
+        zapper.as_str(),
+        0,
+        vec![Route {
+            token_in: token_x.to_string(),
+            offer_amount: Uint128::new(amount_x_to_swap),
+            operations: vec![SwapOperation::SwapV3 {
+                pool_key: pool_key.clone(),
+                x_to_y: true,
+            }],
+            minimum_receive: None,
+        }],
+    )
+    .unwrap();
+    let balance_fee_receiver_after = balance_of!(app, token_x, charlie);
+
+    assert_eq!(
+        balance_fee_receiver_after,
+        balance_fee_receiver_before
+            .add((Uint128::new(amount_x_to_swap) * StdDecimal::from_ratio(1u128, 10u128)).u128())
+    );
 }
