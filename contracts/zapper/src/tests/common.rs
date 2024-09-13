@@ -1,9 +1,11 @@
 use cosmwasm_std::Addr;
 use decimal::*;
 
+use oraiswap_v3_common::asset::AssetInfo;
 use oraiswap_v3_common::math::liquidity::Liquidity;
 use oraiswap_v3_common::math::percentage::Percentage;
 use oraiswap_v3_common::math::sqrt_price::{calculate_sqrt_price, SqrtPrice};
+use oraiswap_v3_common::math::token_amount::TokenAmount;
 use oraiswap_v3_common::storage::{FeeTier, PoolKey};
 
 use crate::tests::helper::macros::*;
@@ -98,6 +100,41 @@ pub fn init_basic_v3_pool(
         liquidity_delta,
         SqrtPrice::new(0),
         SqrtPrice::max_instance(),
+        admin
+    )
+    .unwrap();
+
+    // init incentive
+    let incentives_addr = app
+        .get_incentives_fund_manager(config.dex_v3.as_str())
+        .unwrap();
+    let incentives_addr_raw = &incentives_addr.to_string();
+    mint!(app, token_z, incentives_addr_raw, initial_amount, admin).unwrap();
+    let reward_token = AssetInfo::Token {
+        contract_addr: token_z.clone(),
+    };
+    let total_reward = Some(TokenAmount::from_integer(1000000000));
+    let reward_per_sec = TokenAmount(100);
+    let start_timestamp: Option<u64> = None;
+    create_incentive!(
+        app,
+        config.dex_v3,
+        pool_key_1,
+        reward_token.clone(),
+        total_reward,
+        reward_per_sec,
+        start_timestamp,
+        admin
+    )
+    .unwrap();
+    create_incentive!(
+        app,
+        config.dex_v3,
+        pool_key_2,
+        reward_token.clone(),
+        total_reward,
+        reward_per_sec,
+        start_timestamp,
         admin
     )
     .unwrap();

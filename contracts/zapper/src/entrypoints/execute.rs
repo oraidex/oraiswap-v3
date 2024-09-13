@@ -187,7 +187,6 @@ pub fn zap_in_liquidity(
     Ok(Response::new().add_messages(msgs).add_submessages(sub_msgs))
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn zap_out_liquidity(
     deps: DepsMut,
     env: Env,

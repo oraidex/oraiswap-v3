@@ -6,8 +6,11 @@ use derive_more::{Deref, DerefMut};
 
 use oraiswap_v3::state::MAX_LIMIT;
 use oraiswap_v3_common::{
-    asset::Asset,
-    math::{liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice},
+    asset::{Asset, AssetInfo},
+    math::{
+        liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice,
+        token_amount::TokenAmount,
+    },
     oraiswap_v3_msg,
     storage::{FeeTier, Pool, PoolKey, Position},
 };
@@ -241,6 +244,24 @@ impl MockApp {
         )
     }
 
+    pub fn zap_out_liquidity(
+        &mut self,
+        sender: &str,
+        zapper: &str,
+        position_index: u32,
+        routes: Vec<Route>,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(zapper),
+            &msg::ExecuteMsg::ZapOutLiquidity {
+                position_index,
+                routes,
+            },
+            &[],
+        )
+    }
+
     pub fn create_pool(
         &mut self,
         sender: &str,
@@ -335,6 +356,37 @@ impl MockApp {
 
     pub fn get_protocol_fee(&self, zapper: &str) -> StdResult<ProtocolFee> {
         self.query(Addr::unchecked(zapper), &msg::QueryMsg::ProtocolFee {})
+    }
+
+    pub fn create_incentive(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        pool_key: &PoolKey,
+        reward_token: AssetInfo,
+        total_reward: Option<TokenAmount>,
+        reward_per_sec: TokenAmount,
+        start_timestamp: Option<u64>,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::ExecuteMsg::CreateIncentive {
+                pool_key: pool_key.clone(),
+                reward_token,
+                total_reward,
+                reward_per_sec,
+                start_timestamp,
+            },
+            &[],
+        )
+    }
+
+    pub fn get_incentives_fund_manager(&mut self, dex: &str) -> StdResult<Addr> {
+        self.query(
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::QueryMsg::IncentivesFundManager {},
+        )
     }
 }
 
@@ -475,6 +527,21 @@ pub mod macros {
         }};
     }
     pub(crate) use balance_of;
+
+    macro_rules! create_incentive {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $reward_token:expr, $total_reward:expr, $reward_per_sec:expr, $start_timestamp:expr, $caller:tt) => {{
+            $app.create_incentive(
+                $caller,
+                $dex_address.as_str(),
+                &$pool_key,
+                $reward_token,
+                $total_reward,
+                $reward_per_sec,
+                $start_timestamp,
+            )
+        }};
+    }
+    pub(crate) use create_incentive;
 }
 
 #[cfg(test)]
