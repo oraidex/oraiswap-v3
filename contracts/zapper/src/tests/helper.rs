@@ -14,7 +14,7 @@ use oraiswap_v3_common::{
 
 use crate::{
     msg::{self, Route},
-    Config,
+    Config, ProtocolFee,
 };
 
 pub const FEE_DENOM: &str = "orai";
@@ -331,6 +331,10 @@ impl MockApp {
                 offset: Some(0),
             },
         )
+    }
+
+    pub fn get_protocol_fee(&self, zapper: &str) -> StdResult<ProtocolFee> {
+        self.query(Addr::unchecked(zapper), &msg::QueryMsg::ProtocolFee {})
     }
 }
 
