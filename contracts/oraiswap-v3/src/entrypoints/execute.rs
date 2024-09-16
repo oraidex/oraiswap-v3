@@ -451,6 +451,7 @@ pub fn transfer_position(
         attr("sender", info.sender.as_str()),
         attr("receiver", receiver),
         attr("position_token_id", position.token_id.to_string()),
+        attr("pool_key", position.pool_key.to_string()),
     ];
 
     Ok(Response::new().add_attributes(event_attributes))
