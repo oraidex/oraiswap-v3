@@ -3,7 +3,6 @@ use std::ops::Add;
 use cosmwasm_std::{coins, Decimal as StdDecimal, Uint128};
 use decimal::*;
 use oraiswap::mixed_router::SwapOperation;
-use oraiswap_v3_common::asset::{Asset, AssetInfo};
 use oraiswap_v3_common::error::ContractError;
 use oraiswap_v3_common::math::liquidity::Liquidity;
 use oraiswap_v3_common::math::percentage::Percentage;

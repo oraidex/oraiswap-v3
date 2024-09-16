@@ -492,26 +492,6 @@ dependencies = [
 [[package]]
 name = "cosmwasm-testing-util"
 version = "0.1.0"
-source = "git+https://github.com/oraichain/cosmwasm-testing-util.git?rev=143348c#143348c91727ea286480a8b987e09c7e66eb9f74"
-dependencies = [
- "anyhow",
- "bech32 0.9.1",
- "cosmwasm-crypto",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-vm",
- "cw-multi-test",
- "cw20",
- "cw20-base",
- "osmosis-test-tube",
- "token-bindings 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=9796c74)",
- "token-bindings-test 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=9796c74)",
- "tokenfactory 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=9796c74)",
-]
-
-[[package]]
-name = "cosmwasm-testing-util"
-version = "0.1.0"
 source = "git+https://github.com/oraichain/cosmwasm-testing-util.git?rev=1b9c412#1b9c4126e8b5e19dc547f992a1a5cd9dde3d1b0d"
 dependencies = [
  "anyhow",
@@ -526,6 +506,26 @@ dependencies = [
  "token-bindings 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=7861576)",
  "token-bindings-test 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=7861576)",
  "tokenfactory 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=7861576)",
+]
+
+[[package]]
+name = "cosmwasm-testing-util"
+version = "0.1.0"
+source = "git+https://github.com/oraichain/cosmwasm-testing-util.git?rev=8363328#8363328393b754b68e6f464e3c89d6eef6d7fd2b"
+dependencies = [
+ "anyhow",
+ "bech32 0.9.1",
+ "cosmwasm-crypto",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-vm",
+ "cw-multi-test",
+ "cw20",
+ "cw20-base",
+ "osmosis-test-tube",
+ "token-bindings 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=9796c74)",
+ "token-bindings-test 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=9796c74)",
+ "tokenfactory 0.11.0 (git+https://github.com/oraichain/token-bindings.git?rev=9796c74)",
 ]
 
 [[package]]
@@ -2123,7 +2123,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cosmwasm-testing-util 0.1.0 (git+https://github.com/oraichain/cosmwasm-testing-util.git?rev=143348c)",
+ "cosmwasm-testing-util 0.1.0 (git+https://github.com/oraichain/cosmwasm-testing-util.git?rev=8363328)",
  "cw-storage-plus 1.2.0",
  "cw2 1.1.2",
  "cw20",
@@ -2172,7 +2172,7 @@ checksum = "e2355d85b9a3786f481747ced0e0ff2ba35213a1f9bd406ed906554d7af805a1"
 [[package]]
 name = "osmosis-test-tube"
 version = "19.2.0"
-source = "git+https://github.com/oraichain/test-tube.git?rev=2b7c2aa#2b7c2aa07af266c9b2e30a4c1241aabe4492bdd9"
+source = "git+https://github.com/oraichain/test-tube.git?rev=389f69c#389f69ceac1f8cf4be65fa376d45b7d9380ce2d7"
 dependencies = [
  "base64 0.13.1",
  "bindgen",
@@ -3260,7 +3260,7 @@ dependencies = [
 [[package]]
 name = "test-tube"
 version = "0.1.7"
-source = "git+https://github.com/oraichain/test-tube.git?rev=2b7c2aa#2b7c2aa07af266c9b2e30a4c1241aabe4492bdd9"
+source = "git+https://github.com/oraichain/test-tube.git?rev=389f69c#389f69ceac1f8cf4be65fa376d45b7d9380ce2d7"
 dependencies = [
  "base64 0.13.1",
  "cosmrs",
@@ -4125,7 +4125,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cosmwasm-testing-util 0.1.0 (git+https://github.com/oraichain/cosmwasm-testing-util.git?rev=143348c)",
+ "cosmwasm-testing-util 0.1.0 (git+https://github.com/oraichain/cosmwasm-testing-util.git?rev=8363328)",
  "cw-storage-plus 1.2.0",
  "cw2 1.1.2",
  "cw20",
