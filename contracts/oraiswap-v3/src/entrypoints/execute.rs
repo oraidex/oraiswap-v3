@@ -451,6 +451,7 @@ pub fn transfer_position(
         attr("sender", info.sender.as_str()),
         attr("receiver", receiver),
         attr("position_token_id", position.token_id.to_string()),
+        attr("pool_key", position.pool_key.to_string()),
     ];
 
     Ok(Response::new().add_attributes(event_attributes))
@@ -996,7 +997,7 @@ pub fn handle_transfer_nft(
     recipient: Addr,
     token_id: u64,
 ) -> Result<Response, ContractError> {
-    transfer_nft(deps, &env, &info, &recipient, token_id)?;
+    let pos = transfer_nft(deps, &env, &info, &recipient, token_id)?;
 
     // need transfer_payout as well
 
@@ -1005,6 +1006,7 @@ pub fn handle_transfer_nft(
         attr("token_id", token_id.to_string()),
         attr("sender", info.sender),
         attr("recipient", recipient),
+        attr("pool_key", pos.pool_key.to_string()),
     ]))
 }
 
@@ -1034,7 +1036,7 @@ pub fn handle_send_nft(
     msg: Option<Binary>,
 ) -> Result<Response, ContractError> {
     // Transfer token
-    transfer_nft(deps, &env, &info, &contract, token_id)?;
+    let pos = transfer_nft(deps, &env, &info, &contract, token_id)?;
 
     let send = Cw721ReceiveMsg {
         sender: info.sender.clone(),
@@ -1050,6 +1052,7 @@ pub fn handle_send_nft(
             attr("token_id", token_id.to_string()),
             attr("sender", info.sender),
             attr("recipient", contract),
+            attr("pool_key", pos.pool_key.to_string()),
         ]))
 }
 

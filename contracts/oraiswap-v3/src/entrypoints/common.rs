@@ -469,7 +469,7 @@ pub fn transfer_nft(
     info: &MessageInfo,
     recipient: &Addr,
     token_id: u64,
-) -> Result<(), ContractError> {
+) -> Result<Position, ContractError> {
     let (owner_raw, index) = state::POSITION_KEYS_BY_TOKEN_ID.load(deps.storage, token_id)?;
     let account_id = Addr::unchecked(String::from_utf8(owner_raw.to_vec())?);
     let mut pos = state::get_position(deps.storage, &account_id, index)?;
@@ -481,5 +481,5 @@ pub fn transfer_nft(
     pos.approvals = vec![];
     state::add_position(deps.storage, recipient, &pos)?;
 
-    Ok(())
+    Ok(pos)
 }
