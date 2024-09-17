@@ -321,16 +321,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let original_version =
         cw2::ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    let config = Config {
-        fee_tiers: msg.fee_tiers,
-        admin: msg.admin,
-        protocol_fee: msg.protocol_fee,
-        incentives_fund_manager: msg.incentives_fund_manager,
-    };
-    CONFIG.save(deps.storage, &config)?;
 
     // // query all position, then update token id
     // let positions: Vec<_> = crate::state::POSITIONS
