@@ -1,14 +1,12 @@
 use cosmwasm_std::coins;
 use decimal::*;
 
-use crate::{
-    liquidity::Liquidity,
-    percentage::Percentage,
-    sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp, FEE_DENOM},
-    FeeTier, PoolKey,
+use crate::tests::helper::{macros::*, MockApp, FEE_DENOM};
+use oraiswap_v3_common::{
+    error::ContractError,
+    math::{liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice},
+    storage::{FeeTier, PoolKey},
 };
-use oraiswap_v3_common::error::ContractError;
 
 #[test]
 fn test_position_slippage_zero_slippage_and_inside_range() {

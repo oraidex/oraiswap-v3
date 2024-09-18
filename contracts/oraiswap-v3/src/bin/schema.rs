@@ -1,5 +1,5 @@
 use cosmwasm_schema::write_api;
-use oraiswap_v3::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use oraiswap_v3_common::oraiswap_v3_msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 fn main() {
     write_api! {

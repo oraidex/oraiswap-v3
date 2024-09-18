@@ -33,9 +33,20 @@ cw-storage-plus = { version = "1.0.1" }
 derive_more = "0.99.17"
 decimal-core = { path = "./packages/decimal-core" }
 decimal = { path = "./packages/decimal" }
-cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-util.git", rev = "143348c" }
+cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-util.git", rev = "8363328" }
 oraiswap-v3-common = { path = "./packages/oraiswap-v3-common" }
 incentives-fund-manager = { path = "./contracts/incentives-fund-manager" }
+oraiswap = { git = "https://github.com/oraichain/oraiswap.git", rev = "45c1930" }
+oraiswap-v3 = { path = "./contracts/oraiswap-v3" }
+
+
+oraiswap-oracle = { git = "https://github.com/oraichain/oraiswap.git", rev = "45c1930" }
+oraiswap-pair = { git = "https://github.com/oraichain/oraiswap.git", rev = "45c1930" }
+oraiswap-factory = { git = "https://github.com/oraichain/oraiswap.git", rev = "45c1930" }
+oraiswap-mixed-router = { git = "https://github.com/oraichain/oraiswap.git", rev = "45c1930" }
+
+[patch."https://github.com/oraichain/oraiswap-v3"]
+oraiswap-v3-common = { path = "./packages/oraiswap-v3-common" }
 
 [profile.release]
 opt-level = 3

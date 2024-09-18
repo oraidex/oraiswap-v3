@@ -1,20 +1,23 @@
 use cosmwasm_std::{coins, Addr, Uint128};
 use decimal::*;
 
-use crate::{
-    fee_growth::FeeGrowth,
-    incentive::{IncentiveRecord, PositionIncentives},
-    liquidity::Liquidity,
-    percentage::Percentage,
-    sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, subtract_assets, MockApp, FEE_DENOM},
-    token_amount::TokenAmount,
-    FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
-};
+use crate::tests::helper::{macros::*, subtract_assets, MockApp, FEE_DENOM};
 
 use oraiswap_v3_common::{
     asset::{Asset, AssetInfo},
     error::ContractError,
+    math::{
+        fee_growth::FeeGrowth,
+        liquidity::Liquidity,
+        percentage::Percentage,
+        sqrt_price::{calculate_sqrt_price, SqrtPrice},
+        token_amount::TokenAmount,
+        MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+    },
+    storage::{
+        incentive::{IncentiveRecord, PositionIncentives},
+        FeeTier, PoolKey,
+    },
 };
 
 #[test]

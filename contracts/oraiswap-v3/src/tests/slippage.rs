@@ -1,15 +1,14 @@
 use cosmwasm_std::coins;
 use decimal::*;
 
-use crate::{
-    liquidity::Liquidity,
-    percentage::Percentage,
-    sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp, FEE_DENOM},
-    token_amount::TokenAmount,
-    FeeTier, PoolKey, MAX_SQRT_PRICE,
+use crate::tests::helper::{macros::*, MockApp, FEE_DENOM};
+use oraiswap_v3_common::{
+    error::ContractError,
+    math::{
+        percentage::Percentage, sqrt_price::SqrtPrice, token_amount::TokenAmount, MAX_SQRT_PRICE,
+    },
+    storage::{FeeTier, PoolKey},
 };
-use oraiswap_v3_common::error::ContractError;
 
 #[test]
 fn test_basic_slippage() {

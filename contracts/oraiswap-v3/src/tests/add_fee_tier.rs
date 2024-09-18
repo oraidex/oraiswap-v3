@@ -1,10 +1,9 @@
-use crate::math::types::percentage::Percentage;
-use crate::msg::QueryMsg;
 use crate::tests::helper::{macros::*, MockApp, FEE_DENOM};
-use crate::FeeTier;
 use cosmwasm_std::coins;
 use decimal::Decimal;
-use oraiswap_v3_common::error::ContractError;
+use oraiswap_v3_common::{
+    error::ContractError, math::percentage::Percentage, oraiswap_v3_msg::QueryMsg, storage::FeeTier,
+};
 
 #[test]
 fn test_add_multiple_fee_tiers() {

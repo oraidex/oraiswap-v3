@@ -1,16 +1,19 @@
 use cosmwasm_std::coins;
 use decimal::*;
-
-use crate::{
-    get_delta_y,
-    liquidity::Liquidity,
+use oraiswap_v3_common::{
     logic::{get_liquidity_by_x, get_liquidity_by_y},
-    percentage::Percentage,
-    sqrt_price::{calculate_sqrt_price, get_max_tick, SqrtPrice},
-    tests::helper::{macros::*, MockApp, FEE_DENOM},
-    token_amount::TokenAmount,
-    FeeTier, PoolKey, MAX_SQRT_PRICE, MAX_TICK, MIN_SQRT_PRICE,
+    math::{
+        get_delta_y,
+        liquidity::Liquidity,
+        percentage::Percentage,
+        sqrt_price::{calculate_sqrt_price, get_max_tick, SqrtPrice},
+        token_amount::TokenAmount,
+        MAX_SQRT_PRICE, MAX_TICK, MIN_SQRT_PRICE,
+    },
+    storage::{FeeTier, PoolKey},
 };
+
+use crate::tests::helper::{macros::*, MockApp, FEE_DENOM};
 
 #[test]
 fn test_limits_big_deposit_x_and_swap_y() {

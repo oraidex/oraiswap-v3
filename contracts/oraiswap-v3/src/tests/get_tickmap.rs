@@ -1,17 +1,14 @@
 use cosmwasm_std::coins;
 use decimal::{Decimal, Factories};
-
-use crate::get_max_chunk;
-use crate::sqrt_price::get_max_tick;
-use crate::sqrt_price::get_min_tick;
-use crate::tests::helper::FEE_DENOM;
-use crate::{
-    liquidity::Liquidity,
-    percentage::Percentage,
-    sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp},
-    FeeTier, PoolKey,
+use oraiswap_v3_common::math::liquidity::Liquidity;
+use oraiswap_v3_common::math::percentage::Percentage;
+use oraiswap_v3_common::math::sqrt_price::{
+    calculate_sqrt_price, get_max_tick, get_min_tick, SqrtPrice,
 };
+use oraiswap_v3_common::storage::{get_max_chunk, FeeTier, PoolKey};
+
+use crate::tests::helper::FEE_DENOM;
+use crate::tests::helper::{macros::*, MockApp};
 
 #[test]
 fn test_get_tickmap() {

@@ -1,16 +1,19 @@
 use cosmwasm_std::coins;
 use decimal::*;
 
-use crate::{
-    fee_growth::FeeGrowth,
-    liquidity::Liquidity,
-    percentage::Percentage,
-    sqrt_price::{calculate_sqrt_price, SqrtPrice},
-    tests::helper::{macros::*, MockApp, FEE_DENOM},
-    token_amount::TokenAmount,
-    FeeTier, PoolKey, MIN_SQRT_PRICE,
+use crate::tests::helper::{macros::*, MockApp, FEE_DENOM};
+use oraiswap_v3_common::{
+    error::ContractError,
+    math::{
+        fee_growth::FeeGrowth,
+        liquidity::Liquidity,
+        percentage::Percentage,
+        sqrt_price::{calculate_sqrt_price, SqrtPrice},
+        token_amount::TokenAmount,
+        MIN_SQRT_PRICE,
+    },
+    storage::{FeeTier, PoolKey},
 };
-use oraiswap_v3_common::error::ContractError;
 
 #[test]
 fn test_liquidity_gap() {

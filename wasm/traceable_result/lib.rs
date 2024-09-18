@@ -7,6 +7,7 @@ use alloc::string::{String, ToString};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::any;
+use core::fmt::Display;
 use js_sys::wasm_bindgen::JsValue;
 
 pub type TrackableResult<T> = Result<T, TrackableError>;
@@ -43,20 +44,23 @@ impl TrackableError {
         self.stack.push(location.to_string());
     }
 
-    pub fn to_string(&self) -> String {
-        let stack_trace = self.stack.join("\n-> ");
-
-        format!(
-            "ERROR CAUSED BY: {}\nSWAP STACK TRACE:\n-> {}",
-            self.cause, stack_trace
-        )
-    }
-
     pub fn get(&self) -> (String, String, Vec<String>) {
         (
             self.to_string().clone(),
             self.cause.clone(),
             self.stack.clone(),
+        )
+    }
+}
+
+impl Display for TrackableError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let stack_trace = self.stack.join("\n-> ");
+
+        writeln!(
+            f,
+            "ERROR CAUSED BY: {}\nSWAP STACK TRACE:\n-> {}",
+            self.cause, stack_trace,
         )
     }
 }

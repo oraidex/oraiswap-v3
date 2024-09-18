@@ -1,8 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_json_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, Uint128, WasmMsg,
+    to_json_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, QuerierWrapper, StdResult,
+    Uint128, WasmMsg,
 };
-use cw20::Cw20ExecuteMsg;
+use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
 use crate::error::ContractError;
 
@@ -31,6 +32,83 @@ impl AssetInfo {
             AssetInfo::NativeToken { denom } => denom.to_string(),
         }
     }
+
+    pub fn balance(&self, querier: &QuerierWrapper, address: String) -> StdResult<Uint128> {
+        match self {
+            AssetInfo::NativeToken { denom } => {
+                let res: Coin = querier.query_balance(address, denom)?;
+                Ok(res.amount)
+            }
+            AssetInfo::Token { contract_addr } => {
+                let res: Cw20BalanceResponse =
+                    querier.query_wasm_smart(contract_addr, &Cw20QueryMsg::Balance { address })?;
+                Ok(res.balance)
+            }
+        }
+    }
+
+    pub fn increase_allowance(
+        &self,
+        coins: &mut Vec<Coin>,
+        msgs: &mut Vec<CosmosMsg>,
+        spender: String,
+        amount: Uint128,
+    ) -> Result<(), ContractError> {
+        match self {
+            AssetInfo::NativeToken { denom } => {
+                if !amount.is_zero() {
+                    coins.push(Coin {
+                        denom: denom.to_string(),
+                        amount,
+                    });
+                }
+            }
+            AssetInfo::Token { contract_addr } => {
+                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: contract_addr.to_string(),
+                    msg: to_json_binary(&Cw20ExecuteMsg::IncreaseAllowance {
+                        spender: spender.clone(),
+                        amount,
+                        expires: None,
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn transfer(
+        &self,
+        msgs: &mut Vec<CosmosMsg>,
+        receiver: String,
+        amount: Uint128,
+    ) -> Result<(), ContractError> {
+        match self {
+            AssetInfo::NativeToken { denom } => {
+                msgs.push(CosmosMsg::Bank(BankMsg::Send {
+                    to_address: receiver.to_string(),
+                    amount: vec![Coin {
+                        denom: denom.to_string(),
+                        amount,
+                    }],
+                }));
+            }
+            AssetInfo::Token { contract_addr } => {
+                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: contract_addr.to_string(),
+                    msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
+                        recipient: receiver.to_string(),
+                        amount,
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }));
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cw_serde]
@@ -40,6 +118,10 @@ pub struct Asset {
 }
 
 impl Asset {
+    pub fn new(info: AssetInfo, amount: Uint128) -> Self {
+        Self { info, amount }
+    }
+
     pub fn transfer(
         &self,
         msgs: &mut Vec<CosmosMsg>,

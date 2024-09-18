@@ -6,18 +6,20 @@ use cw20::Expiration;
 use cw_storage_plus::Bound;
 use decimal::{CheckedOps, Decimal};
 
-use crate::{
-    check_tick, compute_swap_step,
-    interface::{Approval, CalculateSwapResult, SwapHop},
-    sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
-    state::{self},
-    token_amount::TokenAmount,
-    PoolKey, Position, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
-};
 use oraiswap_v3_common::{
     asset::{Asset, AssetInfo},
     error::ContractError,
+    interface::{Approval, CalculateSwapResult, SwapHop},
+    math::{
+        check_tick, compute_swap_step,
+        sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
+        token_amount::TokenAmount,
+        MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+    },
+    storage::{PoolKey, Position, Tick, UpdatePoolTick},
 };
+
+use crate::state;
 
 pub trait TimeStampExt {
     fn millis(&self) -> u64;
