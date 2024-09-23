@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_json_binary, Addr, Binary, CosmosMsg, StdResult, WasmMsg};
+use cosmwasm_std::{wasm_execute, Addr, Binary, CosmosMsg, StdResult};
 use cw20::Expiration;
 
 use crate::{
@@ -92,21 +92,11 @@ pub struct Cw721ReceiveMsg {
 }
 
 impl Cw721ReceiveMsg {
-    /// serializes the message
-    pub fn into_binary(self) -> StdResult<Binary> {
-        let msg = ReceiverHandleMsg::ReceiveNft(self);
-        to_json_binary(&msg)
-    }
-
     /// creates a cosmos_msg sending this struct to the named contract
     pub fn into_cosmos_msg(self, contract_addr: String) -> StdResult<CosmosMsg> {
-        let msg = self.into_binary()?;
-        let execute = WasmMsg::Execute {
-            contract_addr,
-            msg,
-            funds: vec![],
-        };
-        Ok(execute.into())
+        let execute_msg =
+            wasm_execute(contract_addr, &ReceiverHandleMsg::ReceiveNft(self), vec![])?;
+        Ok(execute_msg.into())
     }
 }
 

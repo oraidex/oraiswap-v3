@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_json_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, QuerierWrapper, StdResult,
-    Uint128, WasmMsg,
+    wasm_execute, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, QuerierWrapper, StdResult,
+    Uint128,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
@@ -64,16 +64,18 @@ impl AssetInfo {
                 }
             }
             AssetInfo::Token { contract_addr } => {
-                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: contract_addr.to_string(),
-                    msg: to_json_binary(&Cw20ExecuteMsg::IncreaseAllowance {
-                        spender: spender.clone(),
-                        amount,
-                        expires: None,
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                }));
+                msgs.push(
+                    wasm_execute(
+                        contract_addr,
+                        &Cw20ExecuteMsg::IncreaseAllowance {
+                            spender: spender.clone(),
+                            amount,
+                            expires: None,
+                        },
+                        vec![],
+                    )?
+                    .into(),
+                );
             }
         }
         Ok(())
@@ -96,15 +98,17 @@ impl AssetInfo {
                 }));
             }
             AssetInfo::Token { contract_addr } => {
-                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: contract_addr.to_string(),
-                    msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
-                        recipient: receiver.to_string(),
-                        amount,
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                }));
+                msgs.push(
+                    wasm_execute(
+                        contract_addr,
+                        &Cw20ExecuteMsg::Transfer {
+                            recipient: receiver.to_string(),
+                            amount,
+                        },
+                        vec![],
+                    )?
+                    .into(),
+                );
             }
         }
         Ok(())
@@ -131,14 +135,14 @@ impl Asset {
             match &self.info {
                 AssetInfo::Token { contract_addr } => {
                     msgs.push(
-                        WasmMsg::Execute {
-                            contract_addr: contract_addr.to_string(),
-                            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
+                        wasm_execute(
+                            contract_addr,
+                            &Cw20ExecuteMsg::Transfer {
                                 recipient: info.sender.to_string(),
                                 amount: self.amount,
-                            })?,
-                            funds: vec![],
-                        }
+                            },
+                            vec![],
+                        )?
                         .into(),
                     );
                 }
@@ -167,15 +171,15 @@ impl Asset {
             match &self.info {
                 AssetInfo::Token { contract_addr } => {
                     msgs.push(
-                        WasmMsg::Execute {
-                            contract_addr: contract_addr.to_string(),
-                            msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
+                        wasm_execute(
+                            contract_addr,
+                            &Cw20ExecuteMsg::TransferFrom {
                                 owner: info.sender.to_string(),
                                 recipient,
                                 amount: self.amount,
-                            })?,
-                            funds: vec![],
-                        }
+                            },
+                            vec![],
+                        )?
                         .into(),
                     );
                 }

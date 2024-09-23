@@ -1,8 +1,7 @@
 use std::vec;
 
 use cosmwasm_std::{
-    to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, Order, Response, StdResult, SubMsg,
-    WasmMsg,
+    wasm_execute, Coin, CosmosMsg, Decimal, DepsMut, Env, Order, Response, StdResult, SubMsg,
 };
 
 use oraiswap_v3_common::{
@@ -118,9 +117,9 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
         .increase_allowance(&mut coins, &mut msgs, config.dex_v3.to_string(), y_amount)?;
 
     sub_msgs.push(SubMsg::reply_on_success(
-        WasmMsg::Execute {
-            contract_addr: config.dex_v3.to_string(),
-            msg: to_json_binary(&V3ExecuteMsg::CreatePosition {
+        wasm_execute(
+            config.dex_v3.as_str(),
+            &V3ExecuteMsg::CreatePosition {
                 pool_key: pending_position.pool_key.clone(),
                 lower_tick: pending_position.lower_tick,
                 upper_tick: pending_position.upper_tick,
@@ -131,9 +130,9 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
                 slippage_limit_upper: pending_position.slippage_limit_upper.unwrap_or(
                     get_max_sqrt_price(pending_position.pool_key.fee_tier.tick_spacing),
                 ),
-            })?,
-            funds: coins,
-        },
+            },
+            coins,
+        )?,
         ADD_LIQUIDITY_REPLY_ID,
     ));
 
@@ -162,14 +161,17 @@ pub fn add_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError>
     let config = CONFIG.load(deps.storage)?;
     let pending_position = PENDING_POSITION.load(deps.storage)?;
     let receiver = RECEIVER.load(deps.storage)?;
-    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: config.dex_v3.to_string(),
-        msg: to_json_binary(&V3ExecuteMsg::TransferPosition {
-            index: pending_position.index,
-            receiver: receiver.to_string(),
-        })?,
-        funds: vec![],
-    }));
+    msgs.push(
+        wasm_execute(
+            config.dex_v3.as_str(),
+            &V3ExecuteMsg::TransferPosition {
+                index: pending_position.index,
+                receiver: receiver.to_string(),
+            },
+            vec![],
+        )?
+        .into(),
+    );
 
     // 10. Refund unused tokenX and tokenY to user
     if !x_amount.is_zero() {

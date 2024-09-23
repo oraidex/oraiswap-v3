@@ -1,6 +1,5 @@
 use cosmwasm_std::{
-    to_json_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128,
-    WasmMsg,
+    wasm_execute, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128,
 };
 
 use oraiswap_v3_common::{
@@ -221,14 +220,17 @@ pub fn zap_out_liquidity(
 
     // 1. Transfer position to this contract
     // sender must be approve for contract first
-    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: config.dex_v3.to_string(),
-        msg: to_json_binary(&V3ExecuteMsg::TransferNft {
-            token_id: position.token_id,
-            recipient: env.contract.address.clone(),
-        })?,
-        funds: vec![],
-    }));
+    msgs.push(
+        wasm_execute(
+            config.dex_v3.as_str(),
+            &V3ExecuteMsg::TransferNft {
+                token_id: position.token_id,
+                recipient: env.contract.address.clone(),
+            },
+            vec![],
+        )?
+        .into(),
+    );
 
     // snap balance
     let (token_x, token_y) = get_pool_v3_asset_info(deps.api, &position.pool_key);
@@ -242,13 +244,13 @@ pub fn zap_out_liquidity(
 
     // 2. Create SubMsg to process remove liquidity in dex_v3 contract
     sub_msgs.push(SubMsg::reply_on_success(
-        WasmMsg::Execute {
-            contract_addr: config.dex_v3.to_string(),
-            msg: to_json_binary(&V3ExecuteMsg::Burn {
+        wasm_execute(
+            config.dex_v3.as_str(),
+            &V3ExecuteMsg::Burn {
                 token_id: position.token_id,
-            })?,
-            funds: vec![],
-        },
+            },
+            vec![],
+        )?,
         ZAP_OUT_LIQUIDITY_REPLY_ID,
     ));
 
