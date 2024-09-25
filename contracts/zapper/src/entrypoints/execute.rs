@@ -111,12 +111,7 @@ pub fn zap_in_liquidity(
     }
 
     // validate asset_in and routes
-    let total_swap_amount: Uint128 = routes
-        .iter()
-        .map(|route| route.offer_amount)
-        .collect::<Vec<Uint128>>()
-        .iter()
-        .sum();
+    let total_swap_amount: Uint128 = routes.iter().map(|route| route.offer_amount).sum();
     if total_swap_amount.gt(&amount_after_fee) {
         return Err(ContractError::InvalidFund {});
     }
@@ -213,8 +208,7 @@ pub fn zap_out_liquidity(
     for incentive in position_incentives {
         let balance = incentive
             .info
-            .balance(&deps.querier, env.contract.address.to_string())
-            .unwrap();
+            .balance(&deps.querier, env.contract.address.to_string())?;
         SNAP_BALANCES.save(deps.storage, incentive.info.denom(), &balance)?;
     }
 
