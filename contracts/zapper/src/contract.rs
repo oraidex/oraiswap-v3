@@ -69,14 +69,18 @@ pub fn execute(
             routes,
             minimum_liquidity,
         ),
+        ExecuteMsg::ZapInAfterSwapOperation {} => internal::zap_in_liquidity(deps, env, info),
+        ExecuteMsg::RefundAfterZapInLiquidity {} => internal::refund_after_zap_in(deps, env, info),
         ExecuteMsg::ZapOutLiquidity {
             position_index,
             routes,
         } => zap_out_liquidity(deps, env, info, position_index, routes),
+        ExecuteMsg::ZapOutAfterSwapOperation {} => internal::zap_out_liquidity(deps, env, info),
         ExecuteMsg::RegisterProtocolFee {
             percent,
             fee_receiver,
         } => execute_register_protocol_fee(deps, info, percent, fee_receiver),
+        ExecuteMsg::Withdraw { assets, recipient } => withdraw(deps, info, assets, recipient),
     }
 }
 
@@ -93,14 +97,4 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
     let original_version =
         cw2::ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::new().add_attribute("new_version", original_version.to_string()))
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
-    match reply.id {
-        ZAP_IN_LIQUIDITY_REPLY_ID => reply::zap_in_liquidity(deps, env),
-        ZAP_OUT_LIQUIDITY_REPLY_ID => reply::zap_out_liquidity(deps, env),
-        ADD_LIQUIDITY_REPLY_ID => reply::add_liquidity(deps, env),
-        _ => Err(ContractError::UnrecognizedReplyId { id: reply.id }),
-    }
 }

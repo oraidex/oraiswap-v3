@@ -50,8 +50,7 @@ impl MockApp {
                     crate::contract::execute,
                     crate::contract::instantiate,
                     crate::contract::query,
-                )
-                .with_reply_empty(crate::contract::reply),
+                ),
             ));
         }
         #[cfg(feature = "test-tube")]
@@ -221,6 +220,24 @@ impl MockApp {
             &msg::ExecuteMsg::RegisterProtocolFee {
                 percent,
                 fee_receiver: Addr::unchecked(fee_receiver.to_string()),
+            },
+            &[],
+        )
+    }
+
+    pub fn withdraw(
+        &mut self,
+        sender: &str,
+        zapper: &str,
+        assets: Vec<Asset>,
+        recipient: Option<&str>,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(zapper),
+            &msg::ExecuteMsg::Withdraw {
+                assets,
+                recipient: recipient.map(Addr::unchecked),
             },
             &[],
         )
