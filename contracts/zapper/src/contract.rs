@@ -70,7 +70,7 @@ pub fn execute(
             minimum_liquidity,
         ),
         ExecuteMsg::ZapInAfterSwapOperation {} => internal::zap_in_liquidity(deps, env, info),
-        ExecuteMsg::RefundAfterZapInLiquidity {} => internal::add_liquidity(deps, env, info),
+        ExecuteMsg::RefundAfterZapInLiquidity {} => internal::refund_after_zap_in(deps, env, info),
         ExecuteMsg::ZapOutLiquidity {
             position_index,
             routes,

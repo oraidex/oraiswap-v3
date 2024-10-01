@@ -146,7 +146,7 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Re
     Ok(Response::new().add_messages(msgs))
 }
 
-pub fn add_liquidity(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn refund_after_zap_in(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     if info.sender != env.contract.address {
         return Err(ContractError::Unauthorized {});
     }
