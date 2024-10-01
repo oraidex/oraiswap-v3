@@ -689,6 +689,6 @@ fn test_zap_in_no_routes() {
     assert_eq!(all_positions.len(), 1);
 
     // check balance of fee_receiver
-    // let fee_receiver_balance = balance_of!(app, token_z, charlie);
-    // assert_eq!(fee_receiver_balance, 100u128);
+    let fee_receiver_balance = balance_of!(app, token_x, charlie);
+    assert_eq!(fee_receiver_balance, 100u128);
 }
