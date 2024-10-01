@@ -225,6 +225,24 @@ impl MockApp {
         )
     }
 
+    pub fn withdraw(
+        &mut self,
+        sender: &str,
+        zapper: &str,
+        assets: Vec<Asset>,
+        recipient: Option<&str>,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(zapper),
+            &msg::ExecuteMsg::Withdraw {
+                assets,
+                recipient: recipient.map(Addr::unchecked),
+            },
+            &[],
+        )
+    }
+
     pub fn get_zapper_config(&mut self, zapper: &str) -> StdResult<Config> {
         self.query(Addr::unchecked(zapper), &msg::QueryMsg::Config {})
     }
