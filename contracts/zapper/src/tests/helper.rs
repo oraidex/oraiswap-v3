@@ -50,8 +50,7 @@ impl MockApp {
                     crate::contract::execute,
                     crate::contract::instantiate,
                     crate::contract::query,
-                )
-                .with_reply_empty(crate::contract::reply),
+                ),
             ));
         }
         #[cfg(feature = "test-tube")]

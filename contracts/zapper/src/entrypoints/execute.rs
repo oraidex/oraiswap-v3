@@ -14,12 +14,12 @@ use oraiswap_v3_common::{
 use crate::{
     contract::{ZAP_IN_LIQUIDITY_REPLY_ID, ZAP_OUT_LIQUIDITY_REPLY_ID},
     entrypoints::common::get_pool_v3_asset_info,
-    msg::Route,
+    msg::{ExecuteMsg, Route},
     state::{CONFIG, PENDING_POSITION, PROTOCOL_FEE, RECEIVER, SNAP_BALANCES, ZAP_OUT_ROUTES},
     Config, PairBalance, PendingPosition,
 };
 
-use super::{build_swap_msg, validate_fund};
+use super::{build_swap_msg, internal, validate_fund};
 
 pub fn update_config(
     deps: DepsMut,
@@ -89,7 +89,6 @@ pub fn zap_in_liquidity(
 ) -> Result<Response, ContractError> {
     // init messages and submessages
     let mut msgs: Vec<CosmosMsg> = vec![];
-    let mut sub_msgs: Vec<SubMsg> = vec![];
 
     // transfer the amount or check the fund is sent with request
     validate_fund(
@@ -134,6 +133,7 @@ pub fn zap_in_liquidity(
             owner: env.contract.address.clone(),
         },
     )?;
+
     let position = PendingPosition::new(
         position_length,
         pool_key.clone(),
@@ -176,17 +176,16 @@ pub fn zap_in_liquidity(
             None,
             None,
         )?;
-        if i == routes.len() - 1 {
-            sub_msgs.push(SubMsg::reply_on_success(
-                swap_msg,
-                ZAP_IN_LIQUIDITY_REPLY_ID,
-            ));
-        } else {
-            sub_msgs.push(SubMsg::new(swap_msg));
-        }
+        msgs.push(CosmosMsg::Wasm(swap_msg));
     }
 
-    Ok(Response::new().add_messages(msgs).add_submessages(sub_msgs))
+    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        msg: to_json_binary(&ExecuteMsg::ZapInAfterSwapOperation {})?,
+        funds: vec![],
+    }));
+
+    Ok(Response::new().add_messages(msgs))
 }
 
 pub fn zap_out_liquidity(
@@ -197,7 +196,6 @@ pub fn zap_out_liquidity(
     routes: Vec<Route>,
 ) -> Result<Response, ContractError> {
     let mut msgs: Vec<CosmosMsg> = vec![];
-    let mut sub_msgs: Vec<SubMsg> = vec![];
     let config = CONFIG.load(deps.storage)?;
     let position: Position = deps.querier.query_wasm_smart(
         config.dex_v3.to_string(),
@@ -243,16 +241,42 @@ pub fn zap_out_liquidity(
     ZAP_OUT_ROUTES.save(deps.storage, &routes)?;
 
     // 2. Create SubMsg to process remove liquidity in dex_v3 contract
-    sub_msgs.push(SubMsg::reply_on_success(
-        WasmMsg::Execute {
-            contract_addr: config.dex_v3.to_string(),
-            msg: to_json_binary(&V3ExecuteMsg::Burn {
-                token_id: position.token_id,
-            })?,
-            funds: vec![],
-        },
-        ZAP_OUT_LIQUIDITY_REPLY_ID,
-    ));
+    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: config.dex_v3.to_string(),
+        msg: to_json_binary(&V3ExecuteMsg::Burn {
+            token_id: position.token_id,
+        })?,
+        funds: vec![],
+    }));
 
-    Ok(Response::new().add_messages(msgs).add_submessages(sub_msgs))
+    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        msg: to_json_binary(&ExecuteMsg::ZapOutAfterSwapOperation {})?,
+        funds: vec![],
+    }));
+
+    Ok(Response::new().add_messages(msgs))
+}
+
+pub fn withdraw(
+    deps: DepsMut,
+    info: MessageInfo,
+    assets: Vec<Asset>,
+    recipient: Option<Addr>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let receiver = recipient.unwrap_or_else(|| info.sender.clone());
+
+    if info.sender != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut msgs: Vec<CosmosMsg> = vec![];
+    for asset in assets {
+        asset
+            .info
+            .transfer(&mut msgs, receiver.to_string(), asset.amount)?;
+    }
+
+    Ok(Response::new().add_messages(msgs))
 }

@@ -626,3 +626,69 @@ fn test_zap_in_with_fee() {
     let fee_receiver_balance = balance_of!(app, token_z, charlie);
     assert_eq!(fee_receiver_balance, 100u128);
 }
+
+#[test]
+fn test_zap_in_no_routes() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+        ("charlie", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let charlie = &accounts[2];
+    let initial_amount = 10u128.pow(20);
+    let (token_x, token_y, token_z) =
+        create_3_tokens!(app, initial_amount, initial_amount, initial_amount, alice);
+
+    let zapper = create_zapper!(app, alice);
+    let config = app.get_zapper_config(zapper.as_str()).unwrap();
+
+    init_basic_v3_pool(
+        &mut app, &zapper, &token_x, &token_y, &token_z, &alice, &bob,
+    );
+
+    let protocol_fee = Percentage::from_scale(6, 3);
+    let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
+    let pool_key_x_y = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+
+    let tick_lower_index = 25;
+    let tick_upper_index = 30;
+
+    // register protocol fee: 0.1%
+    app.register_protocol_fee(
+        &alice,
+        zapper.as_str(),
+        StdDecimal::from_ratio(1u128, 10u128),
+        &charlie,
+    )
+    .unwrap();
+
+    // asset_in = token_x
+    let asset_in = Asset {
+        info: AssetInfo::Token {
+            contract_addr: token_x.clone(),
+        },
+        amount: Uint128::new(1000),
+    };
+
+    // add successful
+    app.zap_in_liquidity(
+        &bob,
+        zapper.as_str(),
+        pool_key_x_y.clone(),
+        tick_lower_index,
+        tick_upper_index,
+        &asset_in,
+        vec![],
+        None,
+    )
+    .unwrap();
+    // get all positions
+    let all_positions = get_all_positions!(app, config.dex_v3, bob);
+    assert_eq!(all_positions.len(), 1);
+
+    // check balance of fee_receiver
+    // let fee_receiver_balance = balance_of!(app, token_z, charlie);
+    // assert_eq!(fee_receiver_balance, 100u128);
+}

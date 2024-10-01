@@ -27,14 +27,21 @@ pub enum ExecuteMsg {
         routes: Vec<Route>,
         minimum_liquidity: Option<Liquidity>,
     },
+    ZapInAfterSwapOperation {},
+    RefundAfterZapInLiquidity {},
     ZapOutLiquidity {
         position_index: u32,
         routes: Vec<Route>,
     },
+    ZapOutAfterSwapOperation {},
     RegisterProtocolFee {
         percent: Decimal,
         fee_receiver: Addr,
     },
+    Withdraw {
+        assets: Vec<Asset>,
+        recipient: Option<Addr>,
+    }
 }
 
 #[cw_serde]

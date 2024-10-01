@@ -1,8 +1,7 @@
 use std::vec;
 
 use cosmwasm_std::{
-    to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, Order, Response, StdResult, SubMsg,
-    WasmMsg,
+    to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response, StdResult, SubMsg, WasmMsg
 };
 
 use oraiswap_v3_common::{
@@ -19,6 +18,7 @@ use oraiswap_v3_common::{
 
 use crate::{
     contract::ADD_LIQUIDITY_REPLY_ID,
+    msg::ExecuteMsg,
     state::{
         CONFIG, PENDING_POSITION, PROTOCOL_FEE, RECEIVER, SNAP_BALANCE, SNAP_BALANCES,
         ZAP_OUT_ROUTES,
@@ -28,9 +28,12 @@ use crate::{
 
 use super::build_swap_msg;
 
-pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+pub fn zap_in_liquidity(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    if info.sender != env.contract.address {
+        return Err(ContractError::Unauthorized {});
+    }
+
     let mut msgs: Vec<CosmosMsg> = vec![];
-    let mut sub_msgs: Vec<SubMsg> = vec![];
 
     // 5. Recheck the balance of tokenX and tokenY in this contract
     let snap_balance = SNAP_BALANCE.load(deps.storage)?;
@@ -49,7 +52,7 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
 
     // 7. Process create new position with amountX and amountY
     let config = CONFIG.load(deps.storage)?;
-    let pending_position = PENDING_POSITION.load(deps.storage)?;
+    let pending_position: crate::PendingPosition = PENDING_POSITION.load(deps.storage)?;
     let pool_info: Pool = deps.querier.query_wasm_smart(
         config.dex_v3.to_string(),
         &V3QueryMsg::Pool {
@@ -117,30 +120,37 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractErr
         .info
         .increase_allowance(&mut coins, &mut msgs, config.dex_v3.to_string(), y_amount)?;
 
-    sub_msgs.push(SubMsg::reply_on_success(
-        WasmMsg::Execute {
-            contract_addr: config.dex_v3.to_string(),
-            msg: to_json_binary(&V3ExecuteMsg::CreatePosition {
-                pool_key: pending_position.pool_key.clone(),
-                lower_tick: pending_position.lower_tick,
-                upper_tick: pending_position.upper_tick,
-                liquidity_delta: res.l,
-                slippage_limit_lower: pending_position.slippage_limit_lower.unwrap_or(
-                    get_min_sqrt_price(pending_position.pool_key.fee_tier.tick_spacing),
-                ),
-                slippage_limit_upper: pending_position.slippage_limit_upper.unwrap_or(
-                    get_max_sqrt_price(pending_position.pool_key.fee_tier.tick_spacing),
-                ),
-            })?,
-            funds: coins,
-        },
-        ADD_LIQUIDITY_REPLY_ID,
-    ));
+    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: config.dex_v3.to_string(),
+        msg: to_json_binary(&V3ExecuteMsg::CreatePosition {
+            pool_key: pending_position.pool_key.clone(),
+            lower_tick: pending_position.lower_tick,
+            upper_tick: pending_position.upper_tick,
+            liquidity_delta: res.l,
+            slippage_limit_lower: pending_position.slippage_limit_lower.unwrap_or(
+                get_min_sqrt_price(pending_position.pool_key.fee_tier.tick_spacing),
+            ),
+            slippage_limit_upper: pending_position.slippage_limit_upper.unwrap_or(
+                get_max_sqrt_price(pending_position.pool_key.fee_tier.tick_spacing),
+            ),
+        })?,
+        funds: coins,
+    }));
 
-    Ok(Response::new().add_messages(msgs).add_submessages(sub_msgs))
+    msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        msg: to_json_binary(&ExecuteMsg::RefundAfterZapInLiquidity {})?,
+        funds: vec![],
+    }));
+
+    Ok(Response::new().add_messages(msgs))
 }
 
-pub fn add_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+pub fn add_liquidity(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    if info.sender != env.contract.address {
+        return Err(ContractError::Unauthorized {});
+    }
+
     let mut msgs: Vec<CosmosMsg> = vec![];
 
     // 8. Refund unused tokenX and tokenY to user
@@ -191,7 +201,11 @@ pub fn add_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError>
     Ok(Response::new().add_messages(msgs))
 }
 
-pub fn zap_out_liquidity(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+pub fn zap_out_liquidity(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    if info.sender != env.contract.address {
+        return Err(ContractError::Unauthorized {});
+    }
+    
     let mut msgs: Vec<CosmosMsg> = vec![];
     let receiver = RECEIVER.load(deps.storage)?;
     let zap_out_routes = ZAP_OUT_ROUTES.load(deps.storage)?;
