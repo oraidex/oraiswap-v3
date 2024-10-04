@@ -1,14 +1,21 @@
 #![allow(unused_imports)]
+use crate::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Uint64};
 use cw20::Expiration;
-use crate::asset::{Asset, AssetInfo};
 
-use crate::{interface::{
-    AllNftInfoResponse, ApprovedForAllResponse, NftInfoResponse, NumTokensResponse, OwnerOfResponse, PoolWithPoolKey, PositionTick, QuoteResult, SwapHop, TokensResponse
-}, math::{liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice, token_amount::TokenAmount}, storage::{FeeTier, LiquidityTick, Pool, PoolKey, Position, Tick}};
+use crate::{
+    interface::{
+        AllNftInfoResponse, ApprovedForAllResponse, NftInfoResponse, NumTokensResponse,
+        OwnerOfResponse, PoolWithPoolKey, PositionTick, QuoteResult, SwapHop, TokensResponse,
+    },
+    math::{
+        liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice,
+        token_amount::TokenAmount,
+    },
+    storage::{FeeTier, LiquidityTick, Pool, PoolKey, Position, Tick},
+};
 #[allow(unused_imports)]
-
 #[cw_serde]
 pub struct InstantiateMsg {
     pub protocol_fee: Percentage,
@@ -33,6 +40,7 @@ pub enum ExecuteMsg {
     WithdrawProtocolFee {
         pool_key: PoolKey,
     },
+    WithdrawAllProtocolFee {},
     ChangeProtocolFee {
         protocol_fee: Percentage,
     },

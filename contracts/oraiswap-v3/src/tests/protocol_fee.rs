@@ -49,6 +49,45 @@ fn test_protocol_fee() {
 }
 
 #[test]
+fn test_withdraw_all_protocol_fee() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+
+    let (dex, token_x, token_y) = init_dex_and_tokens!(app, alice);
+    init_basic_pool!(app, dex, token_x, token_y, alice);
+    init_basic_position!(app, dex, token_x, token_y, alice);
+    init_basic_swap!(app, dex, token_x, token_y, alice, bob);
+
+    let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
+
+    withdraw_all_protocol_fee!(app, dex, alice).unwrap();
+
+    let amount_x = balance_of!(app, token_x, alice);
+    let amount_y = balance_of!(app, token_y, alice);
+    assert_eq!(amount_x, 9999999501);
+    assert_eq!(amount_y, 9999999000);
+
+    let amount_x = balance_of!(app, token_x, dex);
+    let amount_y = balance_of!(app, token_y, dex);
+    assert_eq!(amount_x, 1499);
+    assert_eq!(amount_y, 7);
+
+    let pool_after_withdraw = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
+    assert_eq!(
+        pool_after_withdraw.fee_protocol_token_x,
+        TokenAmount::new(0)
+    );
+    assert_eq!(
+        pool_after_withdraw.fee_protocol_token_y,
+        TokenAmount::new(0)
+    );
+}
+
+#[test]
 fn test_protocol_fee_not_admin() {
     let (mut app, accounts) = MockApp::new(&[
         ("alice", &coins(100_000_000_000, FEE_DENOM)),
@@ -76,6 +115,38 @@ fn test_protocol_fee_not_admin() {
         .root_cause()
         .to_string()
         .contains(&ContractError::Unauthorized {}.to_string()));
+}
+
+#[test]
+fn test_withdraw_all_protocol_fee_not_admin() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let (dex, token_x, token_y) = init_dex_and_tokens!(app, alice);
+    init_basic_pool!(app, dex, token_x, token_y, alice);
+    init_basic_position!(app, dex, token_x, token_y, alice);
+    init_basic_swap!(app, dex, token_x, token_y, alice, bob);
+    let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
+
+    withdraw_all_protocol_fee!(app, dex, bob).unwrap();
+
+    let amount_x = balance_of!(app, token_x, alice);
+    let amount_y = balance_of!(app, token_y, alice);
+    assert_eq!(amount_x, 9999999500);
+    assert_eq!(amount_y, 9999999000);
+
+    let pool_after_withdraw = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
+    assert_eq!(
+        pool_after_withdraw.fee_protocol_token_x,
+        TokenAmount::new(1)
+    );
+    assert_eq!(
+        pool_after_withdraw.fee_protocol_token_y,
+        TokenAmount::new(0)
+    );
 }
 
 #[test]
