@@ -184,6 +184,20 @@ impl MockApp {
         )
     }
 
+    pub fn withdraw_all_protocol_fee(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        receiver: Option<Addr>,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::ExecuteMsg::WithdrawAllProtocolFee { receiver },
+            &[],
+        )
+    }
+
     pub fn change_fee_receiver(
         &mut self,
         sender: &str,
@@ -1193,6 +1207,13 @@ pub mod macros {
         }};
     }
     pub(crate) use withdraw_protocol_fee;
+
+    macro_rules! withdraw_all_protocol_fee {
+        ($app:ident, $dex_address:expr,$receiver:expr, $caller:tt) => {{
+            $app.withdraw_all_protocol_fee($caller, $dex_address.as_str(), $receiver)
+        }};
+    }
+    pub(crate) use withdraw_all_protocol_fee;
 
     macro_rules! change_fee_receiver {
         ($app:ident,  $dex_address:expr, $pool_key:expr, $fee_receiver:tt, $caller:tt) => {{

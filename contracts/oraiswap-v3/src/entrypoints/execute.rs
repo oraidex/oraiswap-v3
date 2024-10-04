@@ -2,7 +2,9 @@ use crate::state::{self, CONFIG, POOLS};
 use oraiswap_v3_common::asset::{Asset, AssetInfo};
 use oraiswap_v3_common::error::ContractError;
 use oraiswap_v3_common::incentives_fund_manager;
-use oraiswap_v3_common::interface::{CalculateSwapResult, Cw721ReceiveMsg, SwapHop};
+use oraiswap_v3_common::interface::{
+    CalculateSwapResult, Cw721ReceiveMsg, PoolWithPoolKey, SwapHop,
+};
 use oraiswap_v3_common::math::fee_growth::FeeGrowth;
 use oraiswap_v3_common::math::liquidity::Liquidity;
 use oraiswap_v3_common::math::percentage::Percentage;
@@ -17,7 +19,8 @@ use super::{
     transfer_nft, update_approvals, TimeStampExt,
 };
 use cosmwasm_std::{
-    attr, wasm_execute, Addr, Attribute, Binary, DepsMut, Env, MessageInfo, Response,
+    attr, wasm_execute, Addr, Attribute, Binary, DepsMut, Env, MessageInfo, Order, Response,
+    StdResult,
 };
 use cw20::Expiration;
 use decimal::Decimal;
@@ -52,6 +55,69 @@ pub fn change_admin(
     ];
 
     Ok(Response::new().add_attributes(event_attributes))
+}
+
+/// Allows an fee receiver to withdraw collected fees.
+///
+///
+/// # Errors
+/// - Reverts the call when the caller is an unauthorized receiver.
+pub fn withdraw_all_protocol_fee(
+    deps: DepsMut,
+    mut info: MessageInfo,
+    receiver: Option<Addr>,
+) -> Result<Response, ContractError> {
+    let pools: Vec<PoolWithPoolKey> = POOLS
+        .range_raw(deps.storage, None, None, Order::Ascending)
+        .map(|item| {
+            let (raw_key, pool) = item?;
+            Ok(PoolWithPoolKey {
+                pool_key: PoolKey::from_bytes(&raw_key)?,
+                pool,
+            })
+        })
+        .collect::<StdResult<_>>()?;
+    let mut attrs: Vec<Attribute> = vec![
+        attr("action", "withdraw_protocol_fee"),
+        attr("receiver", info.sender.as_str()),
+    ];
+    let mut msgs = vec![];
+    let sender = info.sender.clone();
+    if let Some(receiver) = receiver {
+        info.sender = receiver;
+    }
+
+    for mut pool_info in pools {
+        if pool_info.pool.fee_receiver != sender {
+            continue;
+        }
+        let pool_key_db = pool_info.pool_key.key();
+        let (fee_protocol_token_x, fee_protocol_token_y) = pool_info.pool.withdraw_protocol_fee();
+        POOLS.save(deps.storage, &pool_key_db, &pool_info.pool)?;
+
+        let asset_0 = Asset {
+            info: AssetInfo::from_denom(deps.api, pool_info.pool_key.token_x.as_str()),
+            amount: fee_protocol_token_x.into(),
+        };
+
+        let asset_1 = Asset {
+            info: AssetInfo::from_denom(deps.api, pool_info.pool_key.token_y.as_str()),
+            amount: fee_protocol_token_y.into(),
+        };
+
+        asset_0.transfer(&mut msgs, &info)?;
+        asset_1.transfer(&mut msgs, &info)?;
+
+        let mut event_attributes = vec![
+            attr("pool_key", pool_info.pool_key.to_string()),
+            attr("token_x", fee_protocol_token_x.to_string()),
+            attr("token_y", fee_protocol_token_y.to_string()),
+        ];
+
+        attrs.append(&mut event_attributes);
+    }
+
+    Ok(Response::new().add_messages(msgs).add_attributes(attrs))
 }
 
 /// Allows an fee receiver to withdraw collected fees.
