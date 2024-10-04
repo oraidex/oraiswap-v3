@@ -40,7 +40,9 @@ pub enum ExecuteMsg {
     WithdrawProtocolFee {
         pool_key: PoolKey,
     },
-    WithdrawAllProtocolFee {},
+    WithdrawAllProtocolFee {
+        receiver: Option<Addr>,
+    },
     ChangeProtocolFee {
         protocol_fee: Percentage,
     },

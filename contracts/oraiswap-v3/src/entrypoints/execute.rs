@@ -64,7 +64,8 @@ pub fn change_admin(
 /// - Reverts the call when the caller is an unauthorized receiver.
 pub fn withdraw_all_protocol_fee(
     deps: DepsMut,
-    info: MessageInfo,
+    mut info: MessageInfo,
+    receiver: Option<Addr>,
 ) -> Result<Response, ContractError> {
     let pools: Vec<PoolWithPoolKey> = POOLS
         .range_raw(deps.storage, None, None, Order::Ascending)
@@ -81,9 +82,13 @@ pub fn withdraw_all_protocol_fee(
         attr("receiver", info.sender.as_str()),
     ];
     let mut msgs = vec![];
+    let sender = info.sender.clone();
+    if let Some(receiver) = receiver {
+        info.sender = receiver;
+    }
 
     for mut pool_info in pools {
-        if pool_info.pool.fee_receiver != info.sender {
+        if pool_info.pool.fee_receiver != sender {
             continue;
         }
         let pool_key_db = pool_info.pool_key.key();

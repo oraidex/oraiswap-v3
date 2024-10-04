@@ -45,7 +45,9 @@ pub fn execute(
     match msg {
         ExecuteMsg::ChangeAdmin { new_admin } => change_admin(deps, info, new_admin),
         ExecuteMsg::WithdrawProtocolFee { pool_key } => withdraw_protocol_fee(deps, info, pool_key),
-        ExecuteMsg::WithdrawAllProtocolFee {} => withdraw_all_protocol_fee(deps, info),
+        ExecuteMsg::WithdrawAllProtocolFee { receiver } => {
+            withdraw_all_protocol_fee(deps, info, receiver)
+        }
         ExecuteMsg::ChangeProtocolFee { protocol_fee } => {
             change_protocol_fee(deps, info, protocol_fee)
         }
