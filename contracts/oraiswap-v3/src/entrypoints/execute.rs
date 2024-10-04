@@ -104,7 +104,6 @@ pub fn withdraw_all_protocol_fee(
         asset_1.transfer(&mut msgs, &info)?;
 
         let mut event_attributes = vec![
-            attr("action", "withdraw_protocol_fee"),
             attr("pool_key", pool_info.pool_key.to_string()),
             attr("token_x", fee_protocol_token_x.to_string()),
             attr("token_y", fee_protocol_token_y.to_string()),
