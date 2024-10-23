@@ -1,7 +1,8 @@
 use std::vec;
 
 use cosmwasm_std::{
-    to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response, StdResult, SubMsg, WasmMsg
+    to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response,
+    StdResult, WasmMsg,
 };
 
 use oraiswap_v3_common::{
@@ -17,7 +18,6 @@ use oraiswap_v3_common::{
 };
 
 use crate::{
-    contract::ADD_LIQUIDITY_REPLY_ID,
     msg::ExecuteMsg,
     state::{
         CONFIG, PENDING_POSITION, PROTOCOL_FEE, RECEIVER, SNAP_BALANCE, SNAP_BALANCES,
@@ -28,7 +28,11 @@ use crate::{
 
 use super::build_swap_msg;
 
-pub fn zap_in_liquidity(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn zap_in_liquidity(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
     if info.sender != env.contract.address {
         return Err(ContractError::Unauthorized {});
     }
@@ -146,7 +150,11 @@ pub fn zap_in_liquidity(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Re
     Ok(Response::new().add_messages(msgs))
 }
 
-pub fn refund_after_zap_in(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn refund_after_zap_in(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
     if info.sender != env.contract.address {
         return Err(ContractError::Unauthorized {});
     }
@@ -201,11 +209,15 @@ pub fn refund_after_zap_in(deps: DepsMut, env: Env, info: MessageInfo) -> Result
     Ok(Response::new().add_messages(msgs))
 }
 
-pub fn zap_out_liquidity(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn zap_out_liquidity(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
     if info.sender != env.contract.address {
         return Err(ContractError::Unauthorized {});
     }
-    
+
     let mut msgs: Vec<CosmosMsg> = vec![];
     let receiver = RECEIVER.load(deps.storage)?;
     let zap_out_routes = ZAP_OUT_ROUTES.load(deps.storage)?;

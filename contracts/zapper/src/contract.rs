@@ -6,9 +6,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::CONFIG;
 use crate::{entrypoints::*, Config};
 
-use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
-};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
 // version info for migration info
@@ -24,12 +22,12 @@ pub const ADD_LIQUIDITY_REPLY_ID: u64 = 3;
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     let config = Config {
-        admin: info.sender,
+        admin: msg.admin,
         dex_v3: msg.dex_v3,
         mixed_router: msg.mixed_router,
     };

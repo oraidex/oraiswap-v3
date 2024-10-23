@@ -1,13 +1,6 @@
 use cosmwasm_std::{coins, Uint128};
-use decimal::*;
-use oraiswap::mixed_router::SwapOperation;
 use oraiswap_v3_common::asset::{Asset, AssetInfo};
-use oraiswap_v3_common::math::percentage::Percentage;
 
-use oraiswap_v3_common::storage::{FeeTier, PoolKey};
-
-use crate::msg::Route;
-use crate::tests::common::init_basic_v3_pool;
 use crate::tests::helper::MockApp;
 use crate::tests::helper::{macros::*, FEE_DENOM};
 
@@ -33,7 +26,8 @@ fn test_withdraw() {
         },
         amount: Uint128::new(1),
     }];
-    let err = app.withdraw(bob, zapper.as_str(), assets.clone(), Some(bob))
+    let err = app
+        .withdraw(bob, zapper.as_str(), assets.clone(), Some(bob))
         .unwrap_err();
     assert!(err.root_cause().to_string().contains("Unauthorized"));
 

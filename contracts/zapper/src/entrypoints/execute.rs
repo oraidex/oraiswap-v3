@@ -1,6 +1,5 @@
 use cosmwasm_std::{
-    to_json_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128,
-    WasmMsg,
+    to_json_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
 };
 
 use oraiswap_v3_common::{
@@ -12,14 +11,13 @@ use oraiswap_v3_common::{
 };
 
 use crate::{
-    contract::{ZAP_IN_LIQUIDITY_REPLY_ID, ZAP_OUT_LIQUIDITY_REPLY_ID},
     entrypoints::common::get_pool_v3_asset_info,
     msg::{ExecuteMsg, Route},
     state::{CONFIG, PENDING_POSITION, PROTOCOL_FEE, RECEIVER, SNAP_BALANCES, ZAP_OUT_ROUTES},
     Config, PairBalance, PendingPosition,
 };
 
-use super::{build_swap_msg, internal, validate_fund};
+use super::{build_swap_msg, validate_fund};
 
 pub fn update_config(
     deps: DepsMut,

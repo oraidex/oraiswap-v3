@@ -60,7 +60,13 @@ fn zap_out_position_not_exist() {
     let err = app
         .zap_out_liquidity(&bob, zapper.as_str(), 1, vec![])
         .unwrap_err();
+    println!("error {:?}", err.root_cause().to_string());
+
+    #[cfg(not(feature="test-tube"))]
     assert!(err.root_cause().to_string().contains("not found"));
+
+    #[cfg(feature="test-tube")]
+    assert!(err.root_cause().to_string().contains("Querier contract error"));
 }
 
 #[test]
