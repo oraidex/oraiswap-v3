@@ -10,7 +10,9 @@ use oraiswap_v3_common::math::percentage::Percentage;
 use oraiswap_v3_common::math::sqrt_price::SqrtPrice;
 use oraiswap_v3_common::math::token_amount::TokenAmount;
 use oraiswap_v3_common::oraiswap_v3_msg;
-use oraiswap_v3_common::storage::{FeeTier, LiquidityTick, Pool, PoolKey, Position, Tick};
+use oraiswap_v3_common::storage::{
+    FeeTier, LiquidityTick, Pool, PoolKey, PoolStatus, Position, Tick,
+};
 
 use crate::state::MAX_LIMIT;
 
@@ -547,6 +549,24 @@ impl MockApp {
         )?;
 
         Ok(tickmaps.into_iter().map(|(k, v)| (k, v.u64())).collect())
+    }
+
+    pub fn update_pool_status(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        pool_key: &PoolKey,
+        status: Option<PoolStatus>,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::ExecuteMsg::UpdatePoolStatus {
+                pool_key: pool_key.clone(),
+                status,
+            },
+            &[],
+        )
     }
 }
 

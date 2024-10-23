@@ -12,7 +12,7 @@ use oraiswap_v3_common::math::sqrt_price::SqrtPrice;
 use oraiswap_v3_common::math::token_amount::TokenAmount;
 use oraiswap_v3_common::math::{calculate_min_amount_out, check_tick};
 use oraiswap_v3_common::storage::incentive::IncentiveRecord;
-use oraiswap_v3_common::storage::{FeeTier, Pool, PoolKey, Position};
+use oraiswap_v3_common::storage::{FeeTier, Pool, PoolKey, PoolStatus, Position};
 
 use super::{
     check_can_send, create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal,
@@ -284,6 +284,11 @@ pub fn create_position(
     let pool_key_db = pool_key.key();
     let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
 
+    // check pool is opening for lp
+    if !pool.can_lp() {
+        return Err(ContractError::PoolPaused {});
+    }
+
     // update global incentives
     pool.update_global_incentives(env.block.time.seconds())?;
 
@@ -386,6 +391,10 @@ pub fn swap(
 ) -> Result<Response, ContractError> {
     // update incentives first
     let mut pool = state::get_pool(deps.storage, &pool_key)?;
+    // check pool is opening for swap
+    if !pool.can_swap() {
+        return Err(ContractError::PoolPaused {});
+    }
     pool.update_global_incentives(env.block.time.seconds())?;
     POOLS.save(deps.storage, &pool_key.key(), &pool)?;
 
@@ -464,6 +473,10 @@ pub fn swap_route(
     // update incentives first
     for hop in &swaps {
         let mut pool = state::get_pool(deps.storage, &hop.pool_key)?;
+        // check pool is opening for swap
+        if !pool.can_swap() {
+            return Err(ContractError::PoolPaused {});
+        }
         pool.update_global_incentives(env.block.time.seconds())?;
         POOLS.save(deps.storage, &hop.pool_key.key(), &pool)?;
     }
@@ -697,6 +710,10 @@ pub fn remove_position(
 
     let pool_key_db = position.pool_key.key();
     let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
+    // check pool is opening for lp
+    if !pool.can_lp() {
+        return Err(ContractError::PoolPaused {});
+    }
 
     // update global incentives first
     pool.update_global_incentives(env.block.time.seconds())?;
@@ -1251,6 +1268,34 @@ pub fn update_incentive(
         (
             "reward_per_sec",
             &reward_per_sec.unwrap_or_default().to_string(),
+        ),
+    ]))
+}
+
+// only owner can execute
+pub fn update_pool_status(
+    deps: DepsMut,
+    info: MessageInfo,
+    pool_key: PoolKey,
+    status: Option<PoolStatus>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if info.sender != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let pool_key_db = pool_key.key();
+    let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
+    pool.status = status.clone();
+
+    POOLS.save(deps.storage, &pool_key_db, &pool)?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "update_pool_status"),
+        ("pool", &pool_key.to_string()),
+        (
+            "pool_status",
+            &format!("{:?}", &status.unwrap_or(PoolStatus::Opening)),
         ),
     ]))
 }

@@ -1,5 +1,8 @@
 #![allow(unused_imports)]
-use crate::asset::{Asset, AssetInfo};
+use crate::{
+    asset::{Asset, AssetInfo},
+    storage::PoolStatus,
+};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Uint64};
 use cw20::Expiration;
@@ -155,6 +158,11 @@ pub enum ExecuteMsg {
     // Claim Incentives
     ClaimIncentive {
         index: u32,
+    },
+    // update pool status
+    UpdatePoolStatus {
+        pool_key: PoolKey,
+        status: Option<PoolStatus>,
     },
 }
 

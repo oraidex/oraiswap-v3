@@ -12,7 +12,7 @@ use oraiswap_v3_common::{
         token_amount::TokenAmount,
         MIN_SQRT_PRICE,
     },
-    storage::{FeeTier, PoolKey},
+    storage::{FeeTier, PoolKey, PoolStatus},
 };
 
 use super::helper::FEE_DENOM;
@@ -48,6 +48,124 @@ fn test_create_position() {
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        -10,
+        10,
+        Liquidity::new(10),
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        alice
+    )
+    .unwrap();
+}
+
+#[test]
+fn test_cannot_create_position_if_pool_not_opening() {
+    let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
+    let alice = &accounts[0];
+
+    let dex = create_dex!(app, Percentage::new(0), alice);
+    let (token_x, token_y) = create_tokens!(app, 500, 500, alice);
+
+    let fee_tier = FeeTier::new(Percentage::new(0), 1).unwrap();
+
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
+
+    let init_tick = 0;
+    let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+    create_pool!(
+        app,
+        dex,
+        token_x,
+        token_y,
+        fee_tier,
+        init_sqrt_price,
+        init_tick,
+        alice
+    )
+    .unwrap();
+
+    approve!(app, token_x, dex, 500, alice).unwrap();
+    approve!(app, token_y, dex, 500, alice).unwrap();
+
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+
+    // case 1: pool status = None => can create
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        -10,
+        10,
+        Liquidity::new(10),
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        alice
+    )
+    .unwrap();
+
+    // case 2: poolStatus = None => can create
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::Opening))
+        .unwrap();
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        -10,
+        10,
+        Liquidity::new(10),
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        alice
+    )
+    .unwrap();
+
+    // case 3: poolStatus = Paused => cannot create
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::Paused))
+        .unwrap();
+    let error = create_position!(
+        app,
+        dex,
+        pool_key,
+        -10,
+        10,
+        Liquidity::new(10),
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        alice
+    )
+    .unwrap_err();
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::PoolPaused {}.to_string()));
+
+    // case 4: poolStatus = swapOnly => cannot create
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::SwapOnly))
+        .unwrap();
+    let error = create_position!(
+        app,
+        dex,
+        pool_key,
+        -10,
+        10,
+        Liquidity::new(10),
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        alice
+    )
+    .unwrap_err();
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::PoolPaused {}.to_string()));
+
+    // case 5: poolStatus = lpOnly => can create
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::LpOnly))
+        .unwrap();
     create_position!(
         app,
         dex,
@@ -110,6 +228,96 @@ fn test_position_same_upper_and_lower_tick() {
         .root_cause()
         .to_string()
         .contains(&ContractError::InvalidTickIndex {}.to_string()));
+}
+
+#[test]
+fn test_remove_position_with_pool_status() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
+
+    let init_tick = 0;
+    let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+
+    let initial_mint = 10u128.pow(10);
+
+    let dex = create_dex!(app, Percentage::from_scale(1, 2), alice);
+
+    let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint, alice);
+
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
+
+    create_pool!(
+        app,
+        dex,
+        token_x,
+        token_y,
+        fee_tier,
+        init_sqrt_price,
+        init_tick,
+        alice
+    )
+    .unwrap();
+
+    let lower_tick_index = -20;
+    let upper_tick_index = 10;
+    let liquidity_delta = Liquidity::from_integer(1_000_000);
+
+    approve!(app, token_x, dex, initial_mint, alice).unwrap();
+    approve!(app, token_y, dex, initial_mint, alice).unwrap();
+
+    let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
+
+    for _ in 0..10 {
+        create_position!(
+            app,
+            dex,
+            pool_key,
+            lower_tick_index,
+            upper_tick_index,
+            liquidity_delta,
+            pool_state.sqrt_price,
+            pool_state.sqrt_price,
+            alice
+        )
+        .unwrap();
+    }
+
+    // case 1: pool status = None => can create
+    remove_position!(app, dex, 0, alice).unwrap();
+
+    // case 2: poolStatus = None => can create
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::Opening))
+        .unwrap();
+    remove_position!(app, dex, 0, alice).unwrap();
+
+    // case 3: poolStatus = Paused => cannot create
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::Paused))
+        .unwrap();
+    let error = remove_position!(app, dex, 0, alice).unwrap_err();
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::PoolPaused {}.to_string()));
+
+    // case 4: poolStatus = swapOnly => cannot create
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::SwapOnly))
+        .unwrap();
+    let error = remove_position!(app, dex, 0, alice).unwrap_err();
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::PoolPaused {}.to_string()));
+
+    // case 5: poolStatus = lpOnly => can create
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::LpOnly))
+        .unwrap();
+    remove_position!(app, dex, 0, alice).unwrap();
 }
 
 #[test]
