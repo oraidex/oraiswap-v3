@@ -192,6 +192,9 @@ pub fn execute(
             start_timestamp,
             reward_per_sec,
         ),
+        ExecuteMsg::UpdatePoolStatus { pool_key, status } => {
+            update_pool_status(deps, info, pool_key, status)
+        }
     }
 }
 

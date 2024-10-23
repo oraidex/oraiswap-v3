@@ -168,6 +168,9 @@ pub enum ContractError {
 
     #[error("Error on zap out: not enough balance to swap")]
     ZapOutNotEnoughBalanceToSwap {},
+
+    #[error("Pool paused")]
+    PoolPaused {},
 }
 
 impl From<ContractError> for StdError {

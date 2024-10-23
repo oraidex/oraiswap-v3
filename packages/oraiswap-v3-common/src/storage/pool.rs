@@ -1,3 +1,4 @@
+use crate::error::ContractError;
 use crate::math::types::sqrt_price::check_tick_to_sqrt_price_relationship;
 use crate::math::{
     clamm::*,
@@ -7,8 +8,7 @@ use crate::math::{
         token_amount::TokenAmount,
     },
 };
-use crate::error::ContractError;
-use crate::storage::{incentive::IncentiveRecord, tick::Tick, fee_tier::FeeTier};
+use crate::storage::{fee_tier::FeeTier, incentive::IncentiveRecord, tick::Tick};
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
@@ -27,9 +27,18 @@ pub struct Pool {
     pub start_timestamp: u64,
     pub last_timestamp: u64,
     pub fee_receiver: String,
+    pub status: Option<PoolStatus>,
 
     #[serde(default)]
     pub incentives: Vec<IncentiveRecord>,
+}
+
+#[cw_serde]
+pub enum PoolStatus {
+    Opening,  // can swap + add/remove lp
+    Paused,   // cannot swap + add/remove lp
+    SwapOnly, // can swap
+    LpOnly,   // can add/remove lp
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -40,6 +49,20 @@ pub enum UpdatePoolTick {
 }
 
 impl Pool {
+    pub fn can_swap(&self) -> bool {
+        match &self.status {
+            None | Some(PoolStatus::Opening) | Some(PoolStatus::SwapOnly) => true,
+            _ => false,
+        }
+    }
+
+    pub fn can_lp(&self) -> bool {
+        match &self.status {
+            None | Some(PoolStatus::Opening) | Some(PoolStatus::LpOnly) => true,
+            _ => false,
+        }
+    }
+
     pub fn create(
         init_sqrt_price: SqrtPrice,
         init_tick: i32,
@@ -206,6 +229,54 @@ mod tests {
     use decimal::Factories;
 
     use super::*;
+
+    #[test]
+    fn test_check_can_swap() {
+        let mut pool = Pool::default();
+
+        // case 1: status = none => can swap
+        assert!(pool.can_swap());
+
+        // case 2: status = open => can swap
+        pool.status = Some(PoolStatus::Opening);
+        assert!(pool.can_swap());
+
+        // case 3: status = paused => can not swap
+        pool.status = Some(PoolStatus::Paused);
+        assert!(!pool.can_swap());
+
+        // case 4: status = swapOnly => can swap
+        pool.status = Some(PoolStatus::SwapOnly);
+        assert!(pool.can_swap());
+
+        // case 5: status = lpOnly => can not swap
+        pool.status = Some(PoolStatus::LpOnly);
+        assert!(!pool.can_swap());
+    }
+
+    #[test]
+    fn test_check_can_lp() {
+        let mut pool = Pool::default();
+
+        // case 1: status = none => can lp
+        assert!(pool.can_lp());
+
+        // case 2: status = open => can lp
+        pool.status = Some(PoolStatus::Opening);
+        assert!(pool.can_lp());
+
+        // case 3: status = paused => can not lp
+        pool.status = Some(PoolStatus::Paused);
+        assert!(!pool.can_lp());
+
+        // case 4: status = swapOnly => can not lp
+        pool.status = Some(PoolStatus::SwapOnly);
+        assert!(!pool.can_lp());
+
+        // case 5: status = lpOnly => can  lp
+        pool.status = Some(PoolStatus::LpOnly);
+        assert!(pool.can_lp());
+    }
 
     #[test]
     fn create() {

@@ -12,10 +12,188 @@ use oraiswap_v3_common::{
         token_amount::TokenAmount,
         MAX_SQRT_PRICE, MIN_SQRT_PRICE,
     },
-    storage::{FeeTier, PoolKey},
+    storage::{FeeTier, PoolKey, PoolStatus},
 };
 
 use super::helper::MockApp;
+
+#[test]
+fn test_swap_with_pool_status() {
+    let (mut app, accounts) = MockApp::new(&[
+        ("alice", &coins(100_000_000_000, FEE_DENOM)),
+        ("bob", &coins(100_000_000_000, FEE_DENOM)),
+    ]);
+    let alice = &accounts[0];
+    let bob = &accounts[1];
+    let protocol_fee = Percentage::from_scale(6, 3);
+
+    let dex = create_dex!(app, protocol_fee, alice);
+
+    let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
+
+    let init_tick = 0;
+    let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+    let initial_amount = 10u128.pow(10);
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount, alice);
+
+    create_pool!(
+        app,
+        dex,
+        token_x,
+        token_y,
+        fee_tier,
+        init_sqrt_price,
+        init_tick,
+        alice
+    )
+    .unwrap();
+
+    approve!(app, token_x, dex, initial_amount, alice).unwrap();
+    approve!(app, token_y, dex, initial_amount, alice).unwrap();
+
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+
+    let lower_tick_index = -20;
+    let middle_tick_index = -10;
+    let upper_tick_index = 10;
+
+    let liquidity_delta = Liquidity::from_integer(1000000000);
+
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        lower_tick_index,
+        upper_tick_index,
+        liquidity_delta,
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        alice
+    )
+    .unwrap();
+
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        lower_tick_index - 20,
+        middle_tick_index,
+        liquidity_delta,
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        alice
+    )
+    .unwrap();
+
+    let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
+    assert_eq!(pool.liquidity, liquidity_delta);
+
+    let amount = 1000;
+    let mint_amount = 1000000;
+    let swap_amount = TokenAmount(amount);
+
+    mint!(app, token_x, bob, mint_amount, alice).unwrap();
+    approve!(app, token_x, dex, mint_amount, bob).unwrap();
+
+    let slippage = SqrtPrice::new(MIN_SQRT_PRICE);
+    let target_sqrt_price = quote!(app, dex, pool_key, true, swap_amount, true, slippage)
+        .unwrap()
+        .target_sqrt_price;
+
+    // case 1: pool status = None => can swap
+    swap!(
+        app,
+        dex,
+        pool_key,
+        true,
+        swap_amount,
+        true,
+        target_sqrt_price,
+        bob
+    )
+    .unwrap();
+
+    // case 2: poolStatus = None => can swap
+    let target_sqrt_price = quote!(app, dex, pool_key, true, swap_amount, true, slippage)
+        .unwrap()
+        .target_sqrt_price;
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::Opening))
+        .unwrap();
+    swap!(
+        app,
+        dex,
+        pool_key,
+        true,
+        swap_amount,
+        true,
+        target_sqrt_price,
+        bob
+    )
+    .unwrap();
+
+    // case 3: poolStatus = Paused => cannot swap
+    let target_sqrt_price = quote!(app, dex, pool_key, true, swap_amount, true, slippage)
+        .unwrap()
+        .target_sqrt_price;
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::Paused))
+        .unwrap();
+    let error = swap!(
+        app,
+        dex,
+        pool_key,
+        true,
+        swap_amount,
+        true,
+        target_sqrt_price,
+        bob
+    )
+    .unwrap_err();
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::PoolPaused {}.to_string()));
+
+    // case 4: poolStatus = swapOnly => can swap
+    let target_sqrt_price = quote!(app, dex, pool_key, true, swap_amount, true, slippage)
+        .unwrap()
+        .target_sqrt_price;
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::SwapOnly))
+        .unwrap();
+    swap!(
+        app,
+        dex,
+        pool_key,
+        true,
+        swap_amount,
+        true,
+        target_sqrt_price,
+        bob
+    )
+    .unwrap();
+
+    // case 5: poolStatus = lpOnly => cannot swap
+    let target_sqrt_price = quote!(app, dex, pool_key, true, swap_amount, true, slippage)
+        .unwrap()
+        .target_sqrt_price;
+    app.update_pool_status(&alice, dex.as_str(), &pool_key, Some(PoolStatus::LpOnly))
+        .unwrap();
+    let error = swap!(
+        app,
+        dex,
+        pool_key,
+        true,
+        swap_amount,
+        true,
+        target_sqrt_price,
+        bob
+    )
+    .unwrap_err();
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::PoolPaused {}.to_string()));
+}
 
 #[test]
 fn test_swap_x_to_y() {
