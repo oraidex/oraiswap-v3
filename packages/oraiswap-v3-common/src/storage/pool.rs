@@ -27,6 +27,7 @@ pub struct Pool {
     pub start_timestamp: u64,
     pub last_timestamp: u64,
     pub fee_receiver: String,
+    #[serde(default)]
     pub status: Option<PoolStatus>,
 
     #[serde(default)]
