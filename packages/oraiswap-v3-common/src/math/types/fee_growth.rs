@@ -1,12 +1,12 @@
+use crate::error::ContractError;
 use crate::math::types::{liquidity::*, token_amount::*};
 use cosmwasm_schema::cw_serde;
 use decimal::*;
-use crate::error::ContractError;
 
 #[decimal(28)]
 #[cw_serde]
 #[derive(Default, Eq, Copy)]
-pub struct FeeGrowth(#[schemars(with = "String")] pub u128);
+pub struct FeeGrowth(#[schemars(with = "String")] pub U256);
 
 impl FeeGrowth {
     pub fn unchecked_add(self, other: Self) -> Self {
@@ -25,8 +25,7 @@ impl FeeGrowth {
                 .checked_mul(Liquidity::one())
                 .ok_or(ContractError::Mul)?
                 .checked_div(liquidity.here())
-                .ok_or(ContractError::Div)?
-                .try_into()?,
+                .ok_or(ContractError::Div)?,
         ))
     }
 
@@ -96,9 +95,9 @@ pub fn calculate_fee_growth_inside(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::math::clamm::CASTING_INTEGER_TO_U128_ERROR;
     use crate::math::consts::{MAX_TICK, TICK_SEARCH_RANGE};
     use crate::math::types::sqrt_price::SqrtPrice;
-    use crate::math::clamm::CASTING_INTEGER_TO_U128_ERROR;
 
     #[test]
     fn test_unchecked_add() {
