@@ -1,4 +1,3 @@
-use alloc::string::ToString;
 use quote::quote;
 
 use crate::utils::string_to_ident;
@@ -50,7 +49,7 @@ pub fn generate_base(characteristics: DecimalCharacteristics) -> proc_macro::Tok
                 #parsed_scale
             }
 
-            fn checked_one() -> Result<Self, alloc::string::String> {
+            fn checked_one() -> Result<Self, String> {
                 let base = #underlying_type::try_from(10u8).map_err(|_| "checked_one: cannot create underlying_type from u8")?;
                 Ok(Self::new(
                     base.checked_pow(
@@ -63,7 +62,7 @@ pub fn generate_base(characteristics: DecimalCharacteristics) -> proc_macro::Tok
                 Self::checked_one().unwrap()
             }
 
-            fn checked_almost_one() -> Result<Self, alloc::string::String> {
+            fn checked_almost_one() -> Result<Self, String> {
                 let min_diff = #underlying_type::try_from(1u8).map_err(|_| "checked_almost_one: cannot create underlying_type from u8")?;
                 let one = Self::checked_one()?;
 

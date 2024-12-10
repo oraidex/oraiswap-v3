@@ -1,7 +1,3 @@
-#![no_std]
-
-extern crate alloc;
-
 mod traits;
 mod uint;
 

@@ -1,9 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use decimal::*;
 
+use crate::error::ContractError;
 use crate::math::consts::*;
 use crate::math::types::{liquidity::*, percentage::*, sqrt_price::*, token_amount::*};
-use crate::error::ContractError;
 pub const CASTING_INTEGER_TO_U128_ERROR: &str = "integer overflow when casting to u128";
 
 #[cw_serde]
@@ -138,21 +138,25 @@ pub fn get_delta_y(
     rounding_up: bool,
 ) -> Result<TokenAmount, ContractError> {
     let delta: SqrtPrice = if sqrt_price_a > sqrt_price_b {
-        sqrt_price_a - sqrt_price_b
+        sqrt_price_a
+            .checked_sub(sqrt_price_b)
+            .map_err(|_| ContractError::UnderFlow)?
     } else {
-        sqrt_price_b - sqrt_price_a
+        sqrt_price_b
+            .checked_sub(sqrt_price_a)
+            .map_err(|_| ContractError::UnderFlow)?
     };
 
     let delta_y = match rounding_up {
         true => delta
             .big_mul_to_value_up(liquidity)
-            .checked_add(SqrtPrice::almost_one())
+            .checked_add(U256::from(SqrtPrice::almost_one().get()))
             .ok_or(ContractError::Add)?
-            .checked_div(SqrtPrice::one())
+            .checked_div(U256::from(SqrtPrice::one().get()))
             .ok_or(ContractError::Div)?,
         false => delta
             .big_mul_to_value(liquidity)
-            .checked_div(SqrtPrice::one())
+            .checked_div(U256::from(SqrtPrice::one().get()))
             .ok_or(ContractError::Div)?,
     };
 
@@ -1515,7 +1519,7 @@ mod tests {
         // huge liquidity
         {
             let sqrt_price_a = SqrtPrice::from_integer(1u8);
-            let sqrt_price_b = SqrtPrice::new(SqrtPrice::one()) + SqrtPrice::new(1000000);
+            let sqrt_price_b = SqrtPrice::one() + SqrtPrice::new(1000000);
             let liquidity = Liquidity::from_integer(2u128.pow(80));
 
             let result_down = get_delta_x(sqrt_price_a, sqrt_price_b, liquidity, false);
@@ -1732,7 +1736,7 @@ mod tests {
         // huge liquidity
         {
             let sqrt_price_a = SqrtPrice::from_integer(1u8);
-            let sqrt_price_b = SqrtPrice::new(SqrtPrice::one()) + SqrtPrice::new(1000000);
+            let sqrt_price_b = SqrtPrice::one() + SqrtPrice::new(1000000);
             let liquidity = Liquidity::from_integer(2u128.pow(80));
 
             let result_down = get_delta_y(sqrt_price_a, sqrt_price_b, liquidity, false);

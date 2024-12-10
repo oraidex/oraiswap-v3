@@ -1208,11 +1208,11 @@ pub mod macros {
 
             assert_eq!(
                 pool_after.fee_growth_global_x,
-                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(50000000000000000000000)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(U256::from(50000000000000000000000))
             );
             assert_eq!(
                 pool_after.fee_growth_global_y,
-                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(0)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(U256::from(0))
             );
 
             assert_eq!(pool_after.fee_protocol_token_x, TokenAmount::new(1));
@@ -1315,9 +1315,9 @@ pub mod macros {
 
             assert_eq!(
                 pool_after.fee_growth_global_x,
-                FeeGrowth::new(40000000000000000000000)
+                FeeGrowth::new(U256::from(40000000000000000000000))
             );
-            assert_eq!(pool_after.fee_growth_global_y, FeeGrowth::new(0));
+            assert_eq!(pool_after.fee_growth_global_y, FeeGrowth::new(U256::from(0)));
 
             assert_eq!(
                 pool_after.fee_protocol_token_x,
@@ -1523,11 +1523,11 @@ pub mod macros {
             }
             assert_eq!(
                 pool.fee_growth_global_x,
-                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(0)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(U256::from(0))
             );
             assert_eq!(
                 pool.fee_growth_global_y,
-                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(0)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(U256::from(0))
             );
             if $x_to_y {
                 assert_eq!(

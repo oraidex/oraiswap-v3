@@ -1,4 +1,3 @@
-use alloc::string::ToString;
 use quote::quote;
 
 use crate::utils::string_to_ident;
@@ -18,7 +17,7 @@ pub fn generate_big_ops(characteristics: DecimalCharacteristics) -> proc_macro::
     proc_macro::TokenStream::from(quote!(
         impl<T> BigOps<T> for #struct_name
         where
-        T: Decimal + alloc::fmt::Debug + Conversion,
+        T: Decimal + core::fmt::Debug + Conversion,
         #big_type: UintCast<<T as Decimal>::U>,
         {
             fn big_mul(self, rhs: T) -> Self {
@@ -63,7 +62,7 @@ pub fn generate_big_ops(characteristics: DecimalCharacteristics) -> proc_macro::
                 ))
             }
 
-            fn checked_big_div(self, rhs: T) -> core::result::Result<Self, alloc::string::String> {
+            fn checked_big_div(self, rhs: T) -> core::result::Result<Self, String> {
                 let big_self: #big_type = self.cast::<#big_type>();
                 let big_rhs: #big_type = rhs.cast::<#big_type>();
                 let big_one: #big_type = T::one().cast::<#big_type>();
@@ -72,9 +71,9 @@ pub fn generate_big_ops(characteristics: DecimalCharacteristics) -> proc_macro::
                     #struct_name::checked_from_value(
                         big_self
                             .checked_mul(big_one)
-                            .ok_or_else(|| alloc::format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div()", #big_str, #name_str))?
+                            .ok_or_else(|| format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div()", #big_str, #name_str))?
                             .checked_div(big_rhs)
-                            .ok_or_else(|| alloc::format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div()", #big_str, #name_str))?
+                            .ok_or_else(|| format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div()", #big_str, #name_str))?
                 )?))
             }
 

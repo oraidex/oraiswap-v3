@@ -7,7 +7,6 @@
 #![allow(clippy::reversed_empty_ranges)]
 
 use crate::{UintCast, UintCheckedCast};
-use alloc::string::{String, ToString};
 use decimal_core::impl_units_casts;
 
 use num_traits::{WrappingAdd, WrappingSub};
@@ -104,35 +103,6 @@ impl WrappingSub for U256 {
     }
 }
 
-#[cfg(feature = "invariant-wasm")]
-pub mod invariant_wasm {
-    use alloc::string::{String, ToString};
-    use serde::{Deserialize, Serialize};
-    use uint::construct_uint;
-    construct_uint! {
-        pub struct U256(4);
-    }
-    impl Serialize for U256 {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-        {
-            self.to_string().serialize(serializer)
-        }
-    }
-    impl<'de> Deserialize<'de> for U256 {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: serde::Deserializer<'de>,
-        {
-            let s = String::deserialize(deserializer)?;
-            Ok(Self::from_dec_str(&s).expect("Failed to deserialize U256 from string"))
-        }
-    }
-}
-#[cfg(feature = "invariant-wasm")]
-pub use invariant_wasm::*;
-
 #[allow(dead_code)]
 pub fn checked_u320_to_u256(n: U320) -> Option<U256> {
     if !(n >> 256).is_zero() {
@@ -171,4 +141,22 @@ pub fn u256_to_u320(n: U256) -> U320 {
 #[allow(dead_code)]
 pub fn to_u320(n: u128) -> U320 {
     u256_to_u320(to_u256(n))
+}
+
+impl serde::ser::Serialize for U256 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_string().serialize(serializer)
+    }
+}
+impl<'de> serde::de::Deserialize<'de> for U256 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(Self::from_dec_str(&s).expect("Failed to deserialize U256 from string"))
+    }
 }

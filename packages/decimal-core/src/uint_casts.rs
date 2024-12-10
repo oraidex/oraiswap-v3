@@ -47,7 +47,7 @@ pub fn validate_uint(
 ) -> proc_macro2::TokenStream {
     // compile time check of the provided length
     let test_ident = proc_macro2::Ident::new(
-        &alloc::format!("test_size_{}", new_uint),
+        &format!("test_size_{}", new_uint),
         proc_macro2::Span::call_site(),
     );
     let test_chunks = (0..new_chunks_count).fold(proc_macro2::TokenStream::new(), |mut acc, _| {
@@ -64,7 +64,7 @@ pub fn validate_uint(
     }
 }
 pub fn impl_uint_casts(
-    uints: alloc::vec::Vec<(proc_macro2::Ident, usize)>,
+    uints: Vec<(proc_macro2::Ident, usize)>,
     new_uint: proc_macro2::Ident,
     new_chunks_count: usize,
 ) -> proc_macro2::TokenStream {
@@ -138,8 +138,7 @@ pub fn impl_uint_casts(
                 }
             };
 
-            let error_message =
-                alloc::format!("Failed to cast {} to {}", bigger_type, smaller_type);
+            let error_message = format!("Failed to cast {} to {}", bigger_type, smaller_type);
             let cast_down: proc_macro2::TokenStream = quote! {
                 impl #checked_cast_trait_name <#bigger_type> for #smaller_type {
                     fn #checked_cast_function_name(#param_name: #bigger_type)-> Result<#smaller_type, String> {
@@ -252,7 +251,7 @@ pub fn impl_primitive_casts(
         .iter()
         .map(|v| proc_macro2::Ident::new(v, proc_macro2::Span::call_site()))
         .for_each(|primitive| {
-            let down_cast_error = alloc::format!("Failed to cast {} to {}", uint, primitive);
+            let down_cast_error = format!("Failed to cast {} to {}", uint, primitive);
             expanded.append_all(quote! {
               impl #checked_cast_trait_name <#uint> for #primitive {
                 fn #checked_cast_function_name(#param_name: #uint)-> Result<#primitive, String> {
@@ -274,7 +273,7 @@ pub fn impl_primitive_casts(
     // downcast to u64
     if chunk_count >= 2 {
         let overflow_chunks = overflow_chunks(1..chunk_count, param_name.clone());
-        let down_cast_error = alloc::format!("Failed to cast {} to u64", uint);
+        let down_cast_error = format!("Failed to cast {} to u64", uint);
         expanded.append_all(quote! {
           impl #checked_cast_trait_name <#uint> for u64 {
             fn #checked_cast_function_name(#param_name: #uint)-> Result<u64, String> {
@@ -296,7 +295,7 @@ pub fn impl_primitive_casts(
     // downcast to u128
     if chunk_count >= 3 {
         let overflow_chunks = overflow_chunks(2..chunk_count, param_name.clone());
-        let down_cast_error = alloc::format!("Failed to cast {} to u128", uint);
+        let down_cast_error = format!("Failed to cast {} to u128", uint);
         expanded.append_all(quote! {
           impl #checked_cast_trait_name <#uint> for u128 {
             fn #checked_cast_function_name(#param_name: #uint)-> Result<u128, String> {
@@ -316,7 +315,7 @@ pub fn impl_primitive_casts(
     };
     // downcast from u128
     if chunk_count == 1 {
-        let down_cast_error = alloc::format!("Failed to cast u128 to {}", uint);
+        let down_cast_error = format!("Failed to cast u128 to {}", uint);
         expanded.append_all(quote! {
           impl #checked_cast_trait_name <u128> for #uint {
             fn #checked_cast_function_name(#param_name: u128)-> Result<#uint, String> {

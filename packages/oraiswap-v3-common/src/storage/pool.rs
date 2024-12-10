@@ -451,8 +451,8 @@ mod tests {
             let mut pool = pool.clone();
             let amount = TokenAmount::new(1);
             pool.add_fee(amount, true, protocol_fee).unwrap();
-            assert_eq!({ pool.fee_growth_global_x }, FeeGrowth::new(0));
-            assert_eq!({ pool.fee_growth_global_y }, FeeGrowth::new(0));
+            assert_eq!({ pool.fee_growth_global_x }, FeeGrowth::new(U256::from(0)));
+            assert_eq!({ pool.fee_growth_global_y }, FeeGrowth::new(U256::from(0)));
             assert_eq!({ pool.fee_protocol_token_x }, TokenAmount(1));
             assert_eq!({ pool.fee_protocol_token_y }, TokenAmount(0));
         }

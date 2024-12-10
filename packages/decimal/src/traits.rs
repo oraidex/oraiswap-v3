@@ -1,7 +1,5 @@
 use core::fmt::Debug;
 
-use alloc::string::String;
-
 // custom traits need to be defined in order to implement the conversion on sails defined types
 pub trait UintCast<T>: Sized {
     fn uint_cast(value: T) -> Self;

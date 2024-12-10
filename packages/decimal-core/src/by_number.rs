@@ -1,4 +1,3 @@
-use alloc::string::ToString;
 use quote::quote;
 
 use crate::utils::string_to_ident;
@@ -32,15 +31,15 @@ pub fn generate_by_number(characteristics: DecimalCharacteristics) -> proc_macro
 
             }
 
-            fn checked_big_div_by_number(self, rhs: #big_type) -> core::result::Result<Self, alloc::string::String> {
+            fn checked_big_div_by_number(self, rhs: #big_type) -> core::result::Result<Self, String> {
                 let big_self: #big_type = self.cast::<#big_type>();
                 let big_self_one: #big_type = Self::one().cast::<#big_type>();
 
                 Ok(Self::new(#struct_name::checked_from_value(big_self
                     .checked_mul(big_self_one)
-                    .ok_or_else(|| alloc::format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div_by_number()", #big_str, #name_str))?
+                    .ok_or_else(|| format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div_by_number()", #big_str, #name_str))?
                     .checked_div(rhs)
-                    .ok_or_else(|| alloc::format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div_by_number()", #big_str, #name_str))?
+                    .ok_or_else(|| format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div_by_number()", #big_str, #name_str))?
                     )?
                 ))
             }
@@ -59,17 +58,17 @@ pub fn generate_by_number(characteristics: DecimalCharacteristics) -> proc_macro
                 ))
             }
 
-            fn checked_big_div_by_number_up(self, rhs: #big_type) -> core::result::Result<Self, alloc::string::String> {
+            fn checked_big_div_by_number_up(self, rhs: #big_type) -> core::result::Result<Self, String> {
                 let big_self: #big_type = self.cast::<#big_type>();
                 let big_self_one: #big_type = Self::one().cast::<#big_type>();
 
                 Ok(Self::new(#struct_name::checked_from_value(big_self
                     .checked_mul(big_self_one)
-                    .ok_or_else(|| alloc::format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div_by_number_up()", #big_str, #name_str))?
+                    .ok_or_else(|| format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div_by_number_up()", #big_str, #name_str))?
                     .checked_add(rhs.checked_sub(#big_type::from(1u8)).unwrap())
-                    .ok_or_else(|| alloc::format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div_by_number_up()", #big_str, #name_str))?
+                    .ok_or_else(|| format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div_by_number_up()", #big_str, #name_str))?
                     .checked_div(rhs)
-                    .ok_or_else(|| alloc::format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div_by_number_up()", #big_str, #name_str))?
+                    .ok_or_else(|| format!("decimal: lhs value can't fit into `{}` type in {}::checked_big_div_by_number_up()", #big_str, #name_str))?
                 )?))
             }
         }

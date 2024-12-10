@@ -1,4 +1,3 @@
-use alloc::string::ToString;
 use quote::quote;
 
 use crate::utils::string_to_ident;

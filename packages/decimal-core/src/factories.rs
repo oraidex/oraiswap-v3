@@ -1,4 +1,3 @@
-use alloc::string::ToString;
 use quote::quote;
 
 use crate::utils::string_to_ident;
@@ -45,7 +44,7 @@ pub fn generate_factories(characteristics: DecimalCharacteristics) -> proc_macro
                 Self::from_scale_underlying(#underlying_type::uint_cast(integer), scale)
             }
 
-            fn checked_from_scale(integer:T,scale:u8) -> core::result::Result<Self,alloc::string::String> {
+            fn checked_from_scale(integer:T,scale:u8) -> core::result::Result<Self,String> {
                 Self::checked_from_scale_underlying(#underlying_type::uint_cast(integer),scale)
             }
 
@@ -80,7 +79,7 @@ pub fn generate_factories(characteristics: DecimalCharacteristics) -> proc_macro
                 )
             }
 
-            fn checked_from_scale_underlying(integer: Self::U, scale: u8) -> core::result::Result<Self, alloc::string::String> {
+            fn checked_from_scale_underlying(integer: Self::U, scale: u8) -> core::result::Result<Self, String> {
                 let input_scale:u8 = #scale;
 
                 Ok(Self::new(
@@ -119,7 +118,7 @@ pub fn generate_factories(characteristics: DecimalCharacteristics) -> proc_macro
                 Self::from_scale(other.get(), T::scale())
             }
 
-            fn checked_from_decimal(other: T) -> core::result::Result<Self, alloc::string::String> {
+            fn checked_from_decimal(other: T) -> core::result::Result<Self, String> {
                 Self::checked_from_scale(other.get(), T::scale())
             }
 
@@ -132,7 +131,7 @@ pub fn generate_factories(characteristics: DecimalCharacteristics) -> proc_macro
         where
         #big_type: UintCast<T>,
         {
-            fn checked_from_scale_to_value(val: T, scale: u8) -> core::result::Result<#big_type, alloc::string::String> {
+            fn checked_from_scale_to_value(val: T, scale: u8) -> core::result::Result<#big_type, String> {
                 let base: #big_type = #struct_name::from_value(val);
 
                 Ok(if #scale > scale {
@@ -149,7 +148,7 @@ pub fn generate_factories(characteristics: DecimalCharacteristics) -> proc_macro
         where
             Self: FactoriesToValue<T::U, #big_type>,
         {
-            fn checked_from_decimal_to_value(other: T) -> core::result::Result<#big_type, alloc::string::String> {
+            fn checked_from_decimal_to_value(other: T) -> core::result::Result<#big_type, String> {
                 Self::checked_from_scale_to_value(other.get(), T::scale())
             }
         }

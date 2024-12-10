@@ -1,7 +1,3 @@
-#![no_std]
-
-extern crate alloc;
-use alloc::{string::ToString, vec::Vec};
 use quote::{quote, ToTokens};
 use syn::parse_macro_input;
 
@@ -24,7 +20,7 @@ use quote::TokenStreamExt;
 #[proc_macro]
 pub fn impl_units_casts(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as UintsCastsInput);
-    let mut uints: Vec<(syn::Ident, usize)> = alloc::vec![];
+    let mut uints: Vec<(syn::Ident, usize)> = vec![];
     let mut expanded = proc_macro2::TokenStream::new();
     input.uints.iter().for_each(|Uint(ident, size)| {
         let count: usize = size.base10_parse().expect("Failed to parse usize");
