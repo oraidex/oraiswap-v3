@@ -327,12 +327,8 @@ mod tests {
                 ..Default::default()
             };
             let result_tick = Tick {
-                fee_growth_outside_x: FeeGrowth::new(U256::from(
-                    340282366920938463463374607431768188274_u128,
-                )),
-                fee_growth_outside_y: FeeGrowth::new(U256::from(
-                    340282366920938463463374607431766958269_u128,
-                )),
+                fee_growth_outside_x: FeeGrowth::new(U256::from_dec_str("115792089237316195423570985008687907853269984665640564039457584007913129616754").unwrap()),
+                fee_growth_outside_y: FeeGrowth::new(U256::from_dec_str("115792089237316195423570985008687907853269984665640564039457584007913128386749").unwrap()),
                 index: 45,
                 seconds_outside: 31535911,
                 liquidity_change: Liquidity::new(10),
