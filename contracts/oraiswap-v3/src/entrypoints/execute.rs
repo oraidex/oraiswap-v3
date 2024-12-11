@@ -23,7 +23,7 @@ use cosmwasm_std::{
     StdResult,
 };
 use cw20::Expiration;
-use decimal::Decimal;
+use decimal::{Decimal, Factories};
 
 /// Allows an admin to adjust admin.
 ///
@@ -1167,7 +1167,6 @@ pub fn handle_mint(
 }
 
 // only owner can execute
-#[allow(clippy::too_many_arguments)]
 pub fn create_incentive(
     deps: DepsMut,
     env: Env,

@@ -208,11 +208,9 @@ impl Tick {
 
 #[cfg(test)]
 mod tests {
-    use decimal::{Decimal, Factories};
-
-    use crate::math::clamm::calculate_max_liquidity_per_tick;
-
     use super::*;
+    use crate::math::clamm::calculate_max_liquidity_per_tick;
+    use decimal::*;
 
     #[test]
     fn test_cross() {

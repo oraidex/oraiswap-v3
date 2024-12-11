@@ -1136,6 +1136,7 @@ pub mod macros {
 
     macro_rules! init_basic_swap {
         ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident,$owner:tt, $bob: tt) => {{
+            use decimal::*;
             let fee = Percentage::from_scale(6, 3);
             let tick_spacing = 10;
             let fee_tier = FeeTier { fee, tick_spacing };
@@ -1208,7 +1209,9 @@ pub mod macros {
 
             assert_eq!(
                 pool_after.fee_growth_global_x,
-                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(U256::from(50000000000000000000000))
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(
+                    50000000000000000000000_u128.into()
+                )
             );
             assert_eq!(
                 pool_after.fee_growth_global_y,
@@ -1244,6 +1247,7 @@ pub mod macros {
 
     macro_rules! init_cross_swap {
         ($app:ident, $dex_address:ident, $token_x_address:expr, $token_y_address:expr,$owner:tt,$bob:tt) => {{
+            use decimal::*;
             let fee = Percentage::from_scale(6, 3);
             let tick_spacing = 10;
             let fee_tier = FeeTier { fee, tick_spacing };
@@ -1315,9 +1319,12 @@ pub mod macros {
 
             assert_eq!(
                 pool_after.fee_growth_global_x,
-                FeeGrowth::new(U256::from(40000000000000000000000))
+                FeeGrowth::new(40000000000000000000000_u128.into())
             );
-            assert_eq!(pool_after.fee_growth_global_y, FeeGrowth::new(U256::from(0)));
+            assert_eq!(
+                pool_after.fee_growth_global_y,
+                FeeGrowth::new(U256::from(0))
+            );
 
             assert_eq!(
                 pool_after.fee_protocol_token_x,

@@ -257,7 +257,7 @@ fn test_burn_nft() {
     let pool_state_after = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     assert_eq!(
         pool_state_after.fee_growth_global_x,
-        FeeGrowth::new(U256::from(49999950000049999))
+        FeeGrowth::new(49999950000049999_u128.into())
     );
     assert_eq!(pool_state_after.fee_protocol_token_x, TokenAmount(1));
     assert_eq!(pool_state_after.fee_protocol_token_y, TokenAmount(0));
