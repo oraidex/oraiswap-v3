@@ -23,7 +23,7 @@ impl SecondsPerLiquidity {
         current_timestamp: u64,
         last_timestamp: u64,
     ) -> Result<Self, ContractError> {
-        if current_timestamp <= last_timestamp {
+        if current_timestamp < last_timestamp {
             return Err(ContractError::TimestampCheckFailed);
         }
         let delta_time = current_timestamp
@@ -76,11 +76,9 @@ pub mod tests {
     use super::*;
     use crate::math::types::seconds_per_liquidity::SecondsPerLiquidity;
 
-    const CASTING_INTEGER_TO_U128_ERROR: &str = "integer overflow when casting to u128";
-
     #[test]
     fn test_domain_calculate_seconds_per_liquidity_global() {
-        // current_timestamp <= last_timestamp
+        // current_timestamp < last_timestamp
         {
             let liquidity = Liquidity::from_integer(1);
             let current_timestamp = 0;
@@ -91,7 +89,6 @@ pub mod tests {
                 last_timestamp,
             )
             .unwrap_err();
-
             assert!(matches!(err, ContractError::TimestampCheckFailed));
         }
         // current_timestamp == last_timestamp
@@ -119,7 +116,6 @@ pub mod tests {
                 last_timestamp,
             )
             .unwrap_err();
-
             assert!(matches!(err, ContractError::Div));
         }
         // min value
@@ -164,8 +160,7 @@ pub mod tests {
                 last_timestamp,
             )
             .unwrap_err();
-
-            assert_eq!(err.to_string(), CASTING_INTEGER_TO_U128_ERROR.to_string());
+            assert!(matches!(err, ContractError::Mul));
         }
 
         let one_liquidity = Liquidity::new(1);
