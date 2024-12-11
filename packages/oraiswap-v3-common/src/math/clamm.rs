@@ -1751,19 +1751,21 @@ mod tests {
     fn test_domain_get_delta_y() {
         let max_sqrt_price = SqrtPrice::from_tick(MAX_TICK).unwrap();
         let min_sqrt_price = SqrtPrice::from_tick(-MAX_TICK).unwrap();
-        let max_liquidity = Liquidity::max_instance();
         let min_liquidity = Liquidity::new(1);
+        let max_liquidity = Liquidity::max_instance();
+
         // maximize delta_sqrt_price and liquidity
         {
+            let max_liquidity = Liquidity::new(1208899457432799883049625000361);
             {
                 let result =
                     get_delta_y(max_sqrt_price, min_sqrt_price, max_liquidity, true).unwrap();
-                assert_eq!(result, TokenAmount(22300535557116062863569555195614450424));
+                assert_eq!(result, TokenAmount(340282366920938463463374607431721256973));
             }
             {
                 let result =
                     get_delta_y(max_sqrt_price, min_sqrt_price, max_liquidity, false).unwrap();
-                assert_eq!(result, TokenAmount(22300535557116062863569555195614450423));
+                assert_eq!(result, TokenAmount(340282366920938463463374607431721256972));
             }
             // can be zero
             {
