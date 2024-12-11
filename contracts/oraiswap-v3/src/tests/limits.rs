@@ -8,7 +8,7 @@ use oraiswap_v3_common::{
         percentage::Percentage,
         sqrt_price::{calculate_sqrt_price, get_max_tick, SqrtPrice},
         token_amount::TokenAmount,
-        MAX_SQRT_PRICE, MAX_TICK, MIN_SQRT_PRICE,
+        MAX_SQRT_PRICE, MAX_TICK, MIN_SQRT_PRICE, MIN_TICK,
     },
     storage::{FeeTier, PoolKey},
 };
@@ -37,7 +37,7 @@ fn test_limits_big_deposit_both_tokens() {
     let (dex, token_x, token_y) =
         init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(1, 2), alice);
 
-    let mint_amount = 2u128.pow(75) - 1;
+    let mint_amount = 2u128.pow(73) - 1;
 
     approve!(app, token_x, dex, u128::MAX, alice).unwrap();
     approve!(app, token_y, dex, u128::MAX, alice).unwrap();
@@ -176,7 +176,7 @@ fn test_limits_big_deposit_and_swaps() {
     let (dex, token_x, token_y) =
         init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(1, 2), alice);
 
-    let mint_amount = 2u128.pow(76) - 1;
+    let mint_amount = 2u128.pow(74) - 1;
 
     approve!(app, token_x, dex, u128::MAX, alice).unwrap();
     approve!(app, token_y, dex, u128::MAX, alice).unwrap();
@@ -275,7 +275,7 @@ fn test_limits_full_range_with_max_liquidity() {
     let (mut app, accounts) = MockApp::new(&[("alice", &coins(100_000_000_000, FEE_DENOM))]);
     let alice = &accounts[0];
     let (dex, token_x, token_y) =
-        init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(1, 2), alice);
+        init_dex_and_tokens!(app, u128::MAX, Percentage::from_scale(6, 3), alice);
 
     approve!(app, token_x, dex, u128::MAX, alice).unwrap();
     approve!(app, token_y, dex, u128::MAX, alice).unwrap();
@@ -302,14 +302,14 @@ fn test_limits_full_range_with_max_liquidity() {
     assert_eq!(pool.sqrt_price, calculate_sqrt_price(init_tick).unwrap());
 
     let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
-    let liquidity_delta = Liquidity::new(2u128.pow(109) - 1);
+    let liquidity_delta = Liquidity::new(1208899457432799883049625000361); // < 2^100
     let slippage_limit_lower = pool.sqrt_price;
     let slippage_limit_upper = pool.sqrt_price;
     create_position!(
         app,
         dex,
         pool_key,
-        -MAX_TICK,
+        MIN_TICK,
         MAX_TICK,
         liquidity_delta,
         slippage_limit_lower,
@@ -322,7 +322,7 @@ fn test_limits_full_range_with_max_liquidity() {
     let contract_amount_y = balance_of!(app, token_y, dex);
 
     let expected_x = 0;
-    let expected_y = 42534896005851865508212194815854; // < 2^106
+    let expected_y = 340282366920938463463374607431721256973; // < 2^106
     assert_eq!(contract_amount_x, expected_x);
     assert_eq!(contract_amount_y, expected_y);
 }

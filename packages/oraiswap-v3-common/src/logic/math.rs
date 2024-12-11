@@ -4,7 +4,7 @@ use crate::error::ContractError;
 use crate::math::liquidity::Liquidity;
 use crate::math::sqrt_price::{calculate_sqrt_price, SqrtPrice};
 use crate::math::token_amount::TokenAmount;
-use crate::math::MAX_TICK;
+use crate::math::{MAX_TICK, MIN_TICK};
 
 #[derive(Debug)]
 pub struct LiquidityResult {
@@ -28,7 +28,7 @@ pub fn get_liquidity(
     current_sqrt_price: SqrtPrice,
     rounding_up: bool,
 ) -> Result<LiquidityResult, ContractError> {
-    if lower_tick < -MAX_TICK || upper_tick > MAX_TICK {
+    if lower_tick < MIN_TICK || upper_tick > MAX_TICK {
         return Err(ContractError::InvalidTick);
     }
 
@@ -101,7 +101,7 @@ pub fn get_liquidity_by_x(
     current_sqrt_price: SqrtPrice,
     rounding_up: bool,
 ) -> Result<SingleTokenLiquidity, ContractError> {
-    if lower_tick < -MAX_TICK || upper_tick > MAX_TICK {
+    if lower_tick < MIN_TICK || upper_tick > MAX_TICK {
         return Err(ContractError::InvalidTick);
     }
 
@@ -172,7 +172,7 @@ pub fn get_liquidity_by_y(
     current_sqrt_price: SqrtPrice,
     rounding_up: bool,
 ) -> Result<SingleTokenLiquidity, ContractError> {
-    if lower_tick < -MAX_TICK || upper_tick > MAX_TICK {
+    if lower_tick < MIN_TICK || upper_tick > MAX_TICK {
         return Err(ContractError::InvalidTick);
     }
 

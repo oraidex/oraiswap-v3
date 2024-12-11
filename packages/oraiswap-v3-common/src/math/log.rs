@@ -10,7 +10,7 @@ const LOG2_HALF: u128 = LOG2_ONE >> 1;
 const LOG2_TWO: u128 = LOG2_ONE << 1;
 const LOG2_DOUBLE_ONE: U256 = U256([0, 0, 1, 0]); // 1 << LOG2_SCALE * 2
 const LOG2_SQRT_10001: u128 = 1330584781654116; // adjusted to fit the approximation of the SqrtPrice for tick = 1;
-const LOG2_NEGATIVE_MAX_LOSE: u128 = 1330580000000000 * 7 / 9; // max accuracy in <-MAX_TICK, 0> domain
+const LOG2_NEGATIVE_MAX_LOSE: u128 = 1330580000000000 * 7 / 9; // max accuracy in <MIN_TICK, 0> domain
 const LOG2_MIN_BINARY_POSITION: i32 = 46; // accuracy = 2^(-46)
 const LOG2_ACCURACY: u64 = 1u64 << (63 - LOG2_MIN_BINARY_POSITION);
 const SQRT_PRICE_DENOMINATOR: u128 = 1_000000_000000_000000_000000;
@@ -176,15 +176,15 @@ mod tests {
     fn test_sqrt_price_to_u64() {
         // min sqrt_price -> sqrt(1.0001)^MIN_TICK
         {
-            let min_sqrt_price_decimal = SqrtPrice::from_tick(-MAX_TICK).unwrap();
+            let min_sqrt_price_decimal = SqrtPrice::from_tick(MIN_TICK).unwrap();
 
             let min_sqrt_price_x64 = sqrt_price_to_x64(min_sqrt_price_decimal);
 
             let expected_min_sqrt_price_x64 = 65534;
             let nearly_min_sqrt_price_decimal =
-                sqrt_price_to_x64(SqrtPrice::from_tick(-MAX_TICK + 1).unwrap());
+                sqrt_price_to_x64(SqrtPrice::from_tick(MIN_TICK + 1).unwrap());
             let nearly_min_sqrt_price_decimal2 =
-                sqrt_price_to_x64(SqrtPrice::from_tick(-MAX_TICK + 2).unwrap());
+                sqrt_price_to_x64(SqrtPrice::from_tick(MIN_TICK + 2).unwrap());
 
             assert_ne!(
                 nearly_min_sqrt_price_decimal2,
@@ -245,7 +245,7 @@ mod tests {
         }
         // log2 of min sqrt_price
         {
-            let min_sqrt_price = SqrtPrice::from_tick(-MAX_TICK).unwrap();
+            let min_sqrt_price = SqrtPrice::from_tick(MIN_TICK).unwrap();
             let sqrt_price_x64 = sqrt_price_to_x64(min_sqrt_price);
             let (sign, value) = log2_iterative_approximation_x64(sqrt_price_x64);
             assert!(!sign);
@@ -366,18 +366,18 @@ mod tests {
         // around min + 1 tick
         {
             let sqrt_price_decimal = SqrtPrice::from_tick(-(MAX_TICK - 1)).unwrap();
-            // get tick at sqrt(1.0001^(-MAX_TICK + 1))
+            // get tick at sqrt(1.0001^(MIN_TICK + 1))
             {
                 let tick = get_tick_at_sqrt_price(sqrt_price_decimal, 1);
                 assert_eq!(tick.unwrap(), -(MAX_TICK - 1));
             }
-            // get tick slightly below sqrt(1.0001^(-MAX_TICK + 1))
+            // get tick slightly below sqrt(1.0001^(MIN_TICK + 1))
             {
                 let sqrt_price_decimal = sqrt_price_decimal - SqrtPrice::new(1);
                 let tick = get_tick_at_sqrt_price(sqrt_price_decimal, 1);
-                assert_eq!(tick.unwrap(), -MAX_TICK);
+                assert_eq!(tick.unwrap(), MIN_TICK);
             }
-            // get tick slightly above sqrt(1.0001^(-MAX_TICK + 1))
+            // get tick slightly above sqrt(1.0001^(MIN_TICK + 1))
             {
                 let sqrt_price_decimal = sqrt_price_decimal + SqrtPrice::new(1);
                 let tick = get_tick_at_sqrt_price(sqrt_price_decimal, 1);
@@ -439,10 +439,10 @@ mod tests {
         }
         //get tick slightly above at min tick
         {
-            let min_sqrt_price = SqrtPrice::from_tick(-MAX_TICK).unwrap();
+            let min_sqrt_price = SqrtPrice::from_tick(MIN_TICK).unwrap();
             let sqrt_price_decimal = min_sqrt_price + SqrtPrice::new(1);
             let tick = get_tick_at_sqrt_price(sqrt_price_decimal, 1);
-            assert_eq!(tick.unwrap(), -MAX_TICK);
+            assert_eq!(tick.unwrap(), MIN_TICK);
         }
     }
 

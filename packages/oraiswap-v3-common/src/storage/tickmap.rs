@@ -20,9 +20,9 @@ pub fn get_min_chunk(tick_spacing: u16) -> u16 {
 
 pub fn tick_to_position(tick: i32, tick_spacing: u16) -> (u16, u8) {
     assert!(
-        (-MAX_TICK..=MAX_TICK).contains(&tick),
+        (MIN_TICK..=MAX_TICK).contains(&tick),
         "tick not in range of <{}, {}>",
-        -MAX_TICK,
+        MIN_TICK,
         MAX_TICK
     );
 

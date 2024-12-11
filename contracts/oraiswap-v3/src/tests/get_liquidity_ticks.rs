@@ -62,7 +62,7 @@ fn test_get_liquidity_ticks() {
     assert_eq!(ticks_amount, 2);
 
     let tickmap: Vec<(u16, u64)> = get_tickmap!(app, dex, &pool_key, -10, 10, false).unwrap();
-    assert_eq!(tickmap.len(), 2);
+    assert_eq!(tickmap.len(), 1);
     let mut ticks = vec![];
     tickmap.iter().for_each(|(chunk_index, chunk)| {
         for i in 0..(CHUNK_SIZE as u8) {

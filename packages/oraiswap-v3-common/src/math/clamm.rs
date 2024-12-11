@@ -484,7 +484,7 @@ mod tests {
         let max_liquidity = Liquidity::max_instance();
         let min_liquidity = Liquidity::new(1);
         let max_amount = TokenAmount::max_instance();
-        let min_sqrt_price = SqrtPrice::from_tick(-MAX_TICK).unwrap();
+        let min_sqrt_price = SqrtPrice::from_tick(MIN_TICK).unwrap();
         let max_sqrt_price = SqrtPrice::from_tick(MAX_TICK).unwrap();
         let almost_min_sqrt_price = min_sqrt_price + SqrtPrice::new(1);
         let almost_max_sqrt_price = max_sqrt_price - SqrtPrice::new(1);
@@ -549,7 +549,7 @@ mod tests {
         let max_liquidity = Liquidity::max_instance();
         let min_liquidity = Liquidity::new(1);
         let max_amount = TokenAmount::max_instance();
-        let min_sqrt_price = SqrtPrice::from_tick(-MAX_TICK).unwrap();
+        let min_sqrt_price = SqrtPrice::from_tick(MIN_TICK).unwrap();
         let max_sqrt_price = SqrtPrice::from_tick(MAX_TICK).unwrap();
         let almost_min_sqrt_price = min_sqrt_price + SqrtPrice::new(1);
         let almost_max_sqrt_price = max_sqrt_price - SqrtPrice::new(1);
@@ -955,7 +955,7 @@ mod tests {
         let one_sqrt_price = SqrtPrice::from_integer(1);
         let two_sqrt_price = SqrtPrice::from_integer(2);
         let max_sqrt_price = SqrtPrice::from_tick(MAX_TICK).unwrap();
-        let min_sqrt_price = SqrtPrice::from_tick(-MAX_TICK).unwrap();
+        let min_sqrt_price = SqrtPrice::from_tick(MIN_TICK).unwrap();
         let one_liquidity = Liquidity::from_integer(1);
         let max_liquidity = Liquidity::max_instance();
         let max_amount = TokenAmount::max_instance();
@@ -1309,7 +1309,7 @@ mod tests {
     fn test_domain_get_next_sqrt_price_y_down() {
         let min_y = TokenAmount::new(1);
         let max_y = TokenAmount::max_instance();
-        let min_sqrt_price = SqrtPrice::from_tick(-MAX_TICK).unwrap();
+        let min_sqrt_price = SqrtPrice::from_tick(MIN_TICK).unwrap();
         let max_sqrt_price = SqrtPrice::from_tick(MAX_TICK).unwrap();
         let almost_min_sqrt_price = min_sqrt_price + SqrtPrice::new(1);
         let almost_max_sqrt_price = max_sqrt_price - SqrtPrice::new(1);
@@ -1556,9 +1556,9 @@ mod tests {
     #[test]
     fn test_domain_get_delta_x() {
         let max_sqrt_price = SqrtPrice::from_tick(MAX_TICK).unwrap();
-        let min_sqrt_price = SqrtPrice::from_tick(-MAX_TICK).unwrap();
+        let min_sqrt_price = SqrtPrice::from_tick(MIN_TICK).unwrap();
 
-        let almost_min_sqrt_price = SqrtPrice::from_tick(-MAX_TICK + 1).unwrap();
+        let almost_min_sqrt_price = SqrtPrice::from_tick(MIN_TICK + 1).unwrap();
 
         let max_liquidity = Liquidity::new(1208899457326985091718930756475);
         let min_liquidity = Liquidity::new(1);
@@ -1778,7 +1778,7 @@ mod tests {
     #[test]
     fn test_domain_get_delta_y() {
         let max_sqrt_price = SqrtPrice::from_tick(MAX_TICK).unwrap();
-        let min_sqrt_price = SqrtPrice::from_tick(-MAX_TICK).unwrap();
+        let min_sqrt_price = SqrtPrice::from_tick(MIN_TICK).unwrap();
         let min_liquidity = Liquidity::new(1);
         let max_liquidity = Liquidity::max_instance();
 

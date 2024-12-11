@@ -423,10 +423,18 @@ pub fn test_multi_incentives_with_single_position() {
 
     assert_eq!(
         subtract_assets(&incentives, &new_incentives),
-        vec![Asset {
-            info: reward_token.clone(),
-            amount: 900000u128.into(),
-        }]
+        vec![
+            Asset {
+                info: reward_token.clone(),
+                amount: 900000u128.into(),
+            },
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("usdt")
+                },
+                amount: 200000000_u128.into()
+            }
+        ]
     );
 
     // success
@@ -435,10 +443,18 @@ pub fn test_multi_incentives_with_single_position() {
     let new_incentives = get_position_incentives!(app, dex, 0, alice).unwrap();
     assert_eq!(
         subtract_assets(&incentives, &new_incentives),
-        vec![Asset {
-            info: reward_token.clone(),
-            amount: Uint128::zero()
-        },]
+        vec![
+            Asset {
+                info: reward_token.clone(),
+                amount: Uint128::zero()
+            },
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("usdt")
+                },
+                amount: 4000000_u128.into()
+            }
+        ]
     );
 }
 

@@ -48,8 +48,8 @@ fn test_get_tickmap() {
         app,
         dex,
         pool_key,
-        -58,
-        5,
+        -47,
+        16,
         liquidity_delta,
         pool.sqrt_price,
         SqrtPrice::max_instance(),
@@ -70,7 +70,7 @@ fn test_get_tickmap() {
     assert_eq!(
         tickmap[0],
         (
-            3465,
+            10397,
             0b1000000000000000000000000000000000000000000000000000000000000001
         )
     );
@@ -150,11 +150,14 @@ fn test_get_tickmap_tick_spacing_over_one() {
     assert_eq!(tickmap[0], (0, 0b1));
     assert_eq!(
         tickmap[1],
-        (346, 0b1100000000000000000000000000000000000000)
+        (1039, 0b1100000000000000000000000000000000000000000000000000)
     );
     assert_eq!(
         tickmap[2],
-        (get_max_chunk(fee_tier.tick_spacing), 0b10000000000)
+        (
+            get_max_chunk(fee_tier.tick_spacing),
+            0b10000000000000000000000000000000000
+        )
     );
     assert_eq!(tickmap.len(), 3);
 }
@@ -197,8 +200,8 @@ fn test_get_tickmap_edge_ticks_intialized() {
         app,
         dex,
         pool_key,
-        -221818,
-        -221817,
+        get_min_tick(fee_tier.tick_spacing),
+        get_min_tick(fee_tier.tick_spacing) + 1,
         liquidity_delta,
         pool.sqrt_price,
         SqrtPrice::max_instance(),
@@ -210,8 +213,8 @@ fn test_get_tickmap_edge_ticks_intialized() {
         app,
         dex,
         pool_key,
-        221817,
-        221818,
+        get_max_tick(fee_tier.tick_spacing) - 1,
+        get_max_tick(fee_tier.tick_spacing),
         liquidity_delta,
         pool.sqrt_price,
         SqrtPrice::max_instance(),
@@ -234,7 +237,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
         tickmap[1],
         (
             get_max_chunk(fee_tier.tick_spacing),
-            0b11000000000000000000000000000000000000000000000000000
+            0b1100000000000000000000000000000
         )
     );
     assert_eq!(tickmap.len(), 2);
@@ -253,7 +256,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
             tickmap[1],
             (
                 get_max_chunk(fee_tier.tick_spacing),
-                0b11000000000000000000000000000000000000000000000000000
+                0b1100000000000000000000000000000
             )
         );
         assert_eq!(tickmap.len(), 2);
@@ -272,7 +275,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
             tickmap[1],
             (
                 get_max_chunk(fee_tier.tick_spacing),
-                0b11000000000000000000000000000000000000000000000000000
+                0b1100000000000000000000000000000
             )
         );
         assert_eq!(tickmap.len(), 2);
@@ -291,7 +294,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
             tickmap[0],
             (
                 get_max_chunk(fee_tier.tick_spacing),
-                0b11000000000000000000000000000000000000000000000000000
+                0b1100000000000000000000000000000
             )
         );
         assert_eq!(tickmap.len(), 2);
@@ -358,8 +361,14 @@ fn test_get_tickmap_more_chunks_above() {
     .unwrap();
 
     for (i, _) in (0..tickmap.len()).enumerate() {
-        let current = 3466 + i as u16;
-        assert_eq!(tickmap[i], (current, 0b11));
+        let current = 10397 + i as u16;
+        assert_eq!(
+            tickmap[i],
+            (
+                current,
+                0b1100000000000000000000000000000000000000000000000000000
+            )
+        );
     }
 }
 
@@ -422,13 +431,10 @@ fn test_get_tickmap_more_chunks_below() {
     )
     .unwrap();
     for (i, _) in (0..tickmap.len()).enumerate() {
-        let current = 2644 + i as u16;
+        let current = 9576 + i as u16;
         assert_eq!(
             tickmap[i],
-            (
-                current,
-                0b110000000000000000000000000000000000000000000000000000000000
-            )
+            (current, 0b1100000000000000000000000000000000000000000000000)
         );
     }
 }

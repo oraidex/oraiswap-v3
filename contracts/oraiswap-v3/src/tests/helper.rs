@@ -1596,7 +1596,7 @@ pub mod macros {
             let (dex, token_x, token_y) =
                 init_dex_and_tokens!($app, u128::MAX, Percentage::from_scale(1, 2), $owner);
 
-            let mint_amount = 2u128.pow(75) - 1;
+            let mint_amount = 2u128.pow(73) - 1;
 
             approve!($app, token_x, dex, u128::MAX, $owner).unwrap();
             approve!($app, token_y, dex, u128::MAX, $owner).unwrap();
@@ -1676,9 +1676,9 @@ pub mod macros {
             let amount_y = balance_of!($app, token_y, $owner);
             if $x_to_y {
                 assert_eq!(amount_x, 340282366920938463463374607431768211455);
-                assert_eq!(amount_y, 340282366920938425684442744474606501888);
+                assert_eq!(amount_y, 340282366920938454018641641692477784064);
             } else {
-                assert_eq!(amount_x, 340282366920938425684442744474606501888);
+                assert_eq!(amount_x, 340282366920938454018641641692477784064);
                 assert_eq!(amount_y, 340282366920938463463374607431768211455);
             }
 
@@ -1703,11 +1703,11 @@ pub mod macros {
             let amount_x = balance_of!($app, token_x, $owner);
             let amount_y = balance_of!($app, token_y, $owner);
             if $x_to_y {
-                assert_eq!(amount_x, 340282366920938425684442744474606501888);
+                assert_eq!(amount_x, 340282366920938454018641641692477784064);
                 assert_ne!(amount_y, 0);
             } else {
                 assert_ne!(amount_x, 0);
-                assert_eq!(amount_y, 340282366920938425684442744474606501888);
+                assert_eq!(amount_y, 340282366920938454018641641692477784064);
             }
         }};
     }

@@ -327,7 +327,7 @@ mod tests {
         {
             let global_max_sqrt_price = SqrtPrice::from_tick(MAX_TICK).unwrap();
             assert_eq!(global_max_sqrt_price, SqrtPrice::new(MAX_SQRT_PRICE)); // ceil(log2(this)) = 96
-            let global_min_sqrt_price = SqrtPrice::from_tick(-MAX_TICK).unwrap();
+            let global_min_sqrt_price = SqrtPrice::from_tick(MIN_TICK).unwrap();
             assert_eq!(global_min_sqrt_price, SqrtPrice::new(MIN_SQRT_PRICE)); // floor(log2(this)) = 63
         }
         {

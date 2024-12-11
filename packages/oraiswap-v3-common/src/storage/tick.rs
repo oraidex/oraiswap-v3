@@ -210,7 +210,6 @@ impl Tick {
 mod tests {
     use super::*;
     use crate::math::clamm::calculate_max_liquidity_per_tick;
-    use decimal::*;
 
     #[test]
     fn test_cross() {
