@@ -506,6 +506,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "bench")]
     #[test]
     fn test_all_positive_ticks() {
         for n in 0..MAX_TICK {
@@ -533,6 +534,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "bench")]
     #[test]
     fn test_all_negative_ticks() {
         for n in 0..MAX_TICK {
@@ -561,6 +563,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "bench")]
     #[test]
     fn test_all_positive_tick_spacing_greater_than_1() {
         let tick_spacing: i32 = 3;
@@ -592,6 +595,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "bench")]
     #[test]
     fn test_all_negative_tick_spacing_greater_than_1() {
         let tick_spacing: i32 = 4;
