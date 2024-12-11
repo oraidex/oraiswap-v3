@@ -96,9 +96,9 @@ pub fn calculate_fee_growth_inside(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::math::clamm::CASTING_INTEGER_TO_U128_ERROR;
     use crate::math::consts::{MAX_TICK, TICK_SEARCH_RANGE};
     use crate::math::types::sqrt_price::SqrtPrice;
+    const CASTING_INTEGER_TO_U128_ERROR: &str = "integer overflow when casting to u128";
 
     #[test]
     fn test_unchecked_add() {

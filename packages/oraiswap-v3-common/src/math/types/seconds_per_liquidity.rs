@@ -74,11 +74,10 @@ pub fn calculate_seconds_per_liquidity_inside(
 pub mod tests {
 
     use super::*;
+    use crate::math::types::seconds_per_liquidity::SecondsPerLiquidity;
 
-    use crate::{
-        math::clamm::CASTING_INTEGER_TO_U128_ERROR,
-        math::types::seconds_per_liquidity::SecondsPerLiquidity,
-    };
+    const CASTING_INTEGER_TO_U128_ERROR: &str = "integer overflow when casting to u128";
+
     #[test]
     fn test_domain_calculate_seconds_per_liquidity_global() {
         // current_timestamp <= last_timestamp

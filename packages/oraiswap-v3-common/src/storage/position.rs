@@ -52,7 +52,7 @@ impl Position {
         pool.last_timestamp = current_timestamp;
 
         // calculate dynamically limit allows easy modification
-        let max_liquidity_per_tick = calculate_max_liquidity_per_tick(tick_spacing);
+        let max_liquidity_per_tick = calculate_max_liquidity_per_tick(tick_spacing)?;
 
         // update initialized tick
         lower_tick.update(liquidity_delta, max_liquidity_per_tick, false, add)?;

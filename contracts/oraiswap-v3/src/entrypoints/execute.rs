@@ -492,7 +492,7 @@ pub fn swap_route(
         swaps.clone(),
     )?;
 
-    let min_amount_out = calculate_min_amount_out(expected_amount_out, slippage);
+    let min_amount_out = calculate_min_amount_out(expected_amount_out, slippage)?;
 
     if amount_out < min_amount_out {
         return Err(ContractError::AmountUnderMinimumAmountOut);

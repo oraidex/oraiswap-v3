@@ -456,7 +456,7 @@ mod tests {
         }
         // Below min tick
         {
-            let tick_out_of_range = -MAX_TICK - 1;
+            let tick_out_of_range = MIN_TICK - 1;
             let err = SqrtPrice::from_tick(tick_out_of_range).unwrap_err();
             assert!(matches!(err, ContractError::TickOverBounds));
         }

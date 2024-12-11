@@ -505,7 +505,7 @@ mod tests {
                 ..Default::default()
             };
 
-            let max_liquidity_per_tick = calculate_max_liquidity_per_tick(1);
+            let max_liquidity_per_tick = calculate_max_liquidity_per_tick(1).unwrap();
             let liquidity_delta = max_liquidity_per_tick + Liquidity::new(1);
             let result = tick.update(liquidity_delta, max_liquidity_per_tick, false, true);
             assert!(result.is_err());
