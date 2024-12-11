@@ -1,7 +1,7 @@
 use crate::tests::helper::{extract_amount, FEE_DENOM};
 use crate::tests::helper::{macros::*, MockApp};
 use cosmwasm_std::{coins, Addr};
-use decimal::{Decimal, Factories};
+use decimal::*;
 use oraiswap_v3_common::error::ContractError;
 use oraiswap_v3_common::math::percentage::Percentage;
 use oraiswap_v3_common::math::sqrt_price::calculate_sqrt_price;

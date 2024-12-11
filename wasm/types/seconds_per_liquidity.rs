@@ -32,18 +32,18 @@ impl SecondsPerLiquidity {
         if current_timestamp <= last_timestamp {
             return Err(err!("current_timestamp > last_timestamp failed"));
         }
-        let delta_time = current_timestamp - last_timestamp;
+        let delta_time = current_timestamp
+            .checked_sub(last_timestamp)
+            .ok_or(err!("Underflow while calculating delta time"))?;
 
         Ok(Self::new(
-            U256::from(delta_time)
-                .checked_mul(SecondsPerLiquidity::one())
+            u128::from(delta_time)
+                .checked_mul(SecondsPerLiquidity::one().get())
                 .ok_or_else(|| err!(TrackableError::MUL))?
-                .checked_mul(Liquidity::one())
+                .checked_mul(Liquidity::one().get())
                 .ok_or_else(|| err!(TrackableError::MUL))?
                 .checked_div(liquidity.here())
-                .ok_or_else(|| err!(TrackableError::DIV))?
-                .try_into()
-                .map_err(|_| err!(TrackableError::cast::<Self>().as_str()))?,
+                .ok_or_else(|| err!(TrackableError::DIV))?,
         ))
     }
 }

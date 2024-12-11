@@ -801,7 +801,7 @@ fn test_multiple_positions_on_same_tick() {
         let lower_tick = get_tick!(app, dex, pool_key, lower_tick_index).unwrap();
         let upper_tick = get_tick!(app, dex, pool_key, upper_tick_index).unwrap();
         let expected_liquidity = Liquidity::new(liquidity_delta.get() * 3);
-        let zero_fee = FeeGrowth::new(0);
+        let zero_fee = FeeGrowth::new(U256::from(0));
 
         // Check ticks
         assert!(lower_tick.index == lower_tick_index);
@@ -844,7 +844,7 @@ fn test_multiple_positions_on_same_tick() {
     {
         let lower_tick_index = -10;
         let upper_tick_index = 10;
-        let zero_fee = FeeGrowth::new(0);
+        let zero_fee = FeeGrowth::new(U256::from(0));
 
         let liquidity_delta = Liquidity::new(100);
 

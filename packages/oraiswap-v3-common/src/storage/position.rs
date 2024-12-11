@@ -52,7 +52,7 @@ impl Position {
         pool.last_timestamp = current_timestamp;
 
         // calculate dynamically limit allows easy modification
-        let max_liquidity_per_tick = calculate_max_liquidity_per_tick(tick_spacing);
+        let max_liquidity_per_tick = calculate_max_liquidity_per_tick(tick_spacing)?;
 
         // update initialized tick
         lower_tick.update(liquidity_delta, max_liquidity_per_tick, false, add)?;
@@ -95,7 +95,7 @@ impl Position {
                 .incentives
                 .iter()
                 .find(|i| i.incentive_id == record.id)
-                .map_or(FeeGrowth::new(0), |incentive| {
+                .map_or(FeeGrowth::new(U256::from(0)), |incentive| {
                     incentive.incentive_growth_outside
                 });
 
@@ -103,7 +103,7 @@ impl Position {
                 .incentives
                 .iter()
                 .find(|i| i.incentive_id == record.id)
-                .map_or(FeeGrowth::new(0), |incentive| {
+                .map_or(FeeGrowth::new(U256::from(0)), |incentive| {
                     incentive.incentive_growth_outside
                 });
 
@@ -267,7 +267,7 @@ impl Position {
             .map(|record| PositionIncentives {
                 incentive_id: record.id,
                 pending_rewards: TokenAmount::new(0),
-                incentive_growth_inside: FeeGrowth::new(0),
+                incentive_growth_inside: FeeGrowth::new(U256::from(0)),
             })
             .collect();
 
@@ -278,8 +278,8 @@ impl Position {
             liquidity: Liquidity::new(0),
             lower_tick_index: lower_tick.index,
             upper_tick_index: upper_tick.index,
-            fee_growth_inside_x: FeeGrowth::new(0),
-            fee_growth_inside_y: FeeGrowth::new(0),
+            fee_growth_inside_x: FeeGrowth::new(U256::from(0)),
+            fee_growth_inside_y: FeeGrowth::new(U256::from(0)),
             last_block_number: block_number,
             tokens_owed_x: TokenAmount::new(0),
             tokens_owed_y: TokenAmount::new(0),
@@ -496,8 +496,8 @@ mod tests {
         {
             let mut position = Position {
                 liquidity: Liquidity::from_integer(1),
-                fee_growth_inside_x: FeeGrowth::new(u128::MAX) - FeeGrowth::from_integer(10),
-                fee_growth_inside_y: FeeGrowth::new(u128::MAX) - FeeGrowth::from_integer(10),
+                fee_growth_inside_x: FeeGrowth::max_instance() - FeeGrowth::from_integer(10),
+                fee_growth_inside_y: FeeGrowth::max_instance() - FeeGrowth::from_integer(10),
                 tokens_owed_x: TokenAmount(100),
                 tokens_owed_y: TokenAmount(100),
                 ..Default::default()
@@ -536,8 +536,8 @@ mod tests {
         {
             let mut position = Position {
                 liquidity: Liquidity::from_integer(123),
-                fee_growth_inside_x: FeeGrowth::new(u128::MAX) - FeeGrowth::from_integer(1234),
-                fee_growth_inside_y: FeeGrowth::new(u128::MAX) - FeeGrowth::from_integer(1234),
+                fee_growth_inside_x: FeeGrowth::max_instance() - FeeGrowth::from_integer(1234),
+                fee_growth_inside_y: FeeGrowth::max_instance() - FeeGrowth::from_integer(1234),
                 tokens_owed_x: TokenAmount(0),
                 tokens_owed_y: TokenAmount(0),
                 ..Default::default()

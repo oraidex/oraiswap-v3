@@ -23,7 +23,7 @@ use cosmwasm_std::{
     StdResult,
 };
 use cw20::Expiration;
-use decimal::Decimal;
+use decimal::{Decimal, Factories};
 
 /// Allows an admin to adjust admin.
 ///
@@ -492,7 +492,7 @@ pub fn swap_route(
         swaps.clone(),
     )?;
 
-    let min_amount_out = calculate_min_amount_out(expected_amount_out, slippage);
+    let min_amount_out = calculate_min_amount_out(expected_amount_out, slippage)?;
 
     if amount_out < min_amount_out {
         return Err(ContractError::AmountUnderMinimumAmountOut);
@@ -1167,7 +1167,6 @@ pub fn handle_mint(
 }
 
 // only owner can execute
-#[allow(clippy::too_many_arguments)]
 pub fn create_incentive(
     deps: DepsMut,
     env: Env,
@@ -1195,7 +1194,7 @@ pub fn create_incentive(
         reward_token: reward_token.clone(),
         remaining,
         start_timestamp: start_timestamp.unwrap_or(env.block.time.seconds()),
-        incentive_growth_global: FeeGrowth(0),
+        incentive_growth_global: FeeGrowth::from_integer(0),
         last_updated: env.block.time.seconds(),
     };
     pool.incentives.push(incentive);

@@ -1,15 +1,15 @@
 use super::Pool;
+use crate::error::ContractError;
 use crate::{
-    storage::incentive::TickIncentive,
     math::types::{
         fee_growth::FeeGrowth,
         liquidity::Liquidity,
         sqrt_price::{calculate_sqrt_price, SqrtPrice},
     },
+    storage::incentive::TickIncentive,
 };
 use cosmwasm_schema::cw_serde;
 use decimal::*;
-use crate::error::ContractError;
 
 #[cw_serde]
 #[derive(Eq, Default)]
@@ -73,7 +73,7 @@ impl Tick {
                 incentive_id: record.id,
                 incentive_growth_outside: match below_current_tick {
                     true => record.incentive_growth_global,
-                    false => FeeGrowth::new(0),
+                    false => FeeGrowth::new(U256::from(0)),
                 },
             })
             .collect();
@@ -84,11 +84,11 @@ impl Tick {
             sqrt_price: calculate_sqrt_price(index).unwrap(),
             fee_growth_outside_x: match below_current_tick {
                 true => pool.fee_growth_global_x,
-                false => FeeGrowth::new(0),
+                false => FeeGrowth::new(U256::from(0)),
             },
             fee_growth_outside_y: match below_current_tick {
                 true => pool.fee_growth_global_y,
-                false => FeeGrowth::new(0),
+                false => FeeGrowth::new(U256::from(0)),
             },
             seconds_outside: match below_current_tick {
                 true => current_timestamp - pool.start_timestamp,
@@ -208,18 +208,15 @@ impl Tick {
 
 #[cfg(test)]
 mod tests {
-    use decimal::{Decimal, Factories};
-
-    use crate::math::clamm::calculate_max_liquidity_per_tick;
-
     use super::*;
+    use crate::math::clamm::calculate_max_liquidity_per_tick;
 
     #[test]
     fn test_cross() {
         {
             let mut pool = Pool {
-                fee_growth_global_x: FeeGrowth::new(45),
-                fee_growth_global_y: FeeGrowth::new(35),
+                fee_growth_global_x: FeeGrowth::new(U256::from(45)),
+                fee_growth_global_y: FeeGrowth::new(U256::from(35)),
                 liquidity: Liquidity::from_integer(4),
                 last_timestamp: 15,
                 start_timestamp: 4,
@@ -227,16 +224,16 @@ mod tests {
                 ..Default::default()
             };
             let mut tick = Tick {
-                fee_growth_outside_x: FeeGrowth::new(30),
-                fee_growth_outside_y: FeeGrowth::new(25),
+                fee_growth_outside_x: FeeGrowth::new(U256::from(30)),
+                fee_growth_outside_y: FeeGrowth::new(U256::from(25)),
                 index: 3,
                 seconds_outside: 5,
                 liquidity_change: Liquidity::from_integer(1),
                 ..Default::default()
             };
             let result_pool = Pool {
-                fee_growth_global_x: FeeGrowth::new(45),
-                fee_growth_global_y: FeeGrowth::new(35),
+                fee_growth_global_x: FeeGrowth::new(U256::from(45)),
+                fee_growth_global_y: FeeGrowth::new(U256::from(35)),
                 liquidity: Liquidity::from_integer(5),
                 last_timestamp: 315360015,
                 start_timestamp: 4,
@@ -244,8 +241,8 @@ mod tests {
                 ..Default::default()
             };
             let result_tick = Tick {
-                fee_growth_outside_x: FeeGrowth::new(15),
-                fee_growth_outside_y: FeeGrowth::new(10),
+                fee_growth_outside_x: FeeGrowth::new(U256::from(15)),
+                fee_growth_outside_y: FeeGrowth::new(U256::from(10)),
                 index: 3,
                 seconds_outside: 315360006,
                 liquidity_change: Liquidity::from_integer(1),
@@ -258,8 +255,8 @@ mod tests {
         {
             // let mut pool = Pool {
             let mut pool = Pool {
-                fee_growth_global_x: FeeGrowth::new(68),
-                fee_growth_global_y: FeeGrowth::new(59),
+                fee_growth_global_x: FeeGrowth::new(U256::from(68)),
+                fee_growth_global_y: FeeGrowth::new(U256::from(59)),
                 liquidity: Liquidity::new(0),
                 last_timestamp: 9,
                 start_timestamp: 34,
@@ -267,8 +264,8 @@ mod tests {
                 ..Default::default()
             };
             let mut tick = Tick {
-                fee_growth_outside_x: FeeGrowth::new(42),
-                fee_growth_outside_y: FeeGrowth::new(14),
+                fee_growth_outside_x: FeeGrowth::new(U256::from(42)),
+                fee_growth_outside_y: FeeGrowth::new(U256::from(14)),
                 index: 9,
                 seconds_outside: 41,
                 liquidity_change: Liquidity::new(0),
@@ -276,8 +273,8 @@ mod tests {
             };
             // let result_pool = Pool {
             let result_pool = Pool {
-                fee_growth_global_x: FeeGrowth::new(68),
-                fee_growth_global_y: FeeGrowth::new(59),
+                fee_growth_global_x: FeeGrowth::new(U256::from(68)),
+                fee_growth_global_y: FeeGrowth::new(U256::from(59)),
                 liquidity: Liquidity::new(0),
                 last_timestamp: 315360000,
                 start_timestamp: 34,
@@ -286,8 +283,8 @@ mod tests {
             };
             // let result_tick = Tick {
             let result_tick = Tick {
-                fee_growth_outside_x: FeeGrowth::new(26),
-                fee_growth_outside_y: FeeGrowth::new(45),
+                fee_growth_outside_x: FeeGrowth::new(U256::from(26)),
+                fee_growth_outside_y: FeeGrowth::new(U256::from(45)),
                 index: 9,
                 seconds_outside: 315359925,
                 liquidity_change: Liquidity::from_integer(0),
@@ -301,8 +298,8 @@ mod tests {
         // fee_growth_outside should underflow
         {
             let mut pool = Pool {
-                fee_growth_global_x: FeeGrowth::new(3402),
-                fee_growth_global_y: FeeGrowth::new(3401),
+                fee_growth_global_x: FeeGrowth::new(U256::from(3402)),
+                fee_growth_global_y: FeeGrowth::new(U256::from(3401)),
                 liquidity: Liquidity::from_integer(14),
                 last_timestamp: 9,
                 start_timestamp: 15,
@@ -310,16 +307,16 @@ mod tests {
                 ..Default::default()
             };
             let mut tick = Tick {
-                fee_growth_outside_x: FeeGrowth::new(26584),
-                fee_growth_outside_y: FeeGrowth::new(1256588),
+                fee_growth_outside_x: FeeGrowth::new(U256::from(26584)),
+                fee_growth_outside_y: FeeGrowth::new(U256::from(1256588)),
                 index: 45,
                 seconds_outside: 74,
                 liquidity_change: Liquidity::new(10),
                 ..Default::default()
             };
             let result_pool = Pool {
-                fee_growth_global_x: FeeGrowth::new(3402),
-                fee_growth_global_y: FeeGrowth::new(3401),
+                fee_growth_global_x: FeeGrowth::new(U256::from(3402)),
+                fee_growth_global_y: FeeGrowth::new(U256::from(3401)),
                 liquidity: Liquidity::new(13999990),
                 last_timestamp: 31536000,
                 start_timestamp: 15,
@@ -327,8 +324,8 @@ mod tests {
                 ..Default::default()
             };
             let result_tick = Tick {
-                fee_growth_outside_x: FeeGrowth::new(340282366920938463463374607431768188274),
-                fee_growth_outside_y: FeeGrowth::new(340282366920938463463374607431766958269),
+                fee_growth_outside_x: FeeGrowth::new(U256::from_dec_str("115792089237316195423570985008687907853269984665640564039457584007913129616754").unwrap()),
+                fee_growth_outside_y: FeeGrowth::new(U256::from_dec_str("115792089237316195423570985008687907853269984665640564039457584007913128386749").unwrap()),
                 index: 45,
                 seconds_outside: 31535911,
                 liquidity_change: Liquidity::new(10),
@@ -342,8 +339,8 @@ mod tests {
         // seconds_per_liquidity_outside should underflow
         {
             let mut pool = Pool {
-                fee_growth_global_x: FeeGrowth::new(145),
-                fee_growth_global_y: FeeGrowth::new(364),
+                fee_growth_global_x: FeeGrowth::new(U256::from(145)),
+                fee_growth_global_y: FeeGrowth::new(U256::from(364)),
                 liquidity: Liquidity::new(14),
                 last_timestamp: 16,
                 start_timestamp: 15,
@@ -351,16 +348,16 @@ mod tests {
                 ..Default::default()
             };
             let mut tick = Tick {
-                fee_growth_outside_x: FeeGrowth::new(99),
-                fee_growth_outside_y: FeeGrowth::new(256),
+                fee_growth_outside_x: FeeGrowth::new(U256::from(99)),
+                fee_growth_outside_y: FeeGrowth::new(U256::from(256)),
                 index: 45,
                 seconds_outside: 74,
                 liquidity_change: Liquidity::new(10),
                 ..Default::default()
             };
             let result_pool = Pool {
-                fee_growth_global_x: FeeGrowth::new(145),
-                fee_growth_global_y: FeeGrowth::new(364),
+                fee_growth_global_x: FeeGrowth::new(U256::from(145)),
+                fee_growth_global_y: FeeGrowth::new(U256::from(364)),
                 liquidity: Liquidity::new(4),
                 last_timestamp: 315360000,
                 start_timestamp: 15,
@@ -368,8 +365,8 @@ mod tests {
                 ..Default::default()
             };
             let result_tick = Tick {
-                fee_growth_outside_x: FeeGrowth::new(46),
-                fee_growth_outside_y: FeeGrowth::new(108),
+                fee_growth_outside_x: FeeGrowth::new(U256::from(46)),
+                fee_growth_outside_y: FeeGrowth::new(U256::from(108)),
                 index: 45,
                 seconds_outside: 315359911,
                 liquidity_change: Liquidity::new(10),
@@ -501,7 +498,7 @@ mod tests {
                 ..Default::default()
             };
 
-            let max_liquidity_per_tick = calculate_max_liquidity_per_tick(1);
+            let max_liquidity_per_tick = calculate_max_liquidity_per_tick(1).unwrap();
             let liquidity_delta = max_liquidity_per_tick + Liquidity::new(1);
             let result = tick.update(liquidity_delta, max_liquidity_per_tick, false, true);
             assert!(result.is_err());

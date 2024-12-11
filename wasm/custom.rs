@@ -1,8 +1,7 @@
 use crate::{
     storage::{pool_key::PoolKey, tick::Tick},
     types::{
-        fee_growth::calculate_fee_growth_inside,
-        fee_growth::FeeGrowth,
+        fee_growth::{calculate_fee_growth_inside, FeeGrowth},
         liquidity::Liquidity,
         sqrt_price::{get_max_tick, SqrtPrice},
         token_amount::TokenAmount,
@@ -89,7 +88,7 @@ pub fn check_tick_to_sqrt_price_relationship(
     sqrt_price: SqrtPrice,
 ) -> TrackableResult<bool> {
     if tick_index + tick_spacing as i32 > MAX_TICK {
-        let max_tick = get_max_tick(tick_spacing);
+        let max_tick = get_max_tick(tick_spacing)?;
         let max_sqrt_price = ok_or_mark_trace!(SqrtPrice::from_tick(max_tick))?;
         if sqrt_price != max_sqrt_price {
             return Ok(false);

@@ -480,7 +480,7 @@ mod tests {
     use crate::state;
     use oraiswap_v3_common::math::percentage::Percentage;
     use oraiswap_v3_common::math::sqrt_price::SqrtPrice;
-    use oraiswap_v3_common::math::TICK_SEARCH_RANGE;
+    use oraiswap_v3_common::math::{MIN_TICK, TICK_SEARCH_RANGE};
     use oraiswap_v3_common::storage::FeeTier;
 
     use cosmwasm_std::testing::mock_dependencies;
@@ -750,7 +750,7 @@ mod tests {
 
         flip_bitmap(deps.as_mut().storage, true, MAX_TICK - 10, 1, pool_key).unwrap();
         assert_eq!(
-            next_initialized(deps.as_ref().storage, -MAX_TICK + 1, 1, pool_key),
+            next_initialized(deps.as_ref().storage, MIN_TICK + 1, 1, pool_key),
             None
         );
     }
@@ -767,7 +767,7 @@ mod tests {
         let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
 
         assert_eq!(
-            next_initialized(deps.as_ref().storage, MAX_TICK - 22, 4, pool_key),
+            next_initialized(deps.as_ref().storage, MAX_TICK - 23, 4, pool_key),
             None
         );
     }
@@ -931,7 +931,7 @@ mod tests {
         };
         let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
 
-        flip_bitmap(deps.as_mut().storage, true, -MAX_TICK + 1, 1, pool_key).unwrap();
+        flip_bitmap(deps.as_mut().storage, true, MIN_TICK + 1, 1, pool_key).unwrap();
         assert_eq!(
             prev_initialized(deps.as_ref().storage, MAX_TICK - 1, 1, pool_key),
             None
@@ -949,10 +949,10 @@ mod tests {
         };
         let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
 
-        flip_bitmap(deps.as_mut().storage, true, -MAX_TICK + 63, 1, pool_key).unwrap();
+        flip_bitmap(deps.as_mut().storage, true, MIN_TICK + 63, 1, pool_key).unwrap();
         assert_eq!(
-            prev_initialized(deps.as_ref().storage, -MAX_TICK + 128, 1, pool_key),
-            Some(-MAX_TICK + 63)
+            prev_initialized(deps.as_ref().storage, MIN_TICK + 128, 1, pool_key),
+            Some(MIN_TICK + 63)
         );
     }
 
@@ -988,14 +988,14 @@ mod tests {
         {
             let step = 5u16;
             let result = get_search_limit(MAX_TICK - 22, step, true);
-            let expected = MAX_TICK - 3;
+            let expected = MAX_TICK;
             assert_eq!(result, expected);
         }
         // At the price limit
         {
             let step = 5u16;
-            let result = get_search_limit(MAX_TICK - 3, step, true);
-            let expected = MAX_TICK - 3;
+            let result = get_search_limit(MAX_TICK, step, true);
+            let expected = MAX_TICK;
             assert_eq!(result, expected);
         }
     }

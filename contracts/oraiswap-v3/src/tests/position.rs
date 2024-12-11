@@ -425,7 +425,7 @@ fn test_remove_position() {
     let pool_state_after = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
     assert_eq!(
         pool_state_after.fee_growth_global_x,
-        FeeGrowth::new(49999950000049999)
+        FeeGrowth::new(49999950000049999_u128.into())
     );
     assert_eq!(pool_state_after.fee_protocol_token_x, TokenAmount(1));
     assert_eq!(pool_state_after.fee_protocol_token_y, TokenAmount(0));
@@ -548,7 +548,7 @@ fn test_position_within_current_tick() {
     let dex_x = balance_of!(app, token_x, dex);
     let dex_y = balance_of!(app, token_y, dex);
 
-    let zero_fee = FeeGrowth::new(0);
+    let zero_fee = FeeGrowth::new(U256::from(0));
     let expected_x_increase = 317;
     let expected_y_increase = 32;
 
@@ -644,7 +644,7 @@ fn test_position_below_current_tick() {
     let dex_x = balance_of!(app, token_x, dex);
     let dex_y = balance_of!(app, token_y, dex);
 
-    let zero_fee = FeeGrowth::new(0);
+    let zero_fee = FeeGrowth::new(U256::from(0));
     let expected_x_increase = 0;
     let expected_y_increase = 2162;
 
@@ -740,7 +740,7 @@ fn test_position_above_current_tick() {
     let dex_x = balance_of!(app, token_x, dex);
     let dex_y = balance_of!(app, token_y, dex);
 
-    let zero_fee = FeeGrowth::new(0);
+    let zero_fee = FeeGrowth::new(U256::from(0));
     let expected_x_increase = 21549;
     let expected_y_increase = 0;
 

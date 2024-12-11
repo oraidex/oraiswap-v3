@@ -81,7 +81,7 @@ pub fn test_create_incentive() {
             reward_token: reward_token.clone(),
             remaining: total_reward.unwrap(),
             start_timestamp: pool.incentives[0].start_timestamp,
-            incentive_growth_global: FeeGrowth(0),
+            incentive_growth_global: FeeGrowth::from_integer(0),
             last_updated: pool.incentives[0].last_updated
         }]
     );
@@ -109,7 +109,7 @@ pub fn test_create_incentive() {
                 reward_token: reward_token.clone(),
                 remaining: total_reward.unwrap(),
                 start_timestamp: pool.incentives[0].start_timestamp,
-                incentive_growth_global: FeeGrowth(0),
+                incentive_growth_global: FeeGrowth::from_integer(0),
                 last_updated: pool.incentives[0].last_updated
             },
             IncentiveRecord {
@@ -118,7 +118,7 @@ pub fn test_create_incentive() {
                 reward_token: reward_token.clone(),
                 remaining: total_reward.unwrap(),
                 start_timestamp: pool.incentives[1].start_timestamp,
-                incentive_growth_global: FeeGrowth(0),
+                incentive_growth_global: FeeGrowth::from_integer(0),
                 last_updated: pool.incentives[1].last_updated
             }
         ]
@@ -147,7 +147,7 @@ pub fn test_create_incentive() {
                 reward_token: reward_token.clone(),
                 remaining: total_reward.unwrap(),
                 start_timestamp: pool.incentives[0].start_timestamp,
-                incentive_growth_global: FeeGrowth(0),
+                incentive_growth_global: FeeGrowth::from_integer(0),
                 last_updated: pool.incentives[0].last_updated
             },
             IncentiveRecord {
@@ -156,7 +156,7 @@ pub fn test_create_incentive() {
                 reward_token: reward_token.clone(),
                 remaining: total_reward.unwrap(),
                 start_timestamp: pool.incentives[1].start_timestamp,
-                incentive_growth_global: FeeGrowth(0),
+                incentive_growth_global: FeeGrowth::from_integer(0),
                 last_updated: pool.incentives[1].last_updated
             },
             IncentiveRecord {
@@ -165,7 +165,7 @@ pub fn test_create_incentive() {
                 reward_token: reward_token.clone(),
                 remaining: TokenAmount(u128::MAX),
                 start_timestamp: pool.incentives[2].start_timestamp,
-                incentive_growth_global: FeeGrowth(0),
+                incentive_growth_global: FeeGrowth::from_integer(0),
                 last_updated: pool.incentives[2].start_timestamp
             }
         ]
@@ -262,7 +262,7 @@ pub fn test_single_incentive_with_single_position() {
         vec![PositionIncentives {
             incentive_id: 0,
             pending_rewards: TokenAmount(0),
-            incentive_growth_inside: FeeGrowth(0)
+            incentive_growth_inside: FeeGrowth::from_integer(0)
         }]
     );
 
@@ -382,12 +382,12 @@ pub fn test_multi_incentives_with_single_position() {
             PositionIncentives {
                 incentive_id: 0,
                 pending_rewards: TokenAmount(0),
-                incentive_growth_inside: FeeGrowth(0)
+                incentive_growth_inside: FeeGrowth::from_integer(0)
             },
             PositionIncentives {
                 incentive_id: 1,
                 pending_rewards: TokenAmount(0),
-                incentive_growth_inside: FeeGrowth(0)
+                incentive_growth_inside: FeeGrowth::from_integer(0)
             }
         ]
     );
@@ -423,10 +423,18 @@ pub fn test_multi_incentives_with_single_position() {
 
     assert_eq!(
         subtract_assets(&incentives, &new_incentives),
-        vec![Asset {
-            info: reward_token.clone(),
-            amount: 900000u128.into(),
-        }]
+        vec![
+            Asset {
+                info: reward_token.clone(),
+                amount: 900000u128.into(),
+            },
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("usdt")
+                },
+                amount: 200000000_u128.into()
+            }
+        ]
     );
 
     // success
@@ -435,10 +443,18 @@ pub fn test_multi_incentives_with_single_position() {
     let new_incentives = get_position_incentives!(app, dex, 0, alice).unwrap();
     assert_eq!(
         subtract_assets(&incentives, &new_incentives),
-        vec![Asset {
-            info: reward_token.clone(),
-            amount: Uint128::zero()
-        },]
+        vec![
+            Asset {
+                info: reward_token.clone(),
+                amount: Uint128::zero()
+            },
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("usdt")
+                },
+                amount: 4000000_u128.into()
+            }
+        ]
     );
 }
 
@@ -902,6 +918,7 @@ pub fn test_remove_position() {
         .eq(&(after_user_balance + after_incentive_balance)));
 }
 
+#[cfg(feature = "bench")]
 #[test]
 pub fn incentive_stress_test() {
     let (mut app, accounts) = MockApp::new(&[

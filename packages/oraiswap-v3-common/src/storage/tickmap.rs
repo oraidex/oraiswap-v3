@@ -1,6 +1,6 @@
 use crate::math::sqrt_price::get_max_tick;
-use crate::math::MAX_TICK;
-use crate::{storage::MAX_RESULT_SIZE, math::TICK_SEARCH_RANGE};
+use crate::math::{MAX_TICK, MIN_TICK};
+use crate::{math::TICK_SEARCH_RANGE, storage::MAX_RESULT_SIZE};
 pub const CHUNK_SIZE: i32 = 64;
 pub const MAX_TICKMAP_QUERY_SIZE: usize = MAX_RESULT_SIZE / (16 + 64);
 
@@ -20,9 +20,9 @@ pub fn get_min_chunk(tick_spacing: u16) -> u16 {
 
 pub fn tick_to_position(tick: i32, tick_spacing: u16) -> (u16, u8) {
     assert!(
-        (-MAX_TICK..=MAX_TICK).contains(&tick),
+        (MIN_TICK..=MAX_TICK).contains(&tick),
         "tick not in range of <{}, {}>",
-        -MAX_TICK,
+        MIN_TICK,
         MAX_TICK
     );
 
@@ -67,7 +67,7 @@ pub fn get_search_limit(tick: i32, tick_spacing: u16, up: bool) -> i32 {
         range_limit.min(sqrt_price_limit)
     } else {
         let range_limit = index - TICK_SEARCH_RANGE;
-        let sqrt_price_limit = -MAX_TICK / tick_spacing as i32;
+        let sqrt_price_limit = MIN_TICK / tick_spacing as i32;
 
         range_limit.max(sqrt_price_limit)
     };

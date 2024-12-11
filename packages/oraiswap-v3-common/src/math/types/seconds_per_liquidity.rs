@@ -1,8 +1,8 @@
 use cosmwasm_schema::cw_serde;
 use decimal::*;
 
-use crate::math::types::liquidity::Liquidity;
 use crate::error::ContractError;
+use crate::math::types::liquidity::Liquidity;
 
 #[decimal(24)]
 #[cw_serde]
@@ -23,20 +23,21 @@ impl SecondsPerLiquidity {
         current_timestamp: u64,
         last_timestamp: u64,
     ) -> Result<Self, ContractError> {
-        if current_timestamp <= last_timestamp {
+        if current_timestamp < last_timestamp {
             return Err(ContractError::TimestampCheckFailed);
         }
-        let delta_time = current_timestamp - last_timestamp;
+        let delta_time = current_timestamp
+            .checked_sub(last_timestamp)
+            .ok_or(ContractError::UnderFlow)?;
 
         Ok(Self::new(
-            U256::from(delta_time)
-                .checked_mul(Self::one())
+            u128::from(delta_time)
+                .checked_mul(Self::one().get())
                 .ok_or(ContractError::Mul)?
-                .checked_mul(Liquidity::one())
+                .checked_mul(Liquidity::one().get())
                 .ok_or(ContractError::Mul)?
                 .checked_div(liquidity.here())
-                .ok_or(ContractError::Div)?
-                .try_into()?,
+                .ok_or(ContractError::Div)?,
         ))
     }
 }
@@ -73,13 +74,11 @@ pub fn calculate_seconds_per_liquidity_inside(
 pub mod tests {
 
     use super::*;
+    use crate::math::types::seconds_per_liquidity::SecondsPerLiquidity;
 
-    use crate::{
-        math::types::seconds_per_liquidity::SecondsPerLiquidity, math::clamm::CASTING_INTEGER_TO_U128_ERROR,
-    };
     #[test]
     fn test_domain_calculate_seconds_per_liquidity_global() {
-        // current_timestamp <= last_timestamp
+        // current_timestamp < last_timestamp
         {
             let liquidity = Liquidity::from_integer(1);
             let current_timestamp = 0;
@@ -90,8 +89,21 @@ pub mod tests {
                 last_timestamp,
             )
             .unwrap_err();
-
             assert!(matches!(err, ContractError::TimestampCheckFailed));
+        }
+        // current_timestamp == last_timestamp
+        {
+            let liquidity = Liquidity::from_integer(1);
+            let current_timestamp = 100;
+            let last_timestamp = 100;
+            let seconds_per_liquidity =
+                SecondsPerLiquidity::calculate_seconds_per_liquidity_global(
+                    liquidity,
+                    current_timestamp,
+                    last_timestamp,
+                )
+                .unwrap();
+            assert_eq!(seconds_per_liquidity.get(), 0);
         }
         // L == 0
         {
@@ -104,7 +116,6 @@ pub mod tests {
                 last_timestamp,
             )
             .unwrap_err();
-
             assert!(matches!(err, ContractError::Div));
         }
         // min value
@@ -149,8 +160,7 @@ pub mod tests {
                 last_timestamp,
             )
             .unwrap_err();
-
-            assert_eq!(err.to_string(), CASTING_INTEGER_TO_U128_ERROR.to_string());
+            assert!(matches!(err, ContractError::Mul));
         }
 
         let one_liquidity = Liquidity::new(1);

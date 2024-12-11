@@ -1136,6 +1136,7 @@ pub mod macros {
 
     macro_rules! init_basic_swap {
         ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident,$owner:tt, $bob: tt) => {{
+            use decimal::*;
             let fee = Percentage::from_scale(6, 3);
             let tick_spacing = 10;
             let fee_tier = FeeTier { fee, tick_spacing };
@@ -1208,11 +1209,13 @@ pub mod macros {
 
             assert_eq!(
                 pool_after.fee_growth_global_x,
-                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(50000000000000000000000)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(
+                    50000000000000000000000_u128.into()
+                )
             );
             assert_eq!(
                 pool_after.fee_growth_global_y,
-                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(0)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(U256::from(0))
             );
 
             assert_eq!(pool_after.fee_protocol_token_x, TokenAmount::new(1));
@@ -1244,6 +1247,7 @@ pub mod macros {
 
     macro_rules! init_cross_swap {
         ($app:ident, $dex_address:ident, $token_x_address:expr, $token_y_address:expr,$owner:tt,$bob:tt) => {{
+            use decimal::*;
             let fee = Percentage::from_scale(6, 3);
             let tick_spacing = 10;
             let fee_tier = FeeTier { fee, tick_spacing };
@@ -1315,9 +1319,12 @@ pub mod macros {
 
             assert_eq!(
                 pool_after.fee_growth_global_x,
-                FeeGrowth::new(40000000000000000000000)
+                FeeGrowth::new(40000000000000000000000_u128.into())
             );
-            assert_eq!(pool_after.fee_growth_global_y, FeeGrowth::new(0));
+            assert_eq!(
+                pool_after.fee_growth_global_y,
+                FeeGrowth::new(U256::from(0))
+            );
 
             assert_eq!(
                 pool_after.fee_protocol_token_x,
@@ -1523,11 +1530,11 @@ pub mod macros {
             }
             assert_eq!(
                 pool.fee_growth_global_x,
-                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(0)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(U256::from(0))
             );
             assert_eq!(
                 pool.fee_growth_global_y,
-                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(0)
+                oraiswap_v3_common::math::fee_growth::FeeGrowth::new(U256::from(0))
             );
             if $x_to_y {
                 assert_eq!(
@@ -1589,7 +1596,7 @@ pub mod macros {
             let (dex, token_x, token_y) =
                 init_dex_and_tokens!($app, u128::MAX, Percentage::from_scale(1, 2), $owner);
 
-            let mint_amount = 2u128.pow(75) - 1;
+            let mint_amount = 2u128.pow(73) - 1;
 
             approve!($app, token_x, dex, u128::MAX, $owner).unwrap();
             approve!($app, token_y, dex, u128::MAX, $owner).unwrap();
@@ -1669,9 +1676,9 @@ pub mod macros {
             let amount_y = balance_of!($app, token_y, $owner);
             if $x_to_y {
                 assert_eq!(amount_x, 340282366920938463463374607431768211455);
-                assert_eq!(amount_y, 340282366920938425684442744474606501888);
+                assert_eq!(amount_y, 340282366920938454018641641692477784064);
             } else {
-                assert_eq!(amount_x, 340282366920938425684442744474606501888);
+                assert_eq!(amount_x, 340282366920938454018641641692477784064);
                 assert_eq!(amount_y, 340282366920938463463374607431768211455);
             }
 
@@ -1696,11 +1703,11 @@ pub mod macros {
             let amount_x = balance_of!($app, token_x, $owner);
             let amount_y = balance_of!($app, token_y, $owner);
             if $x_to_y {
-                assert_eq!(amount_x, 340282366920938425684442744474606501888);
+                assert_eq!(amount_x, 340282366920938454018641641692477784064);
                 assert_ne!(amount_y, 0);
             } else {
                 assert_ne!(amount_x, 0);
-                assert_eq!(amount_y, 340282366920938425684442744474606501888);
+                assert_eq!(amount_y, 340282366920938454018641641692477784064);
             }
         }};
     }

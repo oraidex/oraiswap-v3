@@ -91,8 +91,11 @@ pub enum ContractError {
     #[error("current_timestamp > last_timestamp failed")]
     TimestampCheckFailed,
 
-    #[error("can not parse from u320 to u256")]
-    U320ToU256,
+    #[error("underflow while calculating delta")]
+    UnderFlow,
+
+    #[error("can not parse from u448 to u256")]
+    U448ToU256,
 
     #[error("tick over bounds")]
     TickOverBounds,
@@ -100,7 +103,7 @@ pub enum ContractError {
     #[error("calculate_sqrt_price: parsing from scale failed")]
     ParseFromScale,
 
-    #[error("calcaule_sqrt_price::checked_div division failed")]
+    #[error("calculate_sqrt_price::checked_div division failed")]
     CheckedDiv,
 
     #[error("big_liquidity -/+ sqrt_price * x")]
