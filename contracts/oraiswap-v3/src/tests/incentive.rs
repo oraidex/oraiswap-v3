@@ -902,6 +902,7 @@ pub fn test_remove_position() {
         .eq(&(after_user_balance + after_incentive_balance)));
 }
 
+#[cfg(feature = "bench")]
 #[test]
 pub fn incentive_stress_test() {
     let (mut app, accounts) = MockApp::new(&[

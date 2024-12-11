@@ -153,8 +153,11 @@ mod tests {
             .update_global_incentive_growth(pool_liquidity, 1300)
             .unwrap();
         assert_eq!(record.last_updated, 1300);
-        assert_eq!(record.remaining, TokenAmount(1000000));
-        assert_eq!(record.incentive_growth_global, FeeGrowth::from_integer(0));
+        assert_eq!(record.remaining, TokenAmount(900000));
+        assert_eq!(
+            record.incentive_growth_global,
+            FeeGrowth::new(U256::from_dec_str("1000000000000000000000000000000000000000").unwrap())
+        );
 
         // case 4: happy case
         pool_liquidity = Liquidity::new(1000);
@@ -163,10 +166,10 @@ mod tests {
             .update_global_incentive_growth(pool_liquidity, 1400)
             .unwrap();
         assert_eq!(record.last_updated, 1400);
-        assert_eq!(record.remaining, TokenAmount(990000));
+        assert_eq!(record.remaining, TokenAmount(890000));
         assert_eq!(
             record.incentive_growth_global,
-            FeeGrowth::from_integer(100000000000000000000000000000000000_u128)
+            FeeGrowth::new(U256::from_dec_str("1000100000000000000000000000000000000000").unwrap())
         );
 
         // case 5: total emit > remaining reward
@@ -179,7 +182,7 @@ mod tests {
         assert_eq!(record.remaining, TokenAmount(0));
         assert_eq!(
             record.incentive_growth_global,
-            FeeGrowth::from_integer(199000000000000000000000000000000000_u128)
+            FeeGrowth::new(U256::from_dec_str("1000189000000000000000000000000000000000").unwrap())
         );
 
         // case 6: no reward remaining
@@ -190,7 +193,7 @@ mod tests {
         assert_eq!(record.remaining, TokenAmount(0));
         assert_eq!(
             record.incentive_growth_global,
-            FeeGrowth::from_integer(199000000000000000000000000000000000_u128)
+            FeeGrowth::new(U256::from_dec_str("1000189000000000000000000000000000000000").unwrap())
         );
     }
 

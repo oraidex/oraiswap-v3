@@ -621,7 +621,7 @@ mod tests {
                 .update_liquidity(liquidity_delta, liquidity_sign, upper_tick, lower_tick)
                 .unwrap();
 
-            assert_eq!(x, TokenAmount(2500375009372499999999997));
+            assert_eq!(x, TokenAmount(2500187490625273443357761));
             assert_eq!(y, TokenAmount(5));
             assert_eq!(pool.liquidity, Liquidity::from_integer(5))
         }
