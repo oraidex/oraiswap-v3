@@ -38,9 +38,9 @@ pub fn simulate_swap(
     }
 
     let tick_limit = if x_to_y {
-        get_min_tick(fee_tier.tick_spacing)
+        get_min_tick(fee_tier.tick_spacing)?
     } else {
-        get_max_tick(fee_tier.tick_spacing)
+        get_max_tick(fee_tier.tick_spacing)?
     };
 
     let start_sqrt_price = pool.sqrt_price;

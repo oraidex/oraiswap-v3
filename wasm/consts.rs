@@ -1,12 +1,12 @@
 use crate::types::sqrt_price::get_max_tick;
-use js_sys::BigInt;
+use traceable_result::*;
 use wasm_bindgen::prelude::*;
 
-pub const MAX_TICK: i32 = 221_818;
+pub const MAX_TICK: i32 = 665455;
 pub const MIN_TICK: i32 = -MAX_TICK;
 
-pub const MAX_SQRT_PRICE: u128 = 65535383934512647000000000000;
-pub const MIN_SQRT_PRICE: u128 = 15258932000000000000;
+pub const MAX_SQRT_PRICE: u128 = 281481114768267672330495788147852355926;
+pub const MIN_SQRT_PRICE: u128 = 3552636207;
 
 pub const TICK_SEARCH_RANGE: i32 = 256;
 pub const CHUNK_SIZE: i32 = 64;
@@ -24,13 +24,13 @@ pub const MAX_POOL_PAIRS_RETURNED: usize =
     MAX_RESULT_SIZE / (128 + 128 + 32 + 128 + 128 + 128 + 128 + 64 + 64 + 32 + 64 + 16);
 
 #[wasm_bindgen(js_name = getGlobalMaxSqrtPrice)]
-pub fn get_global_max_sqrt_price() -> BigInt {
-    BigInt::from(MAX_SQRT_PRICE)
+pub fn get_global_max_sqrt_price() -> u128 {
+    MAX_SQRT_PRICE
 }
 
 #[wasm_bindgen(js_name = getGlobalMinSqrtPrice)]
-pub fn get_global_min_sqrt_price() -> BigInt {
-    BigInt::from(MIN_SQRT_PRICE)
+pub fn get_global_min_sqrt_price() -> u128 {
+    MIN_SQRT_PRICE
 }
 
 #[wasm_bindgen(js_name = getTickSearchRange)]
@@ -39,11 +39,15 @@ pub fn get_tick_search_range() -> i32 {
 }
 
 #[wasm_bindgen(js_name = getMaxChunk)]
-pub fn get_max_chunk(tick_spacing: u16) -> u16 {
-    let max_tick = get_max_tick(tick_spacing);
-    let max_bitmap_index = (max_tick + MAX_TICK) / tick_spacing as i32;
-    let max_chunk_index = max_bitmap_index / CHUNK_SIZE;
-    max_chunk_index as u16
+pub fn get_max_chunk(tick_spacing: u16) -> TrackableResult<u16> {
+    let max_tick = get_max_tick(tick_spacing)?;
+    let max_bitmap_index = (max_tick.checked_add(MAX_TICK).ok_or(err!("add overflow"))?)
+        .checked_div(tick_spacing as i32)
+        .ok_or(err!("div overflow"))?;
+    let max_chunk_index = max_bitmap_index
+        .checked_div(CHUNK_SIZE)
+        .ok_or(err!("div overflow"))?;
+    Ok(max_chunk_index as u16)
 }
 
 #[wasm_bindgen(js_name = getChunkSize)]
