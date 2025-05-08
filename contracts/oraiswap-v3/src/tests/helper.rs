@@ -568,6 +568,20 @@ impl MockApp {
             &[],
         )
     }
+
+    pub fn pause(
+        &mut self,
+        sender: &str,
+        dex: &str,
+        pause_status: bool,
+    ) -> MockResult<ExecuteResponse> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(dex),
+            &oraiswap_v3_msg::ExecuteMsg::Pause { pause_status },
+            &[],
+        )
+    }
 }
 
 pub fn extract_amount(events: &[Event], key: &str) -> Option<TokenAmount> {

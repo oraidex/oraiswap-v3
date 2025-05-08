@@ -37,6 +37,9 @@ pub struct NftExtensionMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    Pause {
+        pause_status: bool,
+    },
     ChangeAdmin {
         new_admin: Addr,
     },

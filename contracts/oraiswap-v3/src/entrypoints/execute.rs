@@ -1,3 +1,4 @@
+use crate::state::PAUSE_STATUS;
 use crate::state::{self, CONFIG, POOLS};
 use oraiswap_v3_common::asset::{Asset, AssetInfo};
 use oraiswap_v3_common::error::ContractError;
@@ -19,7 +20,7 @@ use super::{
     transfer_nft, update_approvals, TimeStampExt,
 };
 use cosmwasm_std::{
-    attr, wasm_execute, Addr, Attribute, Binary, DepsMut, Env, MessageInfo, Order, Response,
+    attr, wasm_execute, Addr, Attribute, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response,
     StdResult,
 };
 use cw20::Expiration;
@@ -389,6 +390,9 @@ pub fn swap(
     by_amount_in: bool,
     sqrt_price_limit: SqrtPrice,
 ) -> Result<Response, ContractError> {
+    // check if pool is paused
+    is_paused(deps.as_ref())?;
+
     // update incentives first
     let mut pool = state::get_pool(deps.storage, &pool_key)?;
     // check pool is opening for swap
@@ -470,6 +474,9 @@ pub fn swap_route(
     slippage: Percentage,
     swaps: Vec<SwapHop>,
 ) -> Result<Response, ContractError> {
+    // check if pool is paused
+    is_paused(deps.as_ref())?;
+
     // update incentives first
     for hop in &swaps {
         let mut pool = state::get_pool(deps.storage, &hop.pool_key)?;
@@ -1298,4 +1305,27 @@ pub fn update_pool_status(
             &format!("{:?}", &status.unwrap_or(PoolStatus::Opening)),
         ),
     ]))
+}
+
+pub fn pause(
+    deps: DepsMut,
+    info: MessageInfo,
+    pause_status: bool,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if info.sender != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    PAUSE_STATUS.save(deps.storage, &pause_status)?;
+
+    Ok(Response::new().add_attributes(vec![("action", "pause")]))
+}
+
+pub fn is_paused(deps: Deps) -> Result<(), ContractError> {
+    let pause_status = PAUSE_STATUS.may_load(deps.storage)?.unwrap_or_default();
+    if pause_status {
+        return Err(ContractError::PoolPaused {});
+    }
+    Ok(())
 }

@@ -14,6 +14,7 @@ use oraiswap_v3_common::{
     },
 };
 
+pub const PAUSE_STATUS: Item<bool> = Item::new("pause_status");
 pub const CONFIG: Item<Config> = Item::new("config");
 
 pub const POOLS: Map<&[u8], Pool> = Map::new("pools");
