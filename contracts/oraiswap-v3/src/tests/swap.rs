@@ -101,6 +101,27 @@ fn test_swap_with_pool_status() {
         .unwrap()
         .target_sqrt_price;
 
+    // paused pool, cannot swap
+    app.pause(&alice, dex.as_str(), true).unwrap();
+    let error = swap!(
+        app,
+        dex,
+        pool_key,
+        true,
+        swap_amount,
+        true,
+        target_sqrt_price,
+        bob
+    )
+    .unwrap_err();
+    assert!(error
+        .root_cause()
+        .to_string()
+        .contains(&ContractError::PoolPaused {}.to_string()));
+
+    // resume pool, can swap
+    app.pause(&alice, dex.as_str(), false).unwrap();
+
     // case 1: pool status = None => can swap
     swap!(
         app,
